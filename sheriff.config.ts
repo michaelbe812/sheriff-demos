@@ -1,164 +1,177 @@
-import { noDependencies, sameTag, SheriffConfig } from '@softarc/sheriff-core';
+import {
+  anyTag,
+  noDependencies,
+  sameTag,
+  SheriffConfig,
+} from '@softarc/sheriff-core';
 
 /**
- * Vertical-slice architecture for Confora SPAs (confora-portal + admin-console).
+ * Sheriff blueprint — vertical slices for apps in /apps and Nx libs in /libs.
  *
- * Two independent tag axes are assigned to every module, and a dependency is
- * only legal when BOTH axes allow it (Sheriff treats multiple source tags with
- * AND semantics — every `fromTag` must independently permit the import, while a
- * single tag is satisfied if ANY of the target's tags matches it):
+ * Principle: EVERYTHING is a slice with the same internal layer matrix;
+ * access from outside only through a port.
+ *   - domain `api/`      -> tag `port`      (public API towards other domains)
+ *   - feat `api/`        -> tag `feat-port` (public API towards sibling feats,
+ *                                            never visible outside the domain)
  *
- *  - `type:<layer>`        governs LAYERING inside a slice (ui/data/api/utils/types/feature)
- *  - `feature:<feature>`   governs the FEATURE BOUNDARY (no cross-feature imports)
+ * Two rule axes are combined with AND semantics: every tag of the importing
+ * module must independently allow the import (one tag's rule is satisfied if
+ * ANY of the target's tags matches it). Marker tags (`entry`, `port`,
+ * `feat-port`) therefore get a transparent `anyTag` rule — the type/domain/
+ * feat axes carry the actual constraints.
  *
  * Layer matrix (X may import Y):
  *   types   -> (nothing)
  *   utils   -> types, utils
- *   api     -> types, utils, api
- *   data    -> types, utils, api, data        (state / signal stores live here)
- *   ui      -> types, utils, api, ui           (NOT data — dumb components only)
- *   feature -> every type:*                    (smart containers wire data into ui)
+ *   events  -> types, utils, events      (ngrx signal-store event definitions)
+ *   api     -> types, utils, api         (+ events if ever needed — one-liner)
+ *   data    -> types, utils, api, data, events   (stores, business services)
+ *   ui      -> types, utils, ui, events  (dumb components; component-local
+ *              stores live INSIDE the ui bucket and are unrestricted there —
+ *              intra-module imports are never checked)
+ *   feature -> every type:*              (smart containers, routes, shells)
  *
- * Feature boundary:
- *   A `feature:<feature>` module may only import from the SAME feature domain
- *   (its own feature-shared buckets and its own `feat-<feat>` code) plus the
- *   app-level `shared` area. It can never import another feature — EXCEPT through
- *   that feature's PUBLIC API PORT (see below).
+ * Scopes:
+ *   domain:<name>  domains AND shared-features (auth, layout, …) — same
+ *                  mechanism. Foreign domains only via their `port`.
+ *   feat:<feat>    feats are private: own feat + everything outside feat-*
+ *                  folders (domain-shared, shared, ports) + sibling feat-ports.
+ *                  The `feat-` folder prefix is load-bearing for this rule.
+ *   shared         dumb shared area (types/utils/ui/api — deliberately no
+ *                  data). Importable by everyone within the same app.
+ *   app:<app>      app shell (app.ts, app.config.ts, app.routes.ts) — reaches
+ *                  slices only via `entry` (slice root) and `port`.
  *
- *   `shared` is importable by everyone via the global `'*': 'shared'` rule, and
- *   `shared` itself carries only `type:*` tags, so the layer matrix keeps the
- *   shared area internally layered while allowing any feature to consume it.
- *
- * Public API port (controlled cross-feature reuse):
- *   The feature-shared `api/` bucket is the ONLY thing a feature exposes to other
- *   features. It is tagged with an extra `port` marker; the `feature:*` rule lets
- *   any feature import a `port` target. Everything else (ui/data/types/utils and
- *   all `feat-<feat>` code) stays private to the feature. `feat-<feat>` private
- *   buckets carry `feature:<feature>-internal` so they are NEVER a cross-feature
- *   port, even though they are `type:api`.
- *
- * Cross-cutting infra:
- *   Cross-cutting infrastructure (auth, convex, user-context, guards,
- *   interceptors) folds into `app/shared/*`: backend clients + query refs →
- *   `shared/api`; stateful services, guards and interceptors → `shared/data`.
- *   Both apps now follow this layout — there is no transitional `app/core`.
+ * App isolation is path-based (sameApp): a target inside apps/<x> must belong
+ * to the same app; libs are app-free and may never import app code. Domain
+ * tags are location-independent — extracting a domain to /libs is a pure
+ * folder move with zero rule changes.
  */
+
+/** One slice shape for domains and shared-features, app-internal or as lib. */
+const slice = (path: string, scope: string) => ({
+  [path]: [scope, 'type:feature', 'entry'], // <slice>.routes.ts, shell
+  [`${path}/types`]: [scope, 'type:types'],
+  [`${path}/utils`]: [scope, 'type:utils'],
+  [`${path}/events`]: [scope, 'type:events'],
+  [`${path}/api`]: [scope, 'type:api', 'port'], // the domain's PUBLIC PORT
+  [`${path}/data`]: [scope, 'type:data'],
+  [`${path}/ui`]: [scope, 'type:ui'],
+  [`${path}/feat-<feat>`]: [scope, 'feat:<feat>', 'type:feature'],
+  [`${path}/feat-<feat>/types`]: [scope, 'feat:<feat>', 'type:types'],
+  [`${path}/feat-<feat>/utils`]: [scope, 'feat:<feat>', 'type:utils'],
+  [`${path}/feat-<feat>/events`]: [scope, 'feat:<feat>', 'type:events'],
+  [`${path}/feat-<feat>/api`]: [scope, 'feat:<feat>', 'type:api', 'feat-port'],
+  [`${path}/feat-<feat>/data`]: [scope, 'feat:<feat>', 'type:data'],
+  [`${path}/feat-<feat>/ui`]: [scope, 'feat:<feat>', 'type:ui'],
+});
+
+const appOf = (path: string) =>
+  /(?:^|\/)apps\/([^/]+)\//.exec(path)?.[1] ?? null;
+
+/**
+ * Target inside an app => must be the same app. Libs are app-free; lib -> app
+ * is blocked. The from-side uses the FILE path: files of the implicit root
+ * module (e.g. main.ts) live in a module whose path is the workspace root,
+ * which would never match any app.
+ */
+const sameApp = ({
+  fromFilePath,
+  toModulePath,
+}: {
+  fromFilePath: string;
+  toModulePath: string;
+}) => {
+  const toApp = appOf(toModulePath);
+  return toApp === null || toApp === appOf(fromFilePath);
+};
+
+const inAnyFeat = (path: string) => /\/feat-[^/]+(\/|$)/.test(path);
+
 export const config: SheriffConfig = {
   enableBarrelLess: true,
-  // Surface accidental name collisions across barrel-less slices in lint/CI.
-  showWarningOnBarrelCollision: true,
+  // encapsulationPattern: 'internal' is the default — every module gets a
+  // private `internal/` folder for free; no dedicated bucket needed.
+  entryPoints: {
+    client: 'apps/client/src/main.ts',
+    // add one entry per extracted lib for `npx sheriff verify` (CLI is a
+    // reachability-based spot check; ESLint is the authoritative gate):
+    'domain-booking': 'libs/domains/booking/src/booking.routes.ts',
+  },
 
   modules: {
     'apps/<app>/src': {
-      // Build-time environment config — app-wide, consumable everywhere.
       environments: ['shared'],
-
       app: ['app:<app>'],
-      // App shell: bootstrap config, routes, layout chrome, and the routing
-      // hosts that compose features via lazy imports. Sits above the feature
-      // boundary — may orchestrate features and consume `shared`.
-      'app/layout': ['app:<app>'],
-      'app/routing': ['app:<app>'],
-
-      // App-wide shared area — consumable by any feature, internally layered.
+      // literal keys before placeholder keys — matching is first-match-wins
       'app/shared/types': ['shared', 'type:types'],
       'app/shared/utils': ['shared', 'type:utils'],
       'app/shared/api': ['shared', 'type:api'],
-      'app/shared/data': ['shared', 'type:data'],
       'app/shared/ui': ['shared', 'type:ui'],
-
-      // Auth infrastructure — a cross-cutting area (NOT a feature slice) holding
-      // the singleton AuthService, route guard, and HTTP interceptor wired
-      // app-wide. Tagged `shared` so any feature (e.g. the auth screens) may
-      // consume it, and internally layered like `shared` so its pure helpers
-      // stay `type:utils`. See ADR 0006.
-      'app/auth-infrastructure': ['shared', 'type:data'],
-      'app/auth-infrastructure/utils': ['shared', 'type:utils'],
-
-      // Feature slices. Sibling matchers (most specific wins); the feature root
-      // itself is a leaf module so loose root files (routes, guards, the smart
-      // container) are tagged `feature:<feature>, type:feature`.
-      'app/features/<feature>': ['feature:<feature>', 'type:feature'],
-
-      // Feature-shared buckets (shared within the feature). The `api` bucket is
-      // additionally tagged `port` — the feature's PUBLIC face other features
-      // may import.
-      'app/features/<feature>/types': ['feature:<feature>', 'type:types'],
-      'app/features/<feature>/utils': ['feature:<feature>', 'type:utils'],
-      'app/features/<feature>/api': ['feature:<feature>', 'type:api', 'port'],
-      'app/features/<feature>/data': ['feature:<feature>', 'type:data'],
-      'app/features/<feature>/ui': ['feature:<feature>', 'type:ui'],
-
-      // Concrete feat implementations, each with its own private buckets. These
-      // carry `feature:<feature>-internal` so they share the feature domain with
-      // their siblings but are NEVER exposed as a cross-feature port.
-      'app/features/<feature>/feat-<feat>': [
-        'feature:<feature>-internal',
-        'type:feature',
-      ],
-      'app/features/<feature>/feat-<feat>/types': [
-        'feature:<feature>-internal',
-        'type:types',
-      ],
-      'app/features/<feature>/feat-<feat>/utils': [
-        'feature:<feature>-internal',
-        'type:utils',
-      ],
-      'app/features/<feature>/feat-<feat>/api': [
-        'feature:<feature>-internal',
-        'type:api',
-      ],
-      'app/features/<feature>/feat-<feat>/data': [
-        'feature:<feature>-internal',
-        'type:data',
-      ],
-      'app/features/<feature>/feat-<feat>/ui': [
-        'feature:<feature>-internal',
-        'type:ui',
-      ],
+      ...slice('app/shared-features/<sf>', 'domain:<sf>'),
+      ...slice('app/domains/<domain>', 'domain:<domain>'),
     },
-
-    // Workspace libraries consumed by the apps. Out of scope for the
-    // vertical-slice rules — tagged `shared` so apps may depend on their
-    // public entrypoints. (Their own internal architecture is not governed
-    // here; verification is scoped to each app's main.ts.)
-    'packages/<pkg>/src': ['shared'],
-    'packages/<pkg>/src/<dir>': ['shared'],
-    'packages-internal/<pkg>/src': ['shared'],
-    'packages-internal/<pkg>/src/<dir>': ['shared'],
+    // Phase 2 — identical tags, so rules stay the same after extraction.
+    'libs/shared/<bucket>/src': ['shared', 'type:<bucket>'],
+    ...slice('libs/shared-features/<sf>/src', 'domain:<sf>'),
+    ...slice('libs/domains/<domain>/src', 'domain:<domain>'),
   },
 
   depRules: {
-    // Bootstrap (main.ts / app config) may pull in feature entry points.
-    root: ['type:feature', 'app:*', 'shared'],
+    // bootstrap (main.ts) wires the shell and lazy slices of ITS OWN app
+    root: (ctx) =>
+      sameApp(ctx) &&
+      (ctx.to.startsWith('app:') ||
+        ctx.to === 'entry' ||
+        ctx.to === 'port' ||
+        ctx.to === 'shared'),
 
-    // Everyone may consume the app-level shared area.
-    '*': 'shared',
+    // NO '*' catch-all: a `'*': 'shared'` rule would give EVERY from tag
+    // clearance towards shared-tagged modules and thereby bypass the type
+    // axis inside the shared area (utils -> api, ui -> api, ...). Instead the
+    // scope rules below grant `shared` explicitly — the type axis keeps
+    // applying because shared buckets carry type:* tags too.
+    shared: (ctx) => ctx.to === 'shared' && sameApp(ctx),
+    noTag: noDependencies, // unconfigured modules: surfaced, never a silent pass
 
-    // App shell wires routes/providers to features and shared infrastructure.
-    'app:*': [sameTag, 'type:feature', 'shared'],
+    // marker tags are transparent as FROM tags — constraints come from the
+    // other axes (AND semantics)
+    entry: anyTag,
+    port: anyTag,
+    'feat-port': anyTag,
 
-    // Layer matrix (the "type" axis) — governs what may import what WITHIN a slice.
+    // app shell composes slices via their entry (routes/shell) and ports
+    'app:*': [
+      sameTag,
+      (ctx) =>
+        sameApp(ctx) &&
+        (ctx.to === 'entry' || ctx.to === 'port' || ctx.to === 'shared'),
+    ],
+
+    // type axis — the layer matrix within a slice
     'type:types': noDependencies,
     'type:utils': ['type:types', 'type:utils'],
-    'type:api': ['type:types', 'type:utils', 'type:api'],
-    'type:data': ['type:types', 'type:utils', 'type:api', 'type:data'],
-    'type:ui': ['type:types', 'type:utils', 'type:api', 'type:ui'],
+    'type:events': ['type:types', 'type:utils', 'type:events'],
+    'type:api': ['type:types', 'type:utils', 'type:api'], // add 'type:events' when api needs events
+    'type:data': ['type:types', 'type:utils', 'type:api', 'type:data', 'type:events'],
+    'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT data
     'type:feature': ({ to }) => to.startsWith('type:'),
 
-    // Feature boundary (the "feature" axis). A feature may import:
-    //   - its own domain: `feature:<f>` <-> `feature:<f>` and `feature:<f>-internal`
-    //     (feature-shared <-> feat-private, both directions, same domain only);
-    //   - any other feature's PUBLIC API PORT (the `port` tag), and nothing else
-    //     of that feature. The `shared` area is reached through the '*' rule.
-    'feature:*': [
-      sameTag,
-      ({ from, to }) =>
-        to.startsWith('feature:') &&
-        from.split(':')[1].replace(/-internal$/, '') ===
-          to.split(':')[1].replace(/-internal$/, ''),
-      // Public API port: any feature may import another feature's `api` bucket.
-      ({ to }) => to === 'port',
+    // scope axis — own domain freely, foreign domains/shared-features only
+    // via port, plus the shared area (type axis still applies on top)
+    'domain:*': [
+      (ctx) =>
+        sameApp(ctx) &&
+        ctx.to.startsWith('domain:') &&
+        ctx.from.split(':')[1] === ctx.to.split(':')[1],
+      (ctx) => sameApp(ctx) && (ctx.to === 'port' || ctx.to === 'shared'),
+    ],
+
+    // feat axis — feats are private towards their siblings
+    'feat:*': [
+      sameTag, // own feat
+      ({ toModulePath }) => !inAnyFeat(toModulePath), // domain-shared, shared, ports
+      ({ to }) => to === 'feat-port', // sibling feats only via their api
     ],
   },
 };

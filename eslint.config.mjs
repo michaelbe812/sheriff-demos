@@ -1,9 +1,11 @@
 import nx from "@nx/eslint-plugin";
+import sheriff from "@softarc/eslint-plugin-sheriff";
 
 export default [
     ...nx.configs["flat/base"],
     ...nx.configs["flat/typescript"],
     ...nx.configs["flat/javascript"],
+    sheriff.configs.all,
     {
         ignores: [
             "**/dist",
@@ -22,6 +24,9 @@ export default [
                 "error",
                 {
                     enforceBuildableLibDependency: true,
+                    // static port imports into lazy-loaded domain libs are a
+                    // deliberate, sheriff-governed pattern
+                    checkDynamicDependenciesExceptions: ["@blueprint/**"],
                     allow: [
                         "^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$"
                     ],
