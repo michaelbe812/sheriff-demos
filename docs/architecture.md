@@ -127,8 +127,24 @@ npx nx build client
 
 Negativbeispiele: In den Quellen markieren Kommentare `// sheriff-violation-example: import …` verbotene Imports (ui→data, ui→api, utils→api, cross-domain internals, SF internals, Geschwister-Feat internals, shell→ui, Import aus fremdem `internal/` → encapsulation-Rule). Einkommentieren ⇒ genau diese Violations feuern.
 
+## Teilen über Projekte: `@berger-engineering/sheriff-blueprint`
+
+Regeln + Generatoren leben in `packages/sheriff-blueprint` (im Repo per pnpm-workspace gelinkt, `prepare`-Build; für andere Projekte in die Registry publishen). Projekte schreiben nur noch:
+
+```ts
+export const config = createSheriffConfig({
+  sharedFeatures: ['auth', 'layout'],
+  entryPoints: { client: 'apps/client/src/main.ts' },
+});
+```
+
+- ESLint: `sheriff.configs.all` + `nxModuleBoundariesOptions('@blueprint')`
+- Generatoren: `nx g @berger-engineering/sheriff-blueprint:domain|feat|shared-feature`
+- Technische Randbedingung: Sheriff transpiliert nur die eine Config-Datei und evalt sie → das Package MUSS gebaut in node_modules liegen; relative Imports in sheriff.config.ts gehen nicht
+- Tests: `nx test sheriff-blueprint` — Regel-Funktionen (unit), Generatoren (devkit-Tree), e2e gegen das echte Workspace (sheriff verify + eslint-Violations)
+
 ## Neues Projekt aufsetzen
 
-1. `sheriff.config.ts` + ESLint-Block kopieren, `entryPoints` anpassen
-2. Ordnerkonventionen einhalten (`domains/`, `shared-features/`, `feat-`, Buckets)
-3. Domain extrahieren: Ordner nach `libs/domains/<d>/src` moven, Alias + `tsconfig.json` + `project.json` ergänzen, Imports von relativ auf Alias umstellen — Regeln unverändert
+1. Package installieren, `sheriff.config.ts` (3 Zeilen, s.o.) + ESLint-Block anlegen
+2. Ordnerkonventionen einhalten (`domains/`, Shared-Features im Root + `sharedFeatures`-Liste, `feat-`, Buckets) — oder Generatoren nutzen
+3. Domain extrahieren: Ordner nach `libs/domains/<d>/src` moven, Alias + `tsconfig.json` + `project.json` ergänzen (macht der `domain`-Generator automatisch), Imports von relativ auf Alias umstellen — Regeln unverändert

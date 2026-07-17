@@ -1,0 +1,17 @@
+{
+  "name": "@berger-engineering/sheriff-blueprint",
+  "version": "0.1.0",
+  "description": "Berger Engineering sheriff blueprint: shared config factory + nx generators for vertical-slice architecture",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "generators": "./generators.json",
+  "files": ["dist", "generators.json", "src/generators/**/schema.json", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "@nx/devkit": ">=21",
+    "@softarc/sheriff-core": ">=0.19.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "sheriff-blueprint",
+  "version": "0.1.0",
+  "generators": {
+    "domain": {
+      "factory": "./dist/generators/domain/generator",
+      "schema": "./src/generators/domain/schema.json",
+      "description": "Generate a domain slice (app-internal or as nx lib) following the sheriff blueprint"
+    },
+    "feat": {
+      "factory": "./dist/generators/feat/generator",
+      "schema": "./src/generators/feat/schema.json",
+      "description": "Generate a feat sub-slice (private, with feat-port) inside a domain"
+    },
+    "shared-feature": {
+      "factory": "./dist/generators/shared-feature/generator",
+      "schema": "./src/generators/shared-feature/schema.json",
+      "description": "Generate a root-level shared feature (port contract + store + providers)"
+    }
+  }
+}

@@ -1,11 +1,20 @@
 import nx from "@nx/eslint-plugin";
 import sheriff from "@softarc/eslint-plugin-sheriff";
+import { nxModuleBoundariesOptions } from "@berger-engineering/sheriff-blueprint";
 
 export default [
     ...nx.configs["flat/base"],
     ...nx.configs["flat/typescript"],
     ...nx.configs["flat/javascript"],
     sheriff.configs.all,
+    {
+        // tooling packages are not part of the app architecture
+        files: ["packages/**"],
+        rules: {
+            "@softarc/sheriff/dependency-rule": "off",
+            "@softarc/sheriff/encapsulation": "off"
+        }
+    },
     {
         ignores: [
             "**/dist",
@@ -22,23 +31,7 @@ export default [
         rules: {
             "@nx/enforce-module-boundaries": [
                 "error",
-                {
-                    enforceBuildableLibDependency: true,
-                    // static port imports into lazy-loaded domain libs are a
-                    // deliberate, sheriff-governed pattern
-                    checkDynamicDependenciesExceptions: ["@blueprint/**"],
-                    allow: [
-                        "^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$"
-                    ],
-                    depConstraints: [
-                        {
-                            sourceTag: "*",
-                            onlyDependOnLibsWithTags: [
-                                "*"
-                            ]
-                        }
-                    ]
-                }
+                nxModuleBoundariesOptions("@blueprint")
             ]
         }
     },

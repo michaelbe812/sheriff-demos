@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "SheriffBlueprintDomain",
+  "title": "Generate a domain slice (app-internal or as nx lib)",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Domain name, e.g. booking",
+      "$default": { "$source": "argv", "index": 0 }
+    },
+    "app": {
+      "type": "string",
+      "description": "App name for an app-internal domain (apps/<app>/src/app/domains). Omit to generate a lib under libs/domains."
+    },
+    "feat": {
+      "type": "string",
+      "description": "First feat to scaffold inside the domain"
+    },
+    "aliasPrefix": {
+      "type": "string",
+      "description": "tsconfig alias prefix for libs",
+      "default": "@blueprint"
+    }
+  },
+  "required": ["name"]
+}

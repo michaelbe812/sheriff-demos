@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "SheriffBlueprintFeat",
+  "title": "Generate a feat sub-slice inside a domain",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Feat name, e.g. check-booking",
+      "$default": { "$source": "argv", "index": 0 }
+    },
+    "domain": {
+      "type": "string",
+      "description": "Domain the feat belongs to"
+    },
+    "app": {
+      "type": "string",
+      "description": "App name if the domain is app-internal. Omit for a lib domain."
+    }
+  },
+  "required": ["name", "domain"]
+}

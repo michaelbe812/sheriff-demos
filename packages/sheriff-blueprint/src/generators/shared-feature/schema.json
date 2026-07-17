@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "SheriffBlueprintSharedFeature",
+  "title": "Generate a root-level shared feature (deep module with port)",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Shared feature name, e.g. auth",
+      "$default": { "$source": "argv", "index": 0 }
+    },
+    "app": {
+      "type": "string",
+      "description": "App name for an app-internal shared feature. Omit for a lib under libs/<name>."
+    }
+  },
+  "required": ["name"]
+}
