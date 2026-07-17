@@ -6,9 +6,16 @@ Skalierbare `sheriff.config.ts` für alle Projekte. Funktioniert identisch für 
 
 **Alles ist ein Slice mit derselben Layer-Matrix; Zugriff von außen nur über einen Port.**
 
-- Domain-`api/` → Tag `port` — public API für andere Domains
+- Domain-`api/` → Tag `port` — public API für andere Domains. **Contract only**: Interface + `InjectionToken`, keine Implementierung.
+- Domain-`infra/` → `type:infra` — die Implementierung des Ports (HTTP, SDKs). **Kein `port`-Tag**, also außerhalb der Slice unsichtbar.
 - Feat-`api/` → Tag `feat-port` — public API für Geschwister-Feats, nie sichtbar außerhalb der Domain
 - Shared-Features (auth, layout, …) = Domains mit gleichem Mechanismus (deep modules, schmale API)
+
+### Warum `api/` und `infra/` getrennt sind
+
+Ursprünglich war `api/` beides: öffentlicher Port **und** HTTP-Adapter — eine `@Injectable`-Klasse mit `fetch` darin. Wer den Port importierte (auch fremde Domains), hing an der Implementierung: kein Fake für Tests, kein Wechsel auf GraphQL ohne Anfassen aller Aufrufer. Der Abhängigkeitspfeil zeigte **zur** Infrastruktur.
+
+Jetzt gilt: `type:api` hat **keine** Clearance zu `type:infra`. Der Contract kann seine eigene Impl nicht benennen — die Inversion ist damit strukturell erzwungen, nicht Disziplinsache. Auch `type:data` darf `infra` nicht sehen: Stores binden an das Token, verdrahtet wird ausschließlich am Slice-Root (`<slice>.providers.ts`, `type:feature`). Das ist dasselbe Muster, das `auth` schon immer nutzte — jetzt für alle Slices.
 
 ## Struktur
 
@@ -27,10 +34,13 @@ libs/
 
 Slice-Shape (Domain, Shared-Feature — app-intern oder Lib):
   <slice>.routes.ts / shell    + entry           einziger Einstieg für App-Shell
+  <slice>.providers.ts         + entry           verdrahtet Port → Impl (einziger Ort)
   types/   utils/   events/   data/   ui/
-  api/                         + port            PUBLIC PORT
+  api/                         + port            PUBLIC PORT (Contract: Interface + Token)
+  infra/                       type:infra        Impl des Ports — slice-privat
   feat-<feat>/                 + feat:<feat>     strikt privat, gleiche Buckets
     api/                       + feat-port       public für Geschwister-Feats
+    infra/                     type:infra        feat-private Impl
 ```
 
 Shared-Features liegen direkt im Root (kein `shared-features/`-Ordner) und werden in der Config **explizit gelistet** (`sharedFeatures = ['auth', 'layout']`) — ein Platzhalter auf Root-Ebene würde auch `domains` und `shared` schlucken. Eine Zeile pro neuem Shared-Feature.
@@ -41,17 +51,20 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
 
 ## Layer-Matrix (type-Achse)
 
-| from \ to | types | utils | events | api | data | ui | feature |
-|---|---|---|---|---|---|---|---|
-| **types**   | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **utils**   | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **events**  | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ |
-| **api**     | ✓ | ✓ | ✗* | ✓ | ✗ | ✗ | ✗ |
-| **data**    | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
-| **ui**      | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✗ |
-| **feature** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| from \ to | types | utils | events | api | infra | data | ui | feature |
+|---|---|---|---|---|---|---|---|---|
+| **types**   | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **utils**   | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **events**  | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **api**     | ✓ | ✓ | ✗* | ✓ | ✗** | ✗ | ✗ | ✗ |
+| **infra**   | ✓ | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| **data**    | ✓ | ✓ | ✓ | ✓ | ✗** | ✓ | ✗ | ✗ |
+| **ui**      | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ |
+| **feature** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 *api→events bei Bedarf: `'type:events'` in der `'type:api'`-Regel ergänzen (Einzeiler).
+
+**Die beiden ✗, die die Inversion tragen: `api → infra` (der Contract kennt seine Impl nicht) und `data → infra` (Stores binden ans Token). Nur `feature` (= Slice-Root, `<slice>.providers.ts`) sieht beide Seiten und verdrahtet sie. Getestet in `tests/e2e.spec.ts` — Regel entfernen ⇒ Test rot.
 
 - `data` = Signal Stores + Business-Logic-Services (domain- oder feat-shared)
 - `events` = Signal-Store-Events, definition-only (Type + Creator). ui/feature werfen, data handelt → deshalb eigener Bucket, den ui importieren darf (data nicht)

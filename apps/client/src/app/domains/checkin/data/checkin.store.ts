@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { CheckinApi } from '../api/checkin-api';
+import { CHECKIN_API } from '../api/checkin-api';
 import { GuestArrived } from '../events/checkin.events';
 import { CheckinRecord } from '../types/checkin.model';
 import { toCheckinRecord } from './internal/checkin.mapper';
@@ -7,7 +7,7 @@ import { toCheckinRecord } from './internal/checkin.mapper';
 /** Domain-shared store: handles domain events, owns the checkin state. */
 @Injectable({ providedIn: 'root' })
 export class CheckinStore {
-  private readonly api = inject(CheckinApi);
+  private readonly api = inject(CHECKIN_API);
   private readonly records = signal<CheckinRecord[]>([]);
 
   readonly all = this.records.asReadonly();

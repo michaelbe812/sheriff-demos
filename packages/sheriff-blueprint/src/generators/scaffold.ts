@@ -40,18 +40,42 @@ export function ${propertyName}Label(entity: ${className}): string {
 }
 
 export function apiPortFile(name: string): string {
-  const { className, fileName } = names(name);
-  return `import { Injectable } from '@angular/core';
+  const { className, constantName, fileName } = names(name);
+  return `import { InjectionToken } from '@angular/core';
 import { ${className} } from '../types/${fileName}.model';
 
 /**
  * PUBLIC PORT of the ${fileName} domain: the only module other domains may
  * import. Cross-domain needed types are re-exported here.
+ *
+ * CONTRACT ONLY — the implementation lives in infra/ and is wired at the
+ * slice root by provide${className}(). Consumers bind to this interface, so
+ * the transport can be swapped or faked without touching a single store.
+ * \`type:api\` has no clearance towards \`type:infra\`: this file structurally
+ * cannot name its own implementation. That is what makes it inverted.
  */
 export type { ${className} } from '../types/${fileName}.model';
 
+export interface ${className}Api {
+  load(): Promise<${className}[]>;
+}
+
+export const ${constantName}_API = new InjectionToken<${className}Api>('${constantName}_API');
+`;
+}
+
+export function infraFile(name: string): string {
+  const { className, fileName } = names(name);
+  return `import { Injectable } from '@angular/core';
+import { ${className}Api } from '../api/${fileName}-api';
+import { ${className} } from '../types/${fileName}.model';
+
+/**
+ * The port's implementation (type:infra) — the only place that knows how the
+ * data arrives. Not tagged \`port\`, so no other domain can reach it.
+ */
 @Injectable({ providedIn: 'root' })
-export class ${className}Api {
+export class Http${className}Api implements ${className}Api {
   async load(): Promise<${className}[]> {
     const response = await fetch('/api/${fileName}');
     return (await response.json()) as ${className}[];
@@ -60,16 +84,31 @@ export class ${className}Api {
 `;
 }
 
+export function providersFile(name: string): string {
+  const { className, constantName, fileName } = names(name);
+  return `import { Provider } from '@angular/core';
+import { ${constantName}_API } from './api/${fileName}-api';
+import { Http${className}Api } from './infra/http-${fileName}-api';
+
+/** Slice root (entry): wires the port contract to its implementation. */
+export function provide${className}(): Provider {
+  return { provide: ${constantName}_API, useClass: Http${className}Api };
+}
+`;
+}
+
 export function storeFile(name: string): string {
-  const { className, fileName } = names(name);
+  const { className, constantName, fileName } = names(name);
   return `import { inject, Injectable, signal } from '@angular/core';
-import { ${className}Api } from '../api/${fileName}-api';
+import { ${constantName}_API } from '../api/${fileName}-api';
 import { ${className} } from '../types/${fileName}.model';
 
 /** Domain-shared store: usable by feature containers, never by ui. */
 @Injectable({ providedIn: 'root' })
 export class ${className}Store {
-  private readonly api = inject(${className}Api);
+  // binds to the TOKEN, never to the impl — type:data has no clearance
+  // towards type:infra, so only the slice root can wire them together
+  private readonly api = inject(${constantName}_API);
   private readonly entities = signal<${className}[]>([]);
 
   readonly all = this.entities.asReadonly();
@@ -123,6 +162,8 @@ export function writeSliceBuckets(tree: Tree, root: string, name: string): void 
   tree.write(`${root}/utils/${fileName}.utils.ts`, utilsFile(name));
   tree.write(`${root}/events/${fileName}.events.ts`, eventsFile(name));
   tree.write(`${root}/api/${fileName}-api.ts`, apiPortFile(name));
+  tree.write(`${root}/infra/http-${fileName}-api.ts`, infraFile(name));
+  tree.write(`${root}/${fileName}.providers.ts`, providersFile(name));
   tree.write(`${root}/data/${fileName}.store.ts`, storeFile(name));
   tree.write(`${root}/ui/.gitkeep`, '');
 }

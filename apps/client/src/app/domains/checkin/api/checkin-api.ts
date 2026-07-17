@@ -1,5 +1,4 @@
-import { inject, Injectable } from '@angular/core';
-import { ApiHttp } from '../../../shared/api/http-client';
+import { InjectionToken } from '@angular/core';
 
 /** PUBLIC PORT of the checkin domain — cross-domain types re-exported here. */
 export type { CheckinRecord } from '../types/checkin.model';
@@ -12,11 +11,17 @@ export interface CheckinDto {
   checked_in_at: string;
 }
 
-@Injectable({ providedIn: 'root' })
-export class CheckinApi {
-  private readonly http = inject(ApiHttp);
-
-  loadCheckins(): Promise<CheckinDto[]> {
-    return this.http.get<CheckinDto[]>('/api/checkins');
-  }
+/**
+ * CONTRACT ONLY — the implementation (HttpCheckinApi, type:infra) is wired at
+ * the slice root by provideCheckin(). Consumers inject CHECKIN_API and bind
+ * to this interface, so the HTTP client can be swapped or faked without
+ * touching a single store.
+ *
+ * `type:api` has no clearance towards `type:infra`, so this file structurally
+ * cannot name its own implementation — that is the inversion.
+ */
+export interface CheckinApi {
+  loadCheckins(): Promise<CheckinDto[]>;
 }
+
+export const CHECKIN_API = new InjectionToken<CheckinApi>('CHECKIN_API');

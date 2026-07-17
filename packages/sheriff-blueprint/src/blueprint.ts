@@ -50,7 +50,13 @@ export const slice = (path: string, scope: string): Modules => ({
   [`${path}/types`]: [scope, 'type:types'],
   [`${path}/utils`]: [scope, 'type:utils'],
   [`${path}/events`]: [scope, 'type:events'],
-  [`${path}/api`]: [scope, 'type:api', 'port'], // the domain's PUBLIC PORT
+  // The PUBLIC PORT: contract only — interfaces + InjectionToken, no impl.
+  // Consumers (own data/, foreign domains) bind to this and nothing else.
+  [`${path}/api`]: [scope, 'type:api', 'port'],
+  // The port's implementation: HTTP clients, mappers, third-party SDKs.
+  // NOT tagged `port`, so it is invisible outside the slice — only the slice
+  // root (entry) may see it, to wire it onto the token.
+  [`${path}/infra`]: [scope, 'type:infra'],
   [`${path}/data`]: [scope, 'type:data'],
   [`${path}/ui`]: [scope, 'type:ui'],
   [`${path}/feat-<feat>`]: [scope, 'feat:<feat>', 'type:feature'],
@@ -58,6 +64,7 @@ export const slice = (path: string, scope: string): Modules => ({
   [`${path}/feat-<feat>/utils`]: [scope, 'feat:<feat>', 'type:utils'],
   [`${path}/feat-<feat>/events`]: [scope, 'feat:<feat>', 'type:events'],
   [`${path}/feat-<feat>/api`]: [scope, 'feat:<feat>', 'type:api', 'feat-port'],
+  [`${path}/feat-<feat>/infra`]: [scope, 'feat:<feat>', 'type:infra'],
   [`${path}/feat-<feat>/data`]: [scope, 'feat:<feat>', 'type:data'],
   [`${path}/feat-<feat>/ui`]: [scope, 'feat:<feat>', 'type:ui'],
 });
@@ -136,7 +143,16 @@ export const blueprintDepRules = (): DepRules => ({
   'type:types': noDependencies,
   'type:utils': ['type:types', 'type:utils'],
   'type:events': ['type:types', 'type:utils', 'type:events'],
+  // The port is a CONTRACT: it may name its own types, never its impl.
+  // `type:api` deliberately has no clearance towards `type:infra` — that is
+  // what makes the dependency inverted rather than merely layered.
   'type:api': ['type:types', 'type:utils', 'type:api'],
+  // The impl side: implements the contract, talks to shared/api (http) and
+  // its own types/utils. It may NOT reach data/ or ui/ — nothing calls
+  // inward from infrastructure.
+  'type:infra': ['type:types', 'type:utils', 'type:api', 'type:infra'],
+  // Stores bind to the TOKEN in api/, never to a class in infra/. `type:data`
+  // has no clearance towards `type:infra`; only the slice root wires them.
   'type:data': ['type:types', 'type:utils', 'type:api', 'type:data', 'type:events'],
   'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT data
   'type:feature': ({ to }) => to.startsWith('type:'),

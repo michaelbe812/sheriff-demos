@@ -96,3 +96,54 @@ describe('eslint dependency-rule fires through the packaged config', () => {
     expect(eslintOn(ok)).not.toContain('@softarc/sheriff/dependency-rule');
   });
 });
+
+/**
+ * The port is a CONTRACT, its impl lives in infra/. These four tests are the
+ * teeth behind that claim — without them "inverted" is a code comment.
+ */
+describe('inverted domain ports: infra/ is unreachable, api/ is the seam', () => {
+  it('blocks a foreign domain from reaching booking/infra', () => {
+    const file = writeTmp(
+      'apps/client/src/app/domains/checkin/data/tmp-e2e-infra-viol.ts',
+      `import { HttpBookingApi } from '@blueprint/domains/booking/infra/http-booking-api';\nexport const x = HttpBookingApi;\n`,
+    );
+    const output = eslintOn(file);
+    // Blocked on the SCOPE axis before type:infra is ever consulted: infra/
+    // carries no `port` tag, so `domain:checkin` has no clearance towards it.
+    // Belt and braces — the type axis (next test) is the second lock.
+    expect(output).toContain('@softarc/sheriff/dependency-rule');
+    expect(output).toContain('domain:checkin');
+  });
+
+  it('blocks a store from binding to the impl instead of the token', () => {
+    // type:data -> type:infra. The whole point: a store cannot name the HTTP
+    // class even inside its own slice; only the slice root wires them.
+    const file = writeTmp(
+      'libs/domains/booking/src/data/tmp-e2e-infra-viol.ts',
+      `import { HttpBookingApi } from '../infra/http-booking-api';\nexport const x = HttpBookingApi;\n`,
+    );
+    const output = eslintOn(file);
+    expect(output).toContain('@softarc/sheriff/dependency-rule');
+    expect(output).toContain('type:data');
+  });
+
+  it('blocks the contract from naming its own implementation', () => {
+    // type:api -> type:infra. If this were allowed the arrow would point at
+    // infrastructure again and the inversion would be decorative.
+    const file = writeTmp(
+      'libs/domains/booking/src/api/tmp-e2e-infra-viol.ts',
+      `import { HttpBookingApi } from '../infra/http-booking-api';\nexport const x = HttpBookingApi;\n`,
+    );
+    const output = eslintOn(file);
+    expect(output).toContain('@softarc/sheriff/dependency-rule');
+    expect(output).toContain('type:api');
+  });
+
+  it('allows a foreign domain to bind to the port token', () => {
+    const file = writeTmp(
+      'apps/client/src/app/domains/checkin/data/tmp-e2e-infra-ok.ts',
+      `import { BOOKING_API } from '@blueprint/domains/booking/api/booking-api';\nexport const x = BOOKING_API;\n`,
+    );
+    expect(eslintOn(file)).not.toContain('@softarc/sheriff/dependency-rule');
+  });
+});
