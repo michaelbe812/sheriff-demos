@@ -1,5 +1,5 @@
 import { Route } from '@angular/router';
-import { LayoutShell } from './shared-features/layout/layout.shell';
+import { LayoutShell } from './layout/layout.shell';
 
 // sheriff-violation-example: import { BookingCard } from '@blueprint/domains/booking/ui/booking-card'; // shell -> slice internals (only entry/port)
 

@@ -17,12 +17,12 @@ apps/<app>/src/
   main.ts                      root (implizites Root-Modul)
   app/                         app:<app>        Shell: app.ts, app.config.ts, app.routes.ts
     shared/                    shared + type:*  dumm: types/utils/api/ui (KEIN data!)
-    shared-features/<sf>/      domain:<sf>      Slice-Shape (s.u.)
+    auth/  layout/  …          domain:<sf>      Shared-Features direkt im Root (Slice-Shape)
     domains/<domain>/          domain:<domain>  Slice-Shape (s.u.)
 
 libs/
   shared/<bucket>/src/         shared + type:<bucket>
-  shared-features/<sf>/src/    domain:<sf>      gleiches Slice-Shape
+  auth/src/  layout/src/  …    domain:<sf>      gleiches Slice-Shape
   domains/<domain>/src/        domain:<domain>  gleiches Slice-Shape
 
 Slice-Shape (Domain, Shared-Feature — app-intern oder Lib):
@@ -33,7 +33,11 @@ Slice-Shape (Domain, Shared-Feature — app-intern oder Lib):
     api/                       + feat-port       public für Geschwister-Feats
 ```
 
-Kein `/internal`-Bucket nötig: barrel-less gibt jedem Modul per Default einen privaten `internal/`-Ordner (`encapsulationPattern`).
+Shared-Features liegen direkt im Root (kein `shared-features/`-Ordner) und werden in der Config **explizit gelistet** (`sharedFeatures = ['auth', 'layout']`) — ein Platzhalter auf Root-Ebene würde auch `domains` und `shared` schlucken. Eine Zeile pro neuem Shared-Feature.
+
+### Modul-private Files: `internal/`
+
+Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPattern: 'internal'`): ein **top-level** `internal/` in einem Modul ist nur aus diesem Modul heraus importierbar — sogar die eigene Domain bekommt eine `encapsulation`-Violation. Kein Tag, keine Regel nötig. Beispiel: `checkin/data/internal/checkin.mapper.ts` (DTO→Model-Mapping, nur vom `CheckinStore` benutzt). Achtung: nur die oberste Ebene zählt — `data/foo/internal/` wird NICHT erkannt.
 
 ## Layer-Matrix (type-Achse)
 
@@ -73,7 +77,8 @@ Kein `/internal`-Bucket nötig: barrel-less gibt jedem Modul per Default einen p
 ## Naming-Konventionen (load-bearing!)
 
 - `feat-<name>/` — Prefix wird von der Feat-Isolations-Regel per Pfad erkannt
-- `domains/` bzw. `shared-features/` als Eltern-Ordner — verhindert Platzhalter-Kollisionen mit `shared`
+- `domains/` als Eltern-Ordner für Domains; Shared-Features direkt im Root, aber explizit in `sharedFeatures` gelistet
+- `internal/` — top-level im Modul = modul-privat (encapsulation-Rule)
 - Libs: flach unter `src/` (kein `src/lib/`), **kein `index.ts`** (Barrel würde Modul-Semantik kippen), Wildcard-Alias `@blueprint/domains/<d>/*` in `tsconfig.base.json`
 
 ## Varianten-Vergleich
@@ -104,7 +109,7 @@ Nx `@nx/enforce-module-boundaries` bleibt als grobes Netz (Projekt-Zyklen, build
 | D1 | Type-Achse: types/utils/events/api/data/ui/feature (api=http, data=stores getrennt) |
 | D2 | ui: nur types/utils/events + lokale Stores; NICHT api, NICHT data |
 | D3 | Cross-Domain nur via Port (= api-Bucket); Types re-exportieren/promoten |
-| D4 | Kein core-Scope; stattdessen shared-features als Domain-Slices mit Port |
+| D4 | Kein core-Scope; Shared-Features (auth, layout) als Domain-Slices mit Port, direkt im App-Root, explizit gelistet |
 | D5 | Geschwister-Feats strikt privat; Austausch nur via feat-port |
 | D6 | events als eigener Bucket (type:events) |
 | D7 | Kein shared/data — stateful Singletons gehören in shared-features |
@@ -120,7 +125,7 @@ npx nx run-many -t lint                     # ESLint = Autorität
 npx nx build client
 ```
 
-Negativbeispiele: In den Quellen markieren Kommentare `// sheriff-violation-example: import …` verbotene Imports (ui→data, ui→api, utils→api, cross-domain internals, SF internals, Geschwister-Feat internals, shell→ui). Einkommentieren ⇒ genau diese Violations feuern.
+Negativbeispiele: In den Quellen markieren Kommentare `// sheriff-violation-example: import …` verbotene Imports (ui→data, ui→api, utils→api, cross-domain internals, SF internals, Geschwister-Feat internals, shell→ui, Import aus fremdem `internal/` → encapsulation-Rule). Einkommentieren ⇒ genau diese Violations feuern.
 
 ## Neues Projekt aufsetzen
 

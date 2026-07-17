@@ -88,6 +88,20 @@ const sameApp = ({
 
 const inAnyFeat = (path: string) => /\/feat-[^/]+(\/|$)/.test(path);
 
+/**
+ * Root-level shared features (deep modules with a port, e.g. auth, layout).
+ * Listed explicitly instead of a placeholder: they live directly under app/
+ * resp. libs/, where a placeholder would also swallow `domains` and `shared`.
+ * One line per new shared feature.
+ */
+const sharedFeatures = ['auth', 'layout'];
+
+const sharedFeatureSlices = (prefix: (sf: string) => string) =>
+  Object.assign(
+    {},
+    ...sharedFeatures.map((sf) => slice(prefix(sf), `domain:${sf}`)),
+  );
+
 export const config: SheriffConfig = {
   enableBarrelLess: true,
   // encapsulationPattern: 'internal' is the default — every module gets a
@@ -108,12 +122,12 @@ export const config: SheriffConfig = {
       'app/shared/utils': ['shared', 'type:utils'],
       'app/shared/api': ['shared', 'type:api'],
       'app/shared/ui': ['shared', 'type:ui'],
-      ...slice('app/shared-features/<sf>', 'domain:<sf>'),
+      ...sharedFeatureSlices((sf) => `app/${sf}`),
       ...slice('app/domains/<domain>', 'domain:<domain>'),
     },
     // Phase 2 — identical tags, so rules stay the same after extraction.
     'libs/shared/<bucket>/src': ['shared', 'type:<bucket>'],
-    ...slice('libs/shared-features/<sf>/src', 'domain:<sf>'),
+    ...sharedFeatureSlices((sf) => `libs/${sf}/src`),
     ...slice('libs/domains/<domain>/src', 'domain:<domain>'),
   },
 
