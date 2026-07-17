@@ -24,7 +24,10 @@ export default [
         // caught by the tag system, so the "domain core knows no framework"
         // guarantee is backed up here. This is the one rule the tag axes
         // cannot fully carry on their own.
-        files: ["src/app/domains/*/domain/**/*.ts"],
+        // Nx runs ESLint from the workspace root, so this glob must be
+        // root-relative. A project-relative one ("src/app/...") silently
+        // matches nothing and the rule never fires — found by probing it.
+        files: ["**/apps/hexagonal-demo/src/app/domains/*/domain/**/*.ts"],
         rules: {
             "no-restricted-imports": [
                 "error",
