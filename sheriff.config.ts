@@ -1,164 +1,145 @@
-import { noDependencies, sameTag, SheriffConfig } from '@softarc/sheriff-core';
+import { anyTag, sameTag, SheriffConfig } from '@softarc/sheriff-core';
 
 /**
- * Vertical-slice architecture for Confora SPAs (confora-portal + admin-console).
+ * Ports & Adapters (hexagonal) — one hexagon PER SLICE.
  *
- * Two independent tag axes are assigned to every module, and a dependency is
- * only legal when BOTH axes allow it (Sheriff treats multiple source tags with
- * AND semantics — every `fromTag` must independently permit the import, while a
- * single tag is satisfied if ANY of the target's tags matches it):
+ * Blueprint app: apps/hexagonal-demo (booking + customer).
  *
- *  - `type:<layer>`        governs LAYERING inside a slice (ui/data/api/utils/types/feature)
- *  - `feature:<feature>`   governs the FEATURE BOUNDARY (no cross-feature imports)
+ * This lives at the repo root because Sheriff resolves exactly ONE config:
+ * `findConfig()` looks only in `tsData.rootDir` — the `rootDir` of the nearest
+ * tsconfig, which is `.` here. There is no "closest config wins" and no
+ * per-app config. Verified against 0.19.6 before writing this.
  *
- * Layer matrix (X may import Y):
- *   types   -> (nothing)
- *   utils   -> types, utils
- *   api     -> types, utils, api
- *   data    -> types, utils, api, data        (state / signal stores live here)
- *   ui      -> types, utils, api, ui           (NOT data — dumb components only)
- *   feature -> every type:*                    (smart containers wire data into ui)
+ * ---------------------------------------------------------------------------
+ * TWO TAG AXES, combined with AND semantics (every source tag must allow the
+ * import; a single source tag is satisfied if ANY target tag matches it):
  *
- * Feature boundary:
- *   A `feature:<feature>` module may only import from the SAME feature domain
- *   (its own feature-shared buckets and its own `feat-<feat>` code) plus the
- *   app-level `shared` area. It can never import another feature — EXCEPT through
- *   that feature's PUBLIC API PORT (see below).
+ *   scope:  core:<slice>   the domain core — sealed
+ *           domain:<slice> the outer layers of a slice
+ *           shared         dumb, app-wide
+ *           app:<app>      composition root
+ *   type:   domain | app | port-in | port-out | adapter-driving |
+ *           adapter-driven | providers | ui | util | types
+ *   marker: entry (routes/providers) | port (public, cross-slice reachable)
  *
- *   `shared` is importable by everyone via the global `'*': 'shared'` rule, and
- *   `shared` itself carries only `type:*` tags, so the layer matrix keeps the
- *   shared area internally layered while allowing any feature to consume it.
+ * ---------------------------------------------------------------------------
+ * WHY THERE IS NO '*' CATCH-ALL RULE — load-bearing, not style:
  *
- * Public API port (controlled cross-feature reuse):
- *   The feature-shared `api/` bucket is the ONLY thing a feature exposes to other
- *   features. It is tagged with an extra `port` marker; the `feature:*` rule lets
- *   any feature import a `port` target. Everything else (ui/data/types/utils and
- *   all `feat-<feat>` code) stays private to the feature. `feat-<feat>` private
- *   buckets carry `feature:<feature>-internal` so they are NEVER a cross-feature
- *   port, even though they are `type:api`.
+ * `isDependencyAllowed` (0.19.6) iterates EVERY depRules key whose wildcard
+ * matches the source tag and OR's the results — there is no "most specific
+ * wins". A permissive `'*': 'shared'` therefore grants clearance via the
+ * *scope* tag and silently bypasses the type axis.
  *
- * Cross-cutting infra:
- *   Cross-cutting infrastructure (auth, convex, user-context, guards,
- *   interceptors) folds into `app/shared/*`: backend clients + query refs →
- *   `shared/api`; stateful services, guards and interceptors → `shared/data`.
- *   Both apps now follow this layout — there is no transitional `app/core`.
+ * Concretely: with a '*' rule, a module tagged ['domain:booking','type:domain']
+ * could import `shared` even though `type:domain` forbids it — the
+ * 'domain:booking' tag matched '*' and returned true first. `noDependencies`
+ * on the core becomes a decoration. (Found empirically, by simulating these
+ * rules against the real engine before any code existed.)
+ *
+ * Consequences, both deliberate:
+ *   1. No '*' key. The `shared` permission rides on the TYPE axis, where
+ *      `type:domain` can withhold it.
+ *   2. The core carries its own scope tag `core:<slice>` so the permissive
+ *      `domain:*` rule can never widen it.
+ *
+ * ---------------------------------------------------------------------------
+ * THE HEXAGON (what each rule buys):
+ *
+ *   domain/      the core. Imports NOTHING but its own core. No Angular, no
+ *                rxjs, no shared, no ports. Dependency inversion's heart.
+ *   application/ use-cases + signal store. Sees domain + own ports. Never adapters.
+ *   ports/in     public face of the slice (`port`) — the ONLY cross-slice surface.
+ *   ports/out    what the core needs from the world. Private to the slice.
+ *   adapters/driving  UI. Sees use-cases + ports/in. NEVER ports/out or HTTP.
+ *   adapters/driven   HTTP etc. Implements ports/out. Never calls use-cases.
+ *   ports/*.providers.ts  slice composition root — the only place allowed to
+ *                wire an adapter onto a port.
  */
+
+/** `domain:booking` -> `booking`, `core:booking` -> `booking` */
+const slice = (tag: string) => tag.split(':')[1];
+const isSliceScope = (tag: string) =>
+  tag.startsWith('domain:') || tag.startsWith('core:');
+
+const hexSlice = (path: string, name: string) => ({
+  // slice root: <slice>.routes.ts — the only thing app.routes.ts may see
+  [path]: [`domain:${name}`, 'entry'],
+  [`${path}/domain`]: [`core:${name}`, 'type:domain'],
+  [`${path}/application`]: [`domain:${name}`, 'type:app'],
+  [`${path}/ports/in`]: [`domain:${name}`, 'type:port-in', 'port'],
+  [`${path}/ports/out`]: [`domain:${name}`, 'type:port-out'],
+  // ports/ root holds <slice>.providers.ts — MUST come after ports/in and
+  // ports/out: module matching is first-match-wins.
+  [`${path}/ports`]: [`domain:${name}`, 'type:providers', 'entry'],
+  [`${path}/adapters/driving`]: [`domain:${name}`, 'type:adapter-driving'],
+  [`${path}/adapters/driven`]: [`domain:${name}`, 'type:adapter-driven'],
+});
+
 export const config: SheriffConfig = {
   enableBarrelLess: true,
-  // Surface accidental name collisions across barrel-less slices in lint/CI.
-  showWarningOnBarrelCollision: true,
+  entryPoints: {
+    'hexagonal-demo': 'apps/hexagonal-demo/src/main.ts',
+  },
 
   modules: {
-    'apps/<app>/src': {
-      // Build-time environment config — app-wide, consumable everywhere.
-      environments: ['shared'],
-
-      app: ['app:<app>'],
-      // App shell: bootstrap config, routes, layout chrome, and the routing
-      // hosts that compose features via lazy imports. Sits above the feature
-      // boundary — may orchestrate features and consume `shared`.
-      'app/layout': ['app:<app>'],
-      'app/routing': ['app:<app>'],
-
-      // App-wide shared area — consumable by any feature, internally layered.
+    'apps/hexagonal-demo/src': {
+      app: ['app:hexagonal-demo'],
       'app/shared/types': ['shared', 'type:types'],
-      'app/shared/utils': ['shared', 'type:utils'],
-      'app/shared/api': ['shared', 'type:api'],
-      'app/shared/data': ['shared', 'type:data'],
+      'app/shared/util': ['shared', 'type:util'],
       'app/shared/ui': ['shared', 'type:ui'],
-
-      // Auth infrastructure — a cross-cutting area (NOT a feature slice) holding
-      // the singleton AuthService, route guard, and HTTP interceptor wired
-      // app-wide. Tagged `shared` so any feature (e.g. the auth screens) may
-      // consume it, and internally layered like `shared` so its pure helpers
-      // stay `type:utils`. See ADR 0006.
-      'app/auth-infrastructure': ['shared', 'type:data'],
-      'app/auth-infrastructure/utils': ['shared', 'type:utils'],
-
-      // Feature slices. Sibling matchers (most specific wins); the feature root
-      // itself is a leaf module so loose root files (routes, guards, the smart
-      // container) are tagged `feature:<feature>, type:feature`.
-      'app/features/<feature>': ['feature:<feature>', 'type:feature'],
-
-      // Feature-shared buckets (shared within the feature). The `api` bucket is
-      // additionally tagged `port` — the feature's PUBLIC face other features
-      // may import.
-      'app/features/<feature>/types': ['feature:<feature>', 'type:types'],
-      'app/features/<feature>/utils': ['feature:<feature>', 'type:utils'],
-      'app/features/<feature>/api': ['feature:<feature>', 'type:api', 'port'],
-      'app/features/<feature>/data': ['feature:<feature>', 'type:data'],
-      'app/features/<feature>/ui': ['feature:<feature>', 'type:ui'],
-
-      // Concrete feat implementations, each with its own private buckets. These
-      // carry `feature:<feature>-internal` so they share the feature domain with
-      // their siblings but are NEVER exposed as a cross-feature port.
-      'app/features/<feature>/feat-<feat>': [
-        'feature:<feature>-internal',
-        'type:feature',
-      ],
-      'app/features/<feature>/feat-<feat>/types': [
-        'feature:<feature>-internal',
-        'type:types',
-      ],
-      'app/features/<feature>/feat-<feat>/utils': [
-        'feature:<feature>-internal',
-        'type:utils',
-      ],
-      'app/features/<feature>/feat-<feat>/api': [
-        'feature:<feature>-internal',
-        'type:api',
-      ],
-      'app/features/<feature>/feat-<feat>/data': [
-        'feature:<feature>-internal',
-        'type:data',
-      ],
-      'app/features/<feature>/feat-<feat>/ui': [
-        'feature:<feature>-internal',
-        'type:ui',
-      ],
+      ...hexSlice('app/domains/booking', 'booking'),
+      ...hexSlice('app/domains/customer', 'customer'),
     },
 
-    // Workspace libraries consumed by the apps. Out of scope for the
-    // vertical-slice rules — tagged `shared` so apps may depend on their
-    // public entrypoints. (Their own internal architecture is not governed
-    // here; verification is scoped to each app's main.ts.)
-    'packages/<pkg>/src': ['shared'],
-    'packages/<pkg>/src/<dir>': ['shared'],
-    'packages-internal/<pkg>/src': ['shared'],
-    'packages-internal/<pkg>/src/<dir>': ['shared'],
+    // The untouched Nx starter app. Not part of the blueprint — tagged only so
+    // its modules have a rule and do not trip NoDependencyRuleForTagError.
+    'apps/client/src': ['app:client'],
   },
 
   depRules: {
-    // Bootstrap (main.ts / app config) may pull in feature entry points.
-    root: ['type:feature', 'app:*', 'shared'],
+    // main.ts bootstraps the shell only
+    root: ({ to }) => to.startsWith('app:') || to === 'entry',
 
-    // Everyone may consume the app-level shared area.
-    '*': 'shared',
+    // marker tags are transparent as SOURCE tags; the real constraints ride on
+    // the type/scope axes via AND semantics
+    entry: anyTag,
+    port: anyTag,
 
-    // App shell wires routes/providers to features and shared infrastructure.
-    'app:*': [sameTag, 'type:feature', 'shared'],
-
-    // Layer matrix (the "type" axis) — governs what may import what WITHIN a slice.
-    'type:types': noDependencies,
-    'type:utils': ['type:types', 'type:utils'],
-    'type:api': ['type:types', 'type:utils', 'type:api'],
-    'type:data': ['type:types', 'type:utils', 'type:api', 'type:data'],
-    'type:ui': ['type:types', 'type:utils', 'type:api', 'type:ui'],
-    'type:feature': ({ to }) => to.startsWith('type:'),
-
-    // Feature boundary (the "feature" axis). A feature may import:
-    //   - its own domain: `feature:<f>` <-> `feature:<f>` and `feature:<f>-internal`
-    //     (feature-shared <-> feat-private, both directions, same domain only);
-    //   - any other feature's PUBLIC API PORT (the `port` tag), and nothing else
-    //     of that feature. The `shared` area is reached through the '*' rule.
-    'feature:*': [
+    'app:*': [
       sameTag,
-      ({ from, to }) =>
-        to.startsWith('feature:') &&
-        from.split(':')[1].replace(/-internal$/, '') ===
-          to.split(':')[1].replace(/-internal$/, ''),
-      // Public API port: any feature may import another feature's `api` bucket.
-      ({ to }) => to === 'port',
+      ({ to }) => to === 'entry' || to === 'port' || to === 'shared',
     ],
+
+    // ---- TYPE AXIS ------------------------------------------------------
+    // Carries the `shared` permission so that `type:domain` can withhold it.
+    'type:domain': ({ to }) => to === 'type:domain',
+    'type:app': ({ to }) =>
+      ['type:domain', 'type:port-in', 'type:port-out', 'type:util', 'type:types'].includes(to),
+    'type:port-in': ({ to }) => ['type:domain', 'type:types'].includes(to),
+    'type:port-out': ({ to }) => ['type:domain', 'type:types'].includes(to),
+    // UI may use its OWN slice's store (signals in templates). It may never
+    // reach ports/out or a driven adapter — no HTTP from a component.
+    'type:adapter-driving': ({ to }) =>
+      ['type:domain', 'type:app', 'type:port-in', 'type:ui', 'type:util', 'type:types'].includes(to),
+    'type:adapter-driven': ({ to }) =>
+      ['type:domain', 'type:port-out', 'type:util', 'type:types'].includes(to),
+    // the slice's wiring file: allowed to see both sides of its own hexagon
+    'type:providers': ({ to }) => to.startsWith('type:'),
+    'type:ui': ({ to }) => ['type:ui', 'type:util', 'type:types'].includes(to),
+    'type:util': ({ to }) => ['type:util', 'type:types'].includes(to),
+    'type:types': ({ to }) => to === 'type:types',
+
+    // ---- SCOPE AXIS -----------------------------------------------------
+    shared: ({ to }) => to === 'shared',
+
+    // outer layers: own slice (incl. its core), any public port, or shared
+    'domain:*': [
+      ({ from, to }) => isSliceScope(to) && slice(from) === slice(to),
+      ({ to }) => to === 'port' || to === 'shared',
+    ],
+
+    // the core: ONLY its own slice's core. Not shared, not ports, nothing.
+    'core:*': ({ from, to }) =>
+      to.startsWith('core:') && slice(from) === slice(to),
   },
 };

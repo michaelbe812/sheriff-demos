@@ -1,0 +1,68 @@
+{
+  "name": "hexagonal-demo",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "hex",
+  "sourceRoot": "apps/hexagonal-demo/src",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/hexagonal-demo",
+        "browser": "apps/hexagonal-demo/src/main.ts",
+        "tsConfig": "apps/hexagonal-demo/tsconfig.app.json",
+        "styles": ["apps/hexagonal-demo/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "configurations": {
+        "production": {
+          "buildTarget": "hexagonal-demo:build:production"
+        },
+        "development": {
+          "buildTarget": "hexagonal-demo:build:development"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "hexagonal-demo:build",
+        "staticFilePath": "dist/apps/hexagonal-demo/browser",
+        "spa": true
+      }
+    }
+  }
+}

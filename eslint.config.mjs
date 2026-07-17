@@ -1,4 +1,5 @@
 import nx from "@nx/eslint-plugin";
+import sheriff from "@softarc/eslint-plugin-sheriff";
 
 export default [
     ...nx.configs["flat/base"],
@@ -7,9 +8,14 @@ export default [
     {
         ignores: [
             "**/dist",
-            "**/out-tsc"
+            "**/out-tsc",
+            "sheriff.config.ts"
         ]
     },
+    // Sheriff's flat config is a single object, not an array — `configs.all`
+    // enables the `dependency-rule` and `encapsulation` rules. Without this the
+    // sheriff.config.ts is inert: it was NOT wired up in this repo before.
+    sheriff.configs.all,
     {
         files: [
             "**/*.ts",

@@ -1,0 +1,27 @@
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  padding: 1.5rem;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+header nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+button {
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+[role='alert'] {
+  color: #b00020;
+  font-weight: 600;
+}
