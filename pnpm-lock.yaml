@@ -70,6 +70,12 @@ devDependencies:
   '@schematics/angular':
     specifier: ~22.0.4
     version: 22.0.7
+  '@softarc/eslint-plugin-sheriff':
+    specifier: ^0.19.6
+    version: 0.19.6(@softarc/sheriff-core@0.19.6)(@typescript-eslint/utils@8.64.0)(eslint@9.8.0)
+  '@softarc/sheriff-core':
+    specifier: ^0.19.6
+    version: 0.19.6(typescript@6.0.3)
   '@swc/helpers':
     specifier: ~0.5.18
     version: 0.5.18
@@ -4600,6 +4606,27 @@ packages:
 
   /@sinclair/typebox@0.34.52:
     resolution: {integrity: sha512-XiMQh7qqVlxZzcVD+kkGMNGMzcTrDMLWI7S4x7z1MkCkbDPrekpZXEUK0eZqZFMuHQg2a2DZOcDIh9o5v3Gonw==}
+    dev: true
+
+  /@softarc/eslint-plugin-sheriff@0.19.6(@softarc/sheriff-core@0.19.6)(@typescript-eslint/utils@8.64.0)(eslint@9.8.0):
+    resolution: {integrity: sha512-PPP4TKSFLOvFhfckS0M7L2PMqK6qw7Q8LiYGd3H64V/jHc7cVLfogMS4mjc/I2+7wbAr374qJg0A+uJ5VkXbCQ==}
+    peerDependencies:
+      '@softarc/sheriff-core': 0.19.6
+      '@typescript-eslint/utils': ^5.48.2 || ^6.0.0 || ^7.0.0 || ^8.0.0-alpha.20
+      eslint: ^8.0.0 || ^9.0.0
+    dependencies:
+      '@softarc/sheriff-core': 0.19.6(typescript@6.0.3)
+      '@typescript-eslint/utils': 8.64.0(eslint@9.8.0)(typescript@6.0.3)
+      eslint: 9.8.0
+    dev: true
+
+  /@softarc/sheriff-core@0.19.6(typescript@6.0.3):
+    resolution: {integrity: sha512-KACxHG9sS7kNWgnnBODzdr14kMLMrJVlQKc+tViUP03p2fRwNhESOA49bz51Yn7dro1mbtMmmFjICLmZSJDZZA==}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=4.8'
+    dependencies:
+      typescript: 6.0.3
     dev: true
 
   /@standard-schema/spec@1.1.0:
