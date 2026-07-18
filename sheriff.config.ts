@@ -1,46 +1,49 @@
-import { anyTag, sameTag, SheriffConfig } from '@softarc/sheriff-core';
+import { anyTag, sameTag, SheriffConfig } from '@lambda-solutions/sheriff-core';
 
 /**
  * Ports & Adapters (hexagonal) — one hexagon PER SLICE.
  *
  * Blueprint app: apps/hexagonal-demo (booking + customer).
  *
- * This lives at the repo root because Sheriff resolves exactly ONE config:
- * `findConfig()` looks only in `tsData.rootDir` — the `rootDir` of the nearest
- * tsconfig, which is `.` here. There is no "closest config wins" and no
- * per-app config. Verified against 0.19.6 before writing this.
+ * Requires the @lambda-solutions Sheriff fork (v1+) for `denyRules`. Against
+ * upstream @softarc 0.19.x this config would need the `core:<slice>` scope
+ * workaround instead — see the git history of this file for that version.
  *
  * ---------------------------------------------------------------------------
  * TWO TAG AXES, combined with AND semantics (every source tag must allow the
  * import; a single source tag is satisfied if ANY target tag matches it):
  *
- *   scope:  core:<slice>   the domain core — sealed
- *           domain:<slice> the outer layers of a slice
- *           shared         dumb, app-wide
- *           app:<app>      composition root
+ *   scope:  domain:<slice>  a slice (core AND outer layers share one scope)
+ *           shared          dumb, app-wide
+ *           app:<app>       composition root
  *   type:   domain | app | port-in | port-out | adapter-driving |
  *           adapter-driven | providers | ui | util | types
  *   marker: entry (routes/providers) | port (public, cross-slice reachable)
  *
  * ---------------------------------------------------------------------------
- * WHY THERE IS NO '*' CATCH-ALL RULE — load-bearing, not style:
+ * WHY THE CORE IS SEALED WITH A denyRule (not a scope trick):
  *
- * `isDependencyAllowed` (0.19.6) iterates EVERY depRules key whose wildcard
- * matches the source tag and OR's the results — there is no "most specific
- * wins". A permissive `'*': 'shared'` therefore grants clearance via the
- * *scope* tag and silently bypasses the type axis.
+ * The domain core must import NOTHING but its own core. Two engine facts make
+ * that hard to express with allow-rules alone:
  *
- * Concretely: with a '*' rule, a module tagged ['domain:booking','type:domain']
- * could import `shared` even though `type:domain` forbids it — the
- * 'domain:booking' tag matched '*' and returned true first. `noDependencies`
- * on the core becomes a decoration. (Found empirically, by simulating these
- * rules against the real engine before any code existed.)
+ *   1. `depRules` keys are OR-combined — every key whose wildcard matches the
+ *      source tag is evaluated, and any one returning true allows the import.
+ *      A permissive key therefore only ever WIDENS; it can never restrict.
+ *   2. The core carries two tags (`domain:<slice>` + `type:domain`). The
+ *      `type:domain` allow-rule can be made strict, but the `domain:*` rule —
+ *      which the outer layers need — would still grant the core `shared` and
+ *      any `port`. `type:domain` cannot veto what `domain:*` grants.
  *
- * Consequences, both deliberate:
- *   1. No '*' key. The `shared` permission rides on the TYPE axis, where
- *      `type:domain` can withhold it.
- *   2. The core carries its own scope tag `core:<slice>` so the permissive
- *      `domain:*` rule can never widen it.
+ * The previous version dodged this by giving the core its OWN scope tag
+ * `core:<slice>`, so `domain:*` never matched it. That cost a whole extra
+ * axis: an `isSliceScope()` helper, a `core:*` rule, and every "reach the
+ * core" rule had to name `core:` explicitly.
+ *
+ * `denyRules` removes all of that. The core is now a normal `domain:<slice>`
+ * module; a single deny seals it. A denyRule is checked AFTER depRules and
+ * wins over any allow — deny beats allow — and it is evaluated per source tag,
+ * so the `type:domain` deny fires no matter what `domain:<slice>` permits.
+ * That is exactly the veto the allow-only model lacked.
  *
  * ---------------------------------------------------------------------------
  * THE HEXAGON (what each rule buys):
@@ -56,15 +59,14 @@ import { anyTag, sameTag, SheriffConfig } from '@softarc/sheriff-core';
  *                wire an adapter onto a port.
  */
 
-/** `domain:booking` -> `booking`, `core:booking` -> `booking` */
+/** `domain:booking` -> `booking` */
 const slice = (tag: string) => tag.split(':')[1];
-const isSliceScope = (tag: string) =>
-  tag.startsWith('domain:') || tag.startsWith('core:');
 
 const hexSlice = (path: string, name: string) => ({
   // slice root: <slice>.routes.ts — the only thing app.routes.ts may see
   [path]: [`domain:${name}`, 'entry'],
-  [`${path}/domain`]: [`core:${name}`, 'type:domain'],
+  // the core is a normal domain:<slice> module now — the denyRule seals it
+  [`${path}/domain`]: [`domain:${name}`, 'type:domain'],
   [`${path}/application`]: [`domain:${name}`, 'type:app'],
   [`${path}/ports/in`]: [`domain:${name}`, 'type:port-in', 'port'],
   [`${path}/ports/out`]: [`domain:${name}`, 'type:port-out'],
@@ -132,14 +134,20 @@ export const config: SheriffConfig = {
     // ---- SCOPE AXIS -----------------------------------------------------
     shared: ({ to }) => to === 'shared',
 
-    // outer layers: own slice (incl. its core), any public port, or shared
+    // a slice reaches: its own scope (core + outer layers), any public port,
+    // or shared. The core lives in this scope too now — the denyRule below is
+    // what keeps it from using the `port`/`shared` clearance this rule grants.
     'domain:*': [
-      ({ from, to }) => isSliceScope(to) && slice(from) === slice(to),
+      ({ from, to }) => to.startsWith('domain:') && slice(from) === slice(to),
       ({ to }) => to === 'port' || to === 'shared',
     ],
+  },
 
-    // the core: ONLY its own slice's core. Not shared, not ports, nothing.
-    'core:*': ({ from, to }) =>
-      to.startsWith('core:') && slice(from) === slice(to),
+  // ---- DENY: the core imports nothing but its own domain layer ----------
+  // Checked after depRules; a match always wins. Evaluated per source tag, so
+  // this fires on the `type:domain` tag regardless of what the `domain:<slice>`
+  // tag was granted above. This single rule replaces the entire `core:*` axis.
+  denyRules: {
+    'type:domain': ({ to }) => to !== 'type:domain',
   },
 };
