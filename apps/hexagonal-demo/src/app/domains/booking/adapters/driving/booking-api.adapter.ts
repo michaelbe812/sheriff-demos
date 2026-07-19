@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Booking } from '../../domain/booking';
 import { BookingApiPort } from '../../ports/in/booking-api.port';
-import { BookingStore } from '../../application/booking.store';
+import { BookingStore } from '../../domain/booking.store';
 
 /**
  * Serves booking's public port to any future slice.

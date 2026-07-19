@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { BookingStore } from '../../application/booking.store';
+import { BookingStore } from '../../domain/booking.store';
 import { toGuestRef, totalPrice } from '../../domain/booking';
 import { Booking } from '../../domain/booking';
 

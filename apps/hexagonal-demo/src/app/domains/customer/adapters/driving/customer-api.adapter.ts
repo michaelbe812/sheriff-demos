@@ -5,7 +5,7 @@ import {
   CustomerApiPort,
   CustomerSummary,
 } from '../../ports/in/customer-api.port';
-import { LoadCustomerUseCase } from '../../application/load-customer.use-case';
+import { LoadCustomerUseCase } from '../../domain/load-customer.use-case';
 
 /**
  * Driving adapter implementing this slice's PUBLIC port.

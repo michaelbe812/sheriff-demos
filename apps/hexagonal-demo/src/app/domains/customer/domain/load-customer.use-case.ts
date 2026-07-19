@@ -1,10 +1,10 @@
 import { inject, Injectable } from '@angular/core';
-import { Customer, CustomerId } from '../domain/customer';
+import { Customer, CustomerId } from './customer';
 import {
   discountPercentFor,
   LoyaltyTier,
   loyaltyTierFor,
-} from '../domain/loyalty-tier';
+} from './loyalty-tier';
 import { CUSTOMER_REPOSITORY } from '../ports/out/customer-repository.port';
 
 /**

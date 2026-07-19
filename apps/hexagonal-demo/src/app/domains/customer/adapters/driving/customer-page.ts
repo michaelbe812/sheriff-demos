@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { CustomerStore } from '../../application/customer.store';
+import { CustomerStore } from '../../domain/customer.store';
 import { loyaltyTierFor } from '../../domain/loyalty-tier';
 
 /**

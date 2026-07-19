@@ -3,8 +3,8 @@ import { CUSTOMER_API } from './in/customer-api.port';
 import { CUSTOMER_REPOSITORY } from './out/customer-repository.port';
 import { CustomerApiAdapter } from '../adapters/driving/customer-api.adapter';
 import { InMemoryCustomerRepository } from '../adapters/driven/in-memory-customer.repository';
-import { LoadCustomerUseCase } from '../application/load-customer.use-case';
-import { CustomerStore } from '../application/customer.store';
+import { LoadCustomerUseCase } from '../domain/load-customer.use-case';
+import { CustomerStore } from '../domain/customer.store';
 
 /**
  * Slice composition root — the only module allowed to see both sides of this

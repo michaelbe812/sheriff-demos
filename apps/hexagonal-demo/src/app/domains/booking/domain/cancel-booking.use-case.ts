@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { Booking, BookingId } from '../domain/booking';
-import { canCancel, cancel } from '../domain/booking-policy';
+import { Booking, BookingId } from './booking';
+import { canCancel, cancel } from './booking-policy';
 import { BOOKING_REPOSITORY } from '../ports/out/booking-repository.port';
 
 /**

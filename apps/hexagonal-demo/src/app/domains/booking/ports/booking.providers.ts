@@ -5,9 +5,9 @@ import { BOOKING_REPOSITORY } from './out/booking-repository.port';
 import { InMemoryBookingRepository } from '../adapters/driven/in-memory-booking.repository';
 import { SystemClock } from '../adapters/driven/system-clock';
 import { BookingApiAdapter } from '../adapters/driving/booking-api.adapter';
-import { BookRoomUseCase } from '../application/book-room.use-case';
-import { CancelBookingUseCase } from '../application/cancel-booking.use-case';
-import { BookingStore } from '../application/booking.store';
+import { BookRoomUseCase } from '../domain/book-room.use-case';
+import { CancelBookingUseCase } from '../domain/cancel-booking.use-case';
+import { BookingStore } from '../domain/booking.store';
 
 /**
  * Slice composition root. The `useClass` lines below are the entire

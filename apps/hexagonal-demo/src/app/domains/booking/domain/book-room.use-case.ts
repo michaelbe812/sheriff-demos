@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { Booking, GuestRef, toBookingId } from '../domain/booking';
-import { validateStay } from '../domain/booking-policy';
+import { Booking, GuestRef, toBookingId } from './booking';
+import { validateStay } from './booking-policy';
 import { BOOKING_REPOSITORY } from '../ports/out/booking-repository.port';
 import { BOOKING_CLOCK } from '../ports/out/booking-clock.port';
 import { CUSTOMER_API } from '../../customer/ports/in/customer-api.port';
@@ -19,7 +19,7 @@ import { CUSTOMER_API } from '../../customer/ports/in/customer-api.port';
  *     - domain:booking -> not the same slice, BUT target carries `port` => ok
  *     - type:app       -> target carries type:port-in                  => ok
  *
- *   Point the import at `customer/application/customer.store` instead and the
+ *   Point the import at `customer/domain/customer.store` instead and the
  *   scope axis fails: no `port` tag, different slice. That is the mechanism —
  *   booking may call customer, but only through its front door.
  *

@@ -18,38 +18,13 @@ export default [
             ]
         }
     },
-    {
-        // Sheriff's depRules govern project-INTERNAL module imports. An import
-        // of `@angular/core` resolves into node_modules and is not reliably
-        // caught by the tag system, so the "domain core knows no framework"
-        // guarantee is backed up here. This is the one rule the tag axes
-        // cannot fully carry on their own.
-        // Nx runs ESLint from the workspace root, so this glob must be
-        // root-relative. A project-relative one ("src/app/...") silently
-        // matches nothing and the rule never fires — found by probing it.
-        files: ["**/apps/hexagonal-demo/src/app/domains/*/domain/**/*.ts"],
-        rules: {
-            "no-restricted-imports": [
-                "error",
-                {
-                    patterns: [
-                        {
-                            group: ["@angular/*"],
-                            message: "Domain core must not depend on Angular."
-                        },
-                        {
-                            group: ["rxjs", "rxjs/*"],
-                            message: "Domain core must not depend on rxjs."
-                        },
-                        {
-                            group: ["**/application/**", "**/ports/**", "**/adapters/**", "**/shared/**"],
-                            message: "Domain core must not depend on outer layers."
-                        }
-                    ]
-                }
-            ]
-        }
-    },
+    // NOTE: the strict hexagon backed up "core knows no framework" with a
+    // no-restricted-imports rule against @angular/* and rxjs on domain/**.
+    // This variant deliberately allows the core to use Angular, so that rule
+    // is gone. Every remaining boundary — including "core must not reach an
+    // adapter" — is enforced by Sheriff's depRules (type:domain has no
+    // clearance towards type:adapter-*), which the tag system covers fully
+    // here because there is no node_modules edge case left to guard.
     {
         files: ["**/*.html"],
         rules: {}
