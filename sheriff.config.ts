@@ -54,6 +54,33 @@ import { anyTag, sameTag, SheriffConfig } from '@softarc/sheriff-core';
  * rides on the TYPE axis, where each type rule decides for itself.
  *
  * ---------------------------------------------------------------------------
+ * TODO(sheriff-fork): drop this workaround once `denyRules` is upstream.
+ *
+ * The rule above exists ONLY because depRules can widen, never restrict. Our
+ * fork (@lambda-solutions/sheriff-core, `is-dependency-denied.ts`) adds
+ * `denyRules`, where a deny always beats any depRules match. Verified against
+ * the real fork engine:
+ *
+ *   depRules: { '*': () => true, ... }                  // catch-all back
+ *   denyRules: {
+ *     'type:domain': ({ to }) => to.startsWith('type:adapter-'),
+ *   }
+ *
+ *   - with '*' and NO denyRules: core -> driven adapter is ALLOWED (the bug
+ *     this whole workaround exists to prevent)
+ *   - with '*' and denyRules:    core -> driven adapter is BLOCKED
+ *   - core -> its own port stays allowed either way
+ *
+ * That lets `'*'` come back and the `shared` clearance stop riding on the type
+ * axis, so each type rule states what it means instead of what it must deny.
+ * In the STRICT variant it additionally removes the artificial `core:<slice>`
+ * scope axis, which only ever existed so `domain:*` could not soften the core.
+ *
+ * Not applied here: this repo intentionally stays on upstream
+ * @softarc/sheriff-core 0.19.6 and must run without the fork. Revisit when the
+ * fork is merged upstream or published.
+ *
+ * ---------------------------------------------------------------------------
  * THE HEXAGON (what each rule buys):
  *
  *   domain/      the core: models, rules, use-cases AND the signal store.
