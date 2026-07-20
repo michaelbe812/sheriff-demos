@@ -17,6 +17,8 @@ Ursprünglich war `api/` beides: öffentlicher Port **und** HTTP-Adapter — ein
 
 Jetzt gilt: `type:api` hat **keine** Clearance zu `type:infra`. Der Contract kann seine eigene Impl nicht benennen — die Inversion ist damit strukturell erzwungen, nicht Disziplinsache. Auch `type:data` darf `infra` nicht sehen: Stores binden an das Token, verdrahtet wird ausschließlich am Slice-Root (`<slice>.providers.ts`, `type:feature`). Das ist dasselbe Muster, das `auth` schon immer nutzte — jetzt für alle Slices.
 
+„Ausschließlich am Slice-Root" ist dabei wörtlich zu nehmen und war anfangs *nicht* durchgesetzt: `type:feature` hängt auch an jedem `feat-<x>/`-Ordner, sodass ein Feat `infra/` direkt greifen konnte — am eigenen Port vorbei. Die Regel unterscheidet beide inzwischen am Dateipfad (`inAnyFeat`), weil Upstream-Sheriff die Tags der importierenden Datei nicht in den Regel-Kontext gibt. Zwei e2e-Tests decken beide Seiten ab: Feat → `infra` blockiert, Slice-Root → `infra` weiterhin erlaubt.
+
 ## Struktur
 
 ```

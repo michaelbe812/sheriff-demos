@@ -139,6 +139,30 @@ describe('inverted domain ports: infra/ is unreachable, api/ is the seam', () =>
     expect(output).toContain('type:api');
   });
 
+  it('blocks a feat from reaching its own slice\'s infra', () => {
+    // type:feature -> type:infra. A feat root carries `type:feature`, same as
+    // the slice root, so a naive `to.startsWith('type:')` let it name the HTTP
+    // class directly and walk past the port. The rule distinguishes them by
+    // the `entry` tag, which only the slice root has.
+    const file = writeTmp(
+      'libs/domains/booking/src/feat-manage-booking/tmp-e2e-infra-viol.ts',
+      `import { HttpBookingApi } from '../infra/http-booking-api';\nexport const x = HttpBookingApi;\n`,
+    );
+    const output = eslintOn(file);
+    expect(output).toContain('@softarc/sheriff/dependency-rule');
+    expect(output).toContain('type:feature');
+  });
+
+  it('still allows the slice root to wire the token onto the impl', () => {
+    // The counterpart to the test above: if this broke, the block would have
+    // cost us the one place that legitimately names both sides.
+    const file = writeTmp(
+      'libs/domains/booking/src/tmp-e2e-infra-ok.ts',
+      `import { HttpBookingApi } from './infra/http-booking-api';\nexport const x = HttpBookingApi;\n`,
+    );
+    expect(eslintOn(file)).not.toContain('@softarc/sheriff/dependency-rule');
+  });
+
   it('allows a foreign domain to bind to the port token', () => {
     const file = writeTmp(
       'apps/client/src/app/domains/checkin/data/tmp-e2e-infra-ok.ts',

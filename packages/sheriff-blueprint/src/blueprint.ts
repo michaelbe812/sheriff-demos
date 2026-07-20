@@ -33,7 +33,9 @@ type DepRules = SheriffConfig['depRules'];
  *   ui      -> types, utils, ui, events  (dumb components; component-local
  *              stores live INSIDE the ui bucket — intra-module imports are
  *              never checked)
- *   feature -> every type:*              (smart containers, routes, shells)
+ *   feature -> every type: EXCEPT infra  (smart containers, routes, shells;
+ *              only the slice root — not a feat-<x>/ — may name infra, to
+ *              wire the token onto its impl)
  *
  * Naming conventions are load-bearing:
  *   - `feat-<name>/` folders drive the path-based feat isolation
@@ -155,28 +157,25 @@ export const blueprintDepRules = (): DepRules => ({
   // has no clearance towards `type:infra`; only the slice root wires them.
   'type:data': ['type:types', 'type:utils', 'type:api', 'type:data', 'type:events'],
   'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT data
-  // NOTE: this is deliberately permissive so the slice root can wire a token
-  // onto its impl — but `type:feature` is also carried by every `feat-<x>/`
-  // folder, so a feat may reach `type:infra` directly, past its own port.
-  // Verified against the fork engine: type:feature -> type:infra is ALLOWED.
+  // Smart containers: routes, shells, feat roots. Broad by design — but NOT
+  // towards `type:infra`, which is the impl behind the port.
   //
-  // Unlike the allow-list rules above, this one cannot be tightened by
-  // narrowing it: the slice root legitimately needs the clearance that the
-  // feats must not have, and both carry the same tag.
+  // `type:feature` is carried by BOTH the slice root and every `feat-<x>/`
+  // folder, and only the slice root may wire a token onto its impl:
   //
-  // TODO(sheriff-fork): close with `denyRules` once upstream —
-  //   denyRules: { 'type:feature': ({ to }) => to === 'type:infra' }
-  // blocks it (verified), but as written it also blocks the legitimate wiring
-  // in the slice root. Doing this properly needs a separate tag for the root
-  // (e.g. `type:composition`) so the veto can target feats only. That is a
-  // design decision about the slice shape, not a mechanical rewrite, so it is
-  // left open rather than half-applied.
+  //   slice root -> infra   ALLOWED — this is the wiring
+  //   feat-x     -> infra   BLOCKED — must go through api/
   //
-  // To be clear about scope: the rest of the api/infra split needs NO fork.
-  // `type:api -/-> type:infra` and `type:data -/-> type:infra` are already
-  // enforced by the allow-lists above (verified) — this blueprint has no '*'
-  // catch-all to work around. This one rule is the only real gap.
-  'type:feature': ({ to }) => to.startsWith('type:'),
+  // The two are told apart by the FILE PATH, not by tags: a feat lives under
+  // `feat-<x>/`, the slice root does not. Tags would be the nicer axis (the
+  // root carries `entry`, a feat does not), but upstream 0.19.6 does not put
+  // `fromTags` into the rule context — only our fork does. Verified in
+  // node_modules: the context is {fromModulePath, toModulePath, fromFilePath,
+  // toFilePath}. Using it would typecheck against the fork and silently pass
+  // everything here, so the path check is the honest option on upstream.
+  'type:feature': ({ to, fromFilePath }) =>
+    to.startsWith('type:') &&
+    (to !== 'type:infra' || !inAnyFeat(fromFilePath)),
 
   // scope axis — own domain freely, foreign domains/shared-features only
   // via port, plus the shared area (type axis still applies on top)
