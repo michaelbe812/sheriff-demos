@@ -74,6 +74,142 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
 - **Port mit State (Muster):** Port = Contract (InjectionToken + Interface), Impl in `data/`, Verdrahtung am Slice-Root (`provideAuth()` in `auth.providers.ts`). Konsument injiziert Token aus dem Port, sieht den Store nie.
 - **AND-Semantik:** jedes from-Tag muss den Import unabhängig erlauben; ein Tag ist erfüllt, wenn EIN Ziel-Tag passt. Marker (`entry`, `port`, `feat-port`) sind deshalb als from-Tag transparent (`anyTag`) — Constraints kommen von den anderen Achsen.
 
+## Regelwerk als Diagramm
+
+### 1. Layer-Matrix (type-Achse) — gilt in JEDEM Slice, app-intern wie Lib
+
+```mermaid
+graph RL
+  feature["type:feature<br/>routes, shells, smart container"]
+  ui["type:ui<br/>dumme Components"]
+  data["type:data<br/>Stores, Business-Services"]
+  api["type:api<br/>HTTP · = port / feat-port"]
+  events["type:events<br/>Event-Definitionen"]
+  utils["type:utils"]
+  types["type:types"]
+
+  feature --> ui
+  feature --> data
+  feature --> api
+  feature --> events
+  feature --> utils
+  feature --> types
+
+  ui --> events
+  ui --> utils
+  ui --> types
+
+  data --> api
+  data --> events
+  data --> utils
+  data --> types
+
+  api --> utils
+  api --> types
+
+  events --> utils
+  events --> types
+
+  utils --> types
+
+  ui -. verboten .-x data
+  ui -. verboten .-x api
+  utils -. verboten .-x api
+```
+
+Selbstkanten (`ui → ui`, `data → data`, …) sind erlaubt und der Übersicht halber weggelassen.
+
+### 2. Scope-Achse — wer darf welchen Slice überhaupt sehen
+
+Erlaubte Zugriffe (durchgezogen) und die Regeln, die sie erzwingen:
+
+```mermaid
+graph LR
+  root["root<br/>main.ts"]
+  shell["app:&lt;app&gt;<br/>App-Shell"]
+  root --> shell
+
+  subgraph D1["domain:booking — Slice (app-intern ODER libs/)"]
+    direction LR
+    d1entry["entry<br/>booking.routes.ts"]
+    d1port["port<br/>api/"]
+    d1int["Slice-interna<br/>types·utils·events·data·ui"]
+  end
+
+  subgraph D2["domain:checkin — fremder Slice"]
+    direction LR
+    d2port["port<br/>api/"]
+    d2int["Slice-interna"]
+  end
+
+  sharedb["shared<br/>types · utils · api · ui"]
+
+  shell --> d1entry
+  shell --> d1port
+  shell --> sharedb
+  d1entry --> d1int
+  d1int --> d1port
+  d1int --> d2port
+  d1int --> sharedb
+```
+
+Verbotene Zugriffe — jeweils die Regel, die greift:
+
+```mermaid
+graph LR
+  shell["app:&lt;app&gt;"] -. "Shell sieht nur entry/port" .-x si["fremde Slice-interna"]
+  dom["domain:booking"] -. "fremde Domain nur via port" .-x fi["domain:checkin interna"]
+  sh["shared"] -. "shared darf nur shared" .-x dm["jede Domain"]
+  ui["type:ui"] -. "Layer-Matrix" .-x da["type:data / type:api"]
+```
+
+App-übergreifende Verbote siehe Diagramm 4.
+
+### 3. Feat-Isolation — Geschwister-Feats sind privat
+
+```mermaid
+graph LR
+  subgraph D["domain:booking"]
+    direction LR
+    dshared["Domain-shared<br/>types·utils·events·data·ui·api"]
+    subgraph F1["feat:check-booking"]
+      direction LR
+      f1port["feat-port<br/>feat-check-booking/api/"]
+      f1int["interna"]
+    end
+    subgraph F2["feat:manage-booking"]
+      f2int["interna"]
+    end
+  end
+
+  f2int --> f1port
+  f2int --> dshared
+  f1int --> dshared
+  f1port --> f1int
+  f2int -. "Geschwister-interna verboten" .-x f1int
+```
+
+Beide Achsen greifen mit **UND**-Semantik: ein Import ist nur legal, wenn Layer-Matrix **und** Scope-Regel ihn erlauben.
+
+### 4. App-Isolation & Extraktion (`sameApp`, pfadbasiert)
+
+```mermaid
+graph LR
+  a1["apps/client/**"]
+  a2["apps/admin/**"]
+  l1["libs/domains/&lt;d&gt;/src/**"]
+  l2["libs/shared/&lt;bucket&gt;/src/**"]
+
+  a1 --> l1
+  a1 --> l2
+  a2 --> l1
+  a2 --> l2
+  a1 -. verboten .-x a2
+  l1 -. verboten .-x a1
+
+  a1 == "Extraktion = reiner Folder-Move,<br/>Tags &amp; Regeln identisch" ==> l1
+```
+
 ## Naming-Konventionen (load-bearing!)
 
 - `feat-<name>/` — Prefix wird von der Feat-Isolations-Regel per Pfad erkannt
