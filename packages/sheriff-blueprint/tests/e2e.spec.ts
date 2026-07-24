@@ -67,7 +67,7 @@ describe('eslint dependency-rule fires through the packaged config', () => {
   it('allows cross-domain access via the port', () => {
     const file = writeTmp(
       'apps/client/src/app/domains/checkin/data/tmp-e2e-ok.ts',
-      `import { BookingApi } from '@blueprint/domains/booking/api/booking-api';\nexport const x = BookingApi;\n`,
+      `import { BookingApi } from '@blueprint/domains/booking';\nexport const x = BookingApi;\n`,
     );
     const output = eslintOn(file);
     expect(output).not.toContain('@softarc/sheriff/dependency-rule');
@@ -163,10 +163,10 @@ describe('inverted domain ports: infra/ is unreachable, api/ is the seam', () =>
     expect(eslintOn(file)).not.toContain('@softarc/sheriff/dependency-rule');
   });
 
-  it('allows a foreign domain to bind to the port token', () => {
+  it('allows a foreign domain to bind to the port contract', () => {
     const file = writeTmp(
       'apps/client/src/app/domains/checkin/data/tmp-e2e-infra-ok.ts',
-      `import { BOOKING_API } from '@blueprint/domains/booking/api/booking-api';\nexport const x = BOOKING_API;\n`,
+      `import { BookingApi } from '@blueprint/domains/booking';\nexport const x = BookingApi;\n`,
     );
     expect(eslintOn(file)).not.toContain('@softarc/sheriff/dependency-rule');
   });

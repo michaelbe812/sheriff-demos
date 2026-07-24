@@ -21,7 +21,7 @@ export interface CheckinDto {
  * cannot name its own implementation — that is the inversion.
  *
  * Variant: INJECTION TOKEN + interface. The booking domain uses the abstract
- * class variant (libs/domains/booking/src/api/booking-api.ts) — both are
+ * class variant (libs/domains/booking/src/api/index.ts) — both are
  * kept side by side on purpose; see docs/architecture.md for the trade-off.
  * The token variant erases at compile time (no runtime class in the bundle)
  * and cannot be `extends`-ed by accident.

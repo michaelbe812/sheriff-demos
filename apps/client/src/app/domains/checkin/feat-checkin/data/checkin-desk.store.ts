@@ -3,7 +3,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 // The port is a contract: this store binds to BOOKING_API and cannot see
 // booking's HTTP client — that lives in booking/infra, which carries no
 // `port` tag and is therefore unreachable from here.
-import { Booking, BookingApi } from '@blueprint/domains/booking/api/booking-api';
+import { Booking, BookingApi } from '@blueprint/domains/booking';
 import { CheckinStore } from '../../data/checkin.store';
 import { guestArrived } from '../../events/checkin.events';
 

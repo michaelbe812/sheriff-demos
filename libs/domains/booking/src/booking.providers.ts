@@ -1,5 +1,5 @@
 import { Provider } from '@angular/core';
-import { BookingApi } from './api/booking-api';
+import { BookingApi } from './api';
 import { HttpBookingApi } from './infra/http-booking-api';
 
 /**

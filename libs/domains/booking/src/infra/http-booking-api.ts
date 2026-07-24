@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BookingApi } from '../api/booking-api';
+import { BookingApi } from '../api';
 import { Booking } from '../types/booking.model';
 
 /**

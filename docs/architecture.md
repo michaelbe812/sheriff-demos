@@ -124,7 +124,19 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
 - `feat-<name>/` — Prefix wird von der Feat-Isolations-Regel per Pfad erkannt
 - `domains/` als Eltern-Ordner für Domains; Shared-Features direkt im Root, aber explizit in `sharedFeatures` gelistet
 - `internal/` — top-level im Modul = modul-privat (encapsulation-Rule)
-- Libs: flach unter `src/` (kein `src/lib/`), **kein `index.ts`** (Barrel würde Modul-Semantik kippen), Wildcard-Alias `@blueprint/domains/<d>/*` in `tsconfig.base.json`
+- Libs: flach unter `src/` (kein `src/lib/`), **kein Barrel auf Lib-Ebene** (`libs/<d>/src/index.ts` würde die Buckets zu einem Modul verschmelzen und die Layer-Matrix aushebeln), Wildcard-Alias `@blueprint/domains/<d>/*` in `tsconfig.base.json`
+- **Barrel auf Bucket-Ebene ist erlaubt und erwünscht**: die Port-Datei heißt `api/index.ts`. Die Bucket-Modulgrenze bleibt (`type:api, port`), aber der Import verliert das Datei-Segment. Dazu ein Kurz-Alias, der direkt auf den Port zeigt:
+
+  ```jsonc
+  "@blueprint/domains/booking":   ["./libs/domains/booking/src/api/index.ts"],  // Port (Contract)
+  "@blueprint/domains/booking/*": ["./libs/domains/booking/src/*"],             // interne Buckets
+  ```
+
+  ```ts
+  import { Booking, BookingApi } from '@blueprint/domains/booking';   // statt .../api/booking-api
+  ```
+
+  Der Kurz-Alias ist **kein Schlupfloch**: er zeigt nur auf den Port. Wer daran vorbei will, braucht wieder den Wildcard-Pfad — und fliegt dort auf. Verifiziert in `tests/e2e.spec.ts`.
 
 ## Varianten-Vergleich
 
