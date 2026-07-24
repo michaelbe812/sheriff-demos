@@ -15,9 +15,7 @@
     "skipDefaultLibCheck": true,
     "strict": false,
     "paths": {
-      "@blueprint/domains/booking": ["./libs/domains/booking/src/api/index.ts"],
       "@blueprint/domains/booking/*": ["./libs/domains/booking/src/*"],
-      "@blueprint/shared/utils": ["./libs/shared/utils/src/index.ts"],
       "@blueprint/shared/utils/*": ["./libs/shared/utils/src/*"]
     }
   },

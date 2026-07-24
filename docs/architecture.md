@@ -215,7 +215,27 @@ graph LR
 - `feat-<name>/` — Prefix wird von der Feat-Isolations-Regel per Pfad erkannt
 - `domains/` als Eltern-Ordner für Domains; Shared-Features direkt im Root, aber explizit in `sharedFeatures` gelistet
 - `internal/` — top-level im Modul = modul-privat (encapsulation-Rule)
-- Libs: flach unter `src/` (kein `src/lib/`), **kein `index.ts`** (Barrel würde Modul-Semantik kippen), Wildcard-Alias `@blueprint/domains/<d>/*` in `tsconfig.base.json`
+- Libs: flach unter `src/` (kein `src/lib/`), **kein Barrel auf Lib-Ebene** (`libs/<d>/src/index.ts` würde die Buckets zu einem Modul verschmelzen und die Layer-Matrix aushebeln)
+- **Barrel auf Bucket-Ebene ist erlaubt**: die Port-Datei heißt `api/index.ts`. Die Bucket-Modulgrenze bleibt (`type:api, port`), aber der Import verliert das Datei-Segment.
+
+  **Genau ein Path pro Lib** — der Wildcard löst `.../<domain>/api` selbst auf `api/index.ts` auf, weil TypeScript den Ordner-Index findet:
+
+  ```jsonc
+  "@blueprint/domains/booking/*": ["./libs/domains/booking/src/*"]
+  ```
+
+  ```ts
+  import { Booking, BookingApi } from '@blueprint/domains/booking/api';        // Port
+  import bookingRoutes           from '@blueprint/domains/booking/booking.routes'; // entry
+  ```
+
+  Der Wildcard löst technisch **alles** auf — er ist keine Zugriffsgrenze, sondern nur Modul-Auflösung. Die Grenze zieht Sheriff über die Tags: `.../booking/data/booking.store` resolved zwar, wird aber geblockt. Bewusst so, damit ein Verstoß als *Architektur*-Fehler mit Regelnamen erscheint statt als „Modul nicht gefunden".
+
+  Härter wäre `exports` in der `package.json` der Lib (Verbotenes wäre gar nicht auflösbar) — verworfen, weil Entwickler `exports` selten selbst pflegen und ein Fehler dort als kryptischer Resolver-Fehler auftritt.
+
+- **Shared-Libs haben kein Bucket-Barrel**: bei `libs/shared/<bucket>/src` **ist die Lib der Bucket** (der Bucket-Name steckt im Lib-Namen), es gibt keinen Unterordner zum Kürzen. Import direkt auf die Datei: `@blueprint/shared/utils/format-date`.
+
+- **Jede Lib braucht ein `tsconfig.json`** neben `src/` — fehlt es, bricht die `dependency-rule` dort mit einem internen Fehler ab **statt zu prüfen** (Gotcha 6). Die Lib ist dann faktisch ungeschützt, ohne dass etwas rot wird.
 
 ## Varianten-Vergleich
 
