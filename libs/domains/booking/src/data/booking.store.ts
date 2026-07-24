@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { BookingApi } from '../api/booking-api';
+import { BookingApi } from '../api';
 import { BookingConfirmed } from '../events/booking.events';
 import { Booking } from '../types/booking.model';
 import { isConfirmed } from '../utils/booking.utils';

@@ -67,7 +67,7 @@ describe('eslint dependency-rule fires through the packaged config', () => {
   it('allows cross-domain access via the port', () => {
     const file = writeTmp(
       'apps/client/src/app/domains/checkin/data/tmp-e2e-ok.ts',
-      `import { BookingApi } from '@blueprint/domains/booking/api/booking-api';\nexport const x = BookingApi;\n`,
+      `import { BookingApi } from '@blueprint/domains/booking';\nexport const x = BookingApi;\n`,
     );
     const output = eslintOn(file);
     expect(output).not.toContain('@softarc/sheriff/dependency-rule');
