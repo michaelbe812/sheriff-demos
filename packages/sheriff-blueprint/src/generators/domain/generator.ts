@@ -59,6 +59,13 @@ export default async function domainGenerator(
     updateJson(tree, 'tsconfig.base.json', (json) => {
       json.compilerOptions ??= {};
       json.compilerOptions.paths ??= {};
+      // Short alias -> the PORT (api/index.ts). This is what consumers import;
+      // it is not a loophole, because it resolves to the contract only.
+      json.compilerOptions.paths[`${aliasPrefix}/domains/${fileName}`] = [
+        `./libs/domains/${fileName}/src/api/index.ts`,
+      ];
+      // Wildcard -> internal buckets. Reaching past the port still resolves,
+      // but sheriff blocks it — that is where a violation is supposed to fire.
       json.compilerOptions.paths[`${aliasPrefix}/domains/${fileName}/*`] = [
         `./libs/domains/${fileName}/src/*`,
       ];

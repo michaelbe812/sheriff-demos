@@ -22,10 +22,10 @@ describe('domain generator', () => {
       `${root}/types/inventory.model.ts`,
       `${root}/utils/inventory.utils.ts`,
       `${root}/events/inventory.events.ts`,
-      `${root}/api/inventory-api.ts`,
+      `${root}/api/index.ts`,
       `${root}/data/inventory.store.ts`,
       `${root}/feat-stock-count/feat-stock-count.ts`,
-      `${root}/feat-stock-count/api/stock-count-api.ts`,
+      `${root}/feat-stock-count/api/index.ts`,
       `${root}/feat-stock-count/data/stock-count.store.ts`,
       'libs/domains/inventory/project.json',
       'libs/domains/inventory/tsconfig.json',
@@ -34,11 +34,20 @@ describe('domain generator', () => {
     }
 
     const baseTsconfig = JSON.parse(tree.read('tsconfig.base.json', 'utf-8')!);
+    // short alias -> the port contract, wildcard -> internal buckets
+    expect(baseTsconfig.compilerOptions.paths['@blueprint/domains/inventory']).toEqual([
+      './libs/domains/inventory/src/api/index.ts',
+    ]);
     expect(baseTsconfig.compilerOptions.paths['@blueprint/domains/inventory/*']).toEqual([
       './libs/domains/inventory/src/*',
     ]);
 
-    expect(tree.read(`${root}/api/inventory-api.ts`, 'utf-8')).toContain('PUBLIC PORT');
+    // no LIB-level barrel — that would merge the buckets into one module
+    expect(tree.exists(`${root}/index.ts`)).toBe(false);
+
+    const port = tree.read(`${root}/api/index.ts`, 'utf-8')!;
+    expect(port).toContain('PUBLIC PORT');
+    expect(port).toContain('export abstract class InventoryApi');
     expect(tree.read('libs/domains/inventory/project.json', 'utf-8')).toContain('"domain-inventory"');
   });
 
@@ -46,15 +55,17 @@ describe('domain generator', () => {
     await domainGenerator(tree, { name: 'billing', app: 'client' });
 
     expect(tree.exists('apps/client/src/app/domains/billing/billing.routes.ts')).toBe(true);
-    expect(tree.exists('apps/client/src/app/domains/billing/api/billing-api.ts')).toBe(true);
+    expect(tree.exists('apps/client/src/app/domains/billing/api/index.ts')).toBe(true);
     expect(tree.exists('libs/domains/billing')).toBe(false);
     const baseTsconfig = JSON.parse(tree.read('tsconfig.base.json', 'utf-8')!);
+    expect(baseTsconfig.compilerOptions.paths['@blueprint/domains/billing']).toBeUndefined();
     expect(baseTsconfig.compilerOptions.paths['@blueprint/domains/billing/*']).toBeUndefined();
   });
 
   it('respects a custom alias prefix', async () => {
     await domainGenerator(tree, { name: 'inventory', aliasPrefix: '@acme' });
     const baseTsconfig = JSON.parse(tree.read('tsconfig.base.json', 'utf-8')!);
+    expect(baseTsconfig.compilerOptions.paths['@acme/domains/inventory']).toBeDefined();
     expect(baseTsconfig.compilerOptions.paths['@acme/domains/inventory/*']).toBeDefined();
   });
 });
@@ -69,7 +80,7 @@ describe('feat generator', () => {
 
     const root = 'libs/domains/inventory/src/feat-restock';
     expect(tree.exists(`${root}/feat-restock.ts`)).toBe(true);
-    expect(tree.read(`${root}/api/restock-api.ts`, 'utf-8')).toContain('FEAT-PORT');
+    expect(tree.read(`${root}/api/index.ts`, 'utf-8')).toContain('FEAT-PORT');
     expect(tree.exists(`${root}/data/restock.store.ts`)).toBe(true);
   });
 
@@ -85,8 +96,9 @@ describe('shared-feature generator', () => {
     await sharedFeatureGenerator(tree, { name: 'notifications', app: 'client' });
 
     const root = 'apps/client/src/app/notifications';
-    const api = tree.read(`${root}/api/notifications-api.ts`, 'utf-8')!;
+    const api = tree.read(`${root}/api/index.ts`, 'utf-8')!;
     expect(api).toContain('NOTIFICATIONS_API');
+    // shared-features keep the token variant: the port is backed by a store
     expect(api).toContain('InjectionToken');
     expect(tree.read(`${root}/notifications.providers.ts`, 'utf-8')).toContain('provideNotifications');
     expect(tree.exists(`${root}/data/notifications.store.ts`)).toBe(true);
@@ -95,6 +107,6 @@ describe('shared-feature generator', () => {
   it('scaffolds a lib shared feature under libs/<name>/src', async () => {
     const tree = createTreeWithEmptyWorkspace();
     await sharedFeatureGenerator(tree, { name: 'auth' });
-    expect(tree.exists('libs/auth/src/api/auth-api.ts')).toBe(true);
+    expect(tree.exists('libs/auth/src/api/index.ts')).toBe(true);
   });
 });

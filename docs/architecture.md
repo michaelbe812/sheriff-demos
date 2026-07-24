@@ -197,6 +197,7 @@ export const config = createSheriffConfig({
 
 - ESLint: `sheriff.configs.all` + `nxModuleBoundariesOptions('@blueprint')`
 - Generatoren: `nx g @berger-engineering/sheriff-blueprint:domain|feat|shared-feature`
+  - Der `domain`-Generator schreibt **beide** Aliase (Kurz-Alias → `api/index.ts`, Wildcard → Buckets), legt den Port als `api/index.ts` an und nutzt für Domains die **abstrakte Klasse**. `shared-feature` bleibt bewusst beim `InjectionToken`: dessen Port wird von einem Store bedient (`useExisting`), der den Contract `implements` — dafür braucht es ein Interface, keine Klasse.
 - Technische Randbedingung: Sheriff transpiliert nur die eine Config-Datei und evalt sie → das Package MUSS gebaut in node_modules liegen; relative Imports in sheriff.config.ts gehen nicht
 - Tests: `nx test sheriff-blueprint` — Regel-Funktionen (unit), Generatoren (devkit-Tree), e2e gegen das echte Workspace (sheriff verify + eslint-Violations)
 
