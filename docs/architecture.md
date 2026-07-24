@@ -19,6 +19,36 @@ Jetzt gilt: `type:api` hat **keine** Clearance zu `type:infra`. Der Contract kan
 
 „Ausschließlich am Slice-Root" ist dabei wörtlich zu nehmen und war anfangs *nicht* durchgesetzt: `type:feature` hängt auch an jedem `feat-<x>/`-Ordner, sodass ein Feat `infra/` direkt greifen konnte — am eigenen Port vorbei. Die Regel unterscheidet beide inzwischen am Dateipfad (`inAnyFeat`), weil Upstream-Sheriff die Tags der importierenden Datei nicht in den Regel-Kontext gibt. Zwei e2e-Tests decken beide Seiten ab: Feat → `infra` blockiert, Slice-Root → `infra` weiterhin erlaubt.
 
+### Zwei Port-Varianten: `InjectionToken` vs. abstrakte Klasse
+
+Der Contract braucht ein DI-Handle. Beide Varianten sind gleichwertig gegenüber Sheriff — die Kapselung kommt aus der Tag-Trennung `type:api` / `type:infra`, nicht aus der Wahl des Handles. Im Repo läuft **je ein Beispiel pro Variante**:
+
+| | `InjectionToken` + Interface | Abstrakte Klasse |
+|---|---|---|
+| **Beispiel** | `checkin` (app-intern) | `booking` (Lib) |
+| **Port** | `interface CheckinApi` + `CHECKIN_API` | `abstract class BookingApi` |
+| **Impl** | `implements CheckinApi` | `extends BookingApi` |
+| **Wiring** | `{ provide: CHECKIN_API, useClass: … }` | `{ provide: BookingApi, useClass: … }` |
+| **Konsument** | `inject(CHECKIN_API)` | `inject(BookingApi)` |
+| **Artefakte** | zwei (Typ + Token) | eins (Typ *ist* Token) |
+| **Runtime** | Interface verschwindet, Token bleibt | Klasse bleibt im Bundle |
+
+```ts
+// Variante A — Token (checkin)
+export interface CheckinApi { loadCheckins(): Promise<CheckinDto[]>; }
+export const CHECKIN_API = new InjectionToken<CheckinApi>('CHECKIN_API');
+
+// Variante B — abstrakte Klasse (booking)
+export abstract class BookingApi {
+  abstract loadBookings(): Promise<Booking[]>;
+}
+```
+
+- **`abstract` ist tragend.** Nur so ist die Klasse nicht instanziierbar — niemand kann `new BookingApi()` oder sie versehentlich als eigene Impl providen. Alle Member bleiben `abstract`: sobald die Datei einen Methoden-**Body** trägt, enthält der Contract Implementierung, und genau das soll `type:api → type:infra = ✗` verhindern.
+- **Für die abstrakte Klasse spricht** die Ergonomie: ein Artefakt statt zwei, `inject(BookingApi)` liest sich wie eine normale Klassen-Injection, kein Schrei-Case-Token im Consumer.
+- **Für den Token spricht** die Härte: ein Interface existiert zur Laufzeit nicht, die Klasse schon — sie landet im Bundle und kann theoretisch `extends`-t werden. Wer maximale Trennung will, nimmt den Token.
+- **Kein Unterschied** bei: Testbarkeit (beide fake-bar per `useClass`/`useValue`), Austauschbarkeit, Sheriff-Kapselung.
+
 ## Struktur
 
 ```

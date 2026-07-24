@@ -1,5 +1,5 @@
 import { Provider } from '@angular/core';
-import { BOOKING_API } from './api/booking-api';
+import { BookingApi } from './api/booking-api';
 import { HttpBookingApi } from './infra/http-booking-api';
 
 /**
@@ -11,5 +11,6 @@ import { HttpBookingApi } from './infra/http-booking-api';
  * towards `type:infra`. The composition happens here or nowhere.
  */
 export function provideBooking(): Provider {
-  return { provide: BOOKING_API, useClass: HttpBookingApi };
+  // the abstract class IS the token — no separate InjectionToken needed
+  return { provide: BookingApi, useClass: HttpBookingApi };
 }

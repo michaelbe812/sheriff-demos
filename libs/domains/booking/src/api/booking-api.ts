@@ -1,4 +1,3 @@
-import { InjectionToken } from '@angular/core';
 import { Booking } from '../types/booking.model';
 
 /**
@@ -6,22 +5,24 @@ import { Booking } from '../types/booking.model';
  * import. Cross-domain needed types are re-exported here — the types bucket
  * itself stays private.
  *
- * CONTRACT ONLY — no implementation, mirroring the auth shared-feature.
- * Consumers inject BOOKING_API and bind to this interface; the HTTP client
- * lives in infra/ and is wired at the slice root by provideBooking().
+ * CONTRACT ONLY — no implementation. The HTTP client lives in infra/ and is
+ * wired at the slice root by provideBooking().
  *
- * Why: the previous version exported a concrete @Injectable with
- * `fetch('/api/bookings')` inside, so every consumer — including the checkin
- * domain across the slice boundary — depended on that class. The dependency
- * arrow pointed *at* infrastructure and there was no seam: no fake for tests,
- * no swap to GraphQL without touching callers. `type:api` now has no
- * clearance towards `type:infra`, which makes the inversion structural rather
- * than a matter of discipline.
+ * Variant: ABSTRACT CLASS as the DI token (checkin/ uses the InjectionToken
+ * variant — both are valid, see docs/architecture.md).
+ *
+ * An abstract class is one artifact instead of two: it is the type AND the
+ * token. `inject(BookingApi)` reads like a normal class injection, and
+ * `extends BookingApi` in infra/ still gives a compile error on drift.
+ *
+ * `abstract` is load-bearing: it makes the class non-instantiable, so nobody
+ * can `new BookingApi()` or accidentally provide it as its own impl. Every
+ * member stays abstract — the moment this file carried a method BODY it would
+ * hold implementation, and `type:api` has no clearance towards `type:infra`
+ * precisely to keep that out.
  */
 export type { Booking } from '../types/booking.model';
 
-export interface BookingApi {
-  loadBookings(): Promise<Booking[]>;
+export abstract class BookingApi {
+  abstract loadBookings(): Promise<Booking[]>;
 }
-
-export const BOOKING_API = new InjectionToken<BookingApi>('BOOKING_API');

@@ -3,14 +3,14 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 // The port is a contract: this store binds to BOOKING_API and cannot see
 // booking's HTTP client — that lives in booking/infra, which carries no
 // `port` tag and is therefore unreachable from here.
-import { Booking, BOOKING_API } from '@blueprint/domains/booking/api/booking-api';
+import { Booking, BookingApi } from '@blueprint/domains/booking/api/booking-api';
 import { CheckinStore } from '../../data/checkin.store';
 import { guestArrived } from '../../events/checkin.events';
 
 /** Feat-private store: orchestrates the desk — arrivals in, check-ins out. */
 @Injectable({ providedIn: 'root' })
 export class CheckinDeskStore {
-  private readonly bookingApi = inject(BOOKING_API);
+  private readonly bookingApi = inject(BookingApi);
   private readonly checkinStore = inject(CheckinStore);
 
   readonly arrivals = signal<Booking[]>([]);

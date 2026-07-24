@@ -11,7 +11,7 @@ import { Booking } from '../types/booking.model';
  * booking.providers.ts. No store, no component, no other domain moves.
  */
 @Injectable({ providedIn: 'root' })
-export class HttpBookingApi implements BookingApi {
+export class HttpBookingApi extends BookingApi {
   async loadBookings(): Promise<Booking[]> {
     const response = await fetch('/api/bookings');
     return (await response.json()) as Booking[];
