@@ -59,13 +59,11 @@ export default async function domainGenerator(
     updateJson(tree, 'tsconfig.base.json', (json) => {
       json.compilerOptions ??= {};
       json.compilerOptions.paths ??= {};
-      // Short alias -> the PORT (api/index.ts). This is what consumers import;
-      // it is not a loophole, because it resolves to the contract only.
-      json.compilerOptions.paths[`${aliasPrefix}/domains/${fileName}`] = [
-        `./libs/domains/${fileName}/src/api/index.ts`,
-      ];
-      // Wildcard -> internal buckets. Reaching past the port still resolves,
-      // but sheriff blocks it — that is where a violation is supposed to fire.
+      // ONE path per domain. The wildcard also resolves `.../<domain>/api`
+      // to api/index.ts (TS finds the folder index), so consumers import
+      //   import { XApi } from '@blueprint/domains/<domain>/api';
+      // Reaching past the port resolves too, but sheriff blocks it — that is
+      // where a violation is supposed to fire, with a rule name attached.
       json.compilerOptions.paths[`${aliasPrefix}/domains/${fileName}/*`] = [
         `./libs/domains/${fileName}/src/*`,
       ];

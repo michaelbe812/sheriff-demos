@@ -125,18 +125,24 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
 - `domains/` als Eltern-Ordner für Domains; Shared-Features direkt im Root, aber explizit in `sharedFeatures` gelistet
 - `internal/` — top-level im Modul = modul-privat (encapsulation-Rule)
 - Libs: flach unter `src/` (kein `src/lib/`), **kein Barrel auf Lib-Ebene** (`libs/<d>/src/index.ts` würde die Buckets zu einem Modul verschmelzen und die Layer-Matrix aushebeln), Wildcard-Alias `@blueprint/domains/<d>/*` in `tsconfig.base.json`
-- **Barrel auf Bucket-Ebene ist erlaubt und erwünscht**: die Port-Datei heißt `api/index.ts`. Die Bucket-Modulgrenze bleibt (`type:api, port`), aber der Import verliert das Datei-Segment. Dazu ein Kurz-Alias, der direkt auf den Port zeigt:
+- **Barrel auf Bucket-Ebene ist erlaubt und erwünscht**: die Port-Datei heißt `api/index.ts`. Die Bucket-Modulgrenze bleibt (`type:api, port`), aber der Import verliert das Datei-Segment.
+
+  **Genau ein Path pro Domain** — der Wildcard löst `.../<domain>/api` selbst auf `api/index.ts` auf, weil TypeScript den Ordner-Index findet:
 
   ```jsonc
-  "@blueprint/domains/booking":   ["./libs/domains/booking/src/api/index.ts"],  // Port (Contract)
-  "@blueprint/domains/booking/*": ["./libs/domains/booking/src/*"],             // interne Buckets
+  "@blueprint/domains/booking/*": ["./libs/domains/booking/src/*"]
   ```
 
   ```ts
-  import { Booking, BookingApi } from '@blueprint/domains/booking';   // statt .../api/booking-api
+  import { Booking, BookingApi } from '@blueprint/domains/booking/api';   // Port
+  import { provideBooking }      from '@blueprint/domains/booking/booking.providers'; // entry
   ```
 
-  Der Kurz-Alias ist **kein Schlupfloch**: er zeigt nur auf den Port. Wer daran vorbei will, braucht wieder den Wildcard-Pfad — und fliegt dort auf. Verifiziert in `tests/e2e.spec.ts`.
+  Der Wildcard löst technisch **alles** auf — er ist keine Zugriffsgrenze, sondern nur Modul-Auflösung. Die Grenze zieht Sheriff über die Tags: `.../booking/data/booking.store` resolved zwar, wird aber geblockt. Das ist bewusst so, damit ein Verstoß als *Architektur*-Fehler mit Regelnamen erscheint statt als „Modul nicht gefunden". Verifiziert in `tests/e2e.spec.ts`.
+
+  Eine härtere Variante wäre `exports` in der `package.json` der Lib (dann ist Verbotenes gar nicht erst auflösbar) — bewusst verworfen, weil Entwickler `exports` selten selbst pflegen und ein Fehler dort als kryptischer Resolver-Fehler auftritt.
+
+- **Shared-Libs haben kein Bucket-Barrel**: bei `libs/shared/<bucket>/src` **ist die Lib der Bucket** (der Bucket-Name steckt im Lib-Namen), es gibt also keinen Unterordner zum Kürzen. Import direkt auf die Datei: `@blueprint/shared/utils/format-date`.
 
 ## Varianten-Vergleich
 
@@ -197,7 +203,7 @@ export const config = createSheriffConfig({
 
 - ESLint: `sheriff.configs.all` + `nxModuleBoundariesOptions('@blueprint')`
 - Generatoren: `nx g @berger-engineering/sheriff-blueprint:domain|feat|shared-feature`
-  - Der `domain`-Generator schreibt **beide** Aliase (Kurz-Alias → `api/index.ts`, Wildcard → Buckets), legt den Port als `api/index.ts` an und nutzt für Domains die **abstrakte Klasse**. `shared-feature` bleibt bewusst beim `InjectionToken`: dessen Port wird von einem Store bedient (`useExisting`), der den Contract `implements` — dafür braucht es ein Interface, keine Klasse.
+  - Der `domain`-Generator schreibt **einen** Alias (Wildcard, der auch `/api` auflöst), legt den Port als `api/index.ts` an und nutzt für Domains die **abstrakte Klasse**. `shared-feature` bleibt bewusst beim `InjectionToken`: dessen Port wird von einem Store bedient (`useExisting`), der den Contract `implements` — dafür braucht es ein Interface, keine Klasse.
 - Technische Randbedingung: Sheriff transpiliert nur die eine Config-Datei und evalt sie → das Package MUSS gebaut in node_modules liegen; relative Imports in sheriff.config.ts gehen nicht
 - Tests: `nx test sheriff-blueprint` — Regel-Funktionen (unit), Generatoren (devkit-Tree), e2e gegen das echte Workspace (sheriff verify + eslint-Violations)
 

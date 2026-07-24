@@ -48,7 +48,7 @@ export function apiPortFile(name: string): string {
  * import. Cross-domain needed types are re-exported here.
  *
  * Lives in \`api/index.ts\` so consumers import the bucket, not a file:
- *   import { ${className}Api } from '@blueprint/domains/${fileName}';
+ *   import { ${className}Api } from '@blueprint/domains/${fileName}/api';
  * The bucket is still its own module (\`type:api\`, \`port\`) — a barrel at
  * BUCKET level keeps every rule; one at LIB level would merge the buckets
  * into a single module and destroy the layer matrix.

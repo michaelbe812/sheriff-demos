@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 // ERLAUBT: der Kurz-Alias zeigt auf den PORT (api/index.ts) — der Contract,
 // nicht die Impl. Die Shell (app:client) darf `port`, `entry` und `shared`.
-import { BookingApi } from '@blueprint/domains/booking';
+import { BookingApi } from '@blueprint/domains/booking/api';
 
 // Alle folgenden Zeilen einkommentieren ⇒ genau die genannte Violation feuert.
 //

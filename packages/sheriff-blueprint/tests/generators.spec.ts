@@ -34,13 +34,11 @@ describe('domain generator', () => {
     }
 
     const baseTsconfig = JSON.parse(tree.read('tsconfig.base.json', 'utf-8')!);
-    // short alias -> the port contract, wildcard -> internal buckets
-    expect(baseTsconfig.compilerOptions.paths['@blueprint/domains/inventory']).toEqual([
-      './libs/domains/inventory/src/api/index.ts',
-    ]);
+    // ONE path per domain — the wildcard also resolves `/api` to api/index.ts
     expect(baseTsconfig.compilerOptions.paths['@blueprint/domains/inventory/*']).toEqual([
       './libs/domains/inventory/src/*',
     ]);
+    expect(baseTsconfig.compilerOptions.paths['@blueprint/domains/inventory']).toBeUndefined();
 
     // no LIB-level barrel — that would merge the buckets into one module
     expect(tree.exists(`${root}/index.ts`)).toBe(false);
@@ -65,7 +63,6 @@ describe('domain generator', () => {
   it('respects a custom alias prefix', async () => {
     await domainGenerator(tree, { name: 'inventory', aliasPrefix: '@acme' });
     const baseTsconfig = JSON.parse(tree.read('tsconfig.base.json', 'utf-8')!);
-    expect(baseTsconfig.compilerOptions.paths['@acme/domains/inventory']).toBeDefined();
     expect(baseTsconfig.compilerOptions.paths['@acme/domains/inventory/*']).toBeDefined();
   });
 });
