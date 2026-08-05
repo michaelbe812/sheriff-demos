@@ -52,6 +52,12 @@ export const hexSlice = (
 export interface HexagonalOptions {
   /** Map app name -> list of slice names inside apps/<app>/src/app/domains. */
   apps?: Record<string, string[]>;
+  /**
+   * Hexagon slices extracted into Nx libs under libs/domains/<slice>/src.
+   * The `hexagon` generator writes a lib when run without --app; list those
+   * slices here so their modules are governed the same way as app-internal ones.
+   */
+  libDomains?: string[];
   entryPoints?: Record<string, string>;
   extraModules?: Modules;
 }
@@ -60,7 +66,7 @@ export function hexagonalConfig(
   preset: HexPreset,
   options: HexagonalOptions = {},
 ): HexConfig {
-  const { apps = {}, entryPoints, extraModules } = options;
+  const { apps = {}, libDomains = [], entryPoints, extraModules } = options;
 
   const appModules = Object.fromEntries(
     Object.entries(apps).map(([app, slices]) => [
@@ -76,6 +82,13 @@ export function hexagonalConfig(
         ),
       },
     ]),
+  );
+
+  // Phase 2 — extracted hexagon libs. Same tags as the app-internal shape, so
+  // the rules stay identical after extraction (mirrors the vertical preset).
+  const libModules: Modules = Object.assign(
+    {},
+    ...libDomains.map((s) => hexSlice(`libs/domains/${s}/src`, s, preset)),
   );
 
   const typeAxis: HexConfig['depRules'] =
@@ -127,6 +140,7 @@ export function hexagonalConfig(
 
     modules: {
       ...appModules,
+      ...libModules,
       ...extraModules,
     },
 

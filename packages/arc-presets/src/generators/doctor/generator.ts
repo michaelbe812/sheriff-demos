@@ -1,5 +1,6 @@
 import { logger, readJson, Tree } from '@nx/devkit';
 import { detectPreset } from '../detect-preset';
+import { isSheriffWired } from '../eslint';
 import { PRESETS } from '../../presets';
 import {
   FORK_CORE,
@@ -80,8 +81,7 @@ export default async function doctorGenerator(
 
   const eslintPath = ESLINT_CANDIDATES.find((c) => tree.exists(c));
   const eslintWired =
-    !!eslintPath &&
-    (tree.read(eslintPath, 'utf-8') ?? '').includes('sheriff.configs.all');
+    !!eslintPath && isSheriffWired(tree.read(eslintPath, 'utf-8') ?? '');
   checks.push({
     ok: eslintWired,
     label: 'eslint config wires sheriff.configs.all',

@@ -13,6 +13,11 @@
     "app": {
       "type": "string",
       "description": "App name: scaffold under apps/<app>/src/app/<name>. Omit for a lib under libs/<name>/src."
+    },
+    "preset": {
+      "type": "string",
+      "description": "Override the detected preset.",
+      "enum": ["blueprint", "inverted"]
     }
   },
   "required": ["name"]

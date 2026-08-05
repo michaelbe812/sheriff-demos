@@ -8,27 +8,37 @@ import { PresetId, PRESET_IDS } from '../presets';
 export const PRESET_MARKER = (preset: PresetId) =>
   `// arc-presets:preset=${preset}`;
 
+const isPreset = (v: string | undefined): v is PresetId =>
+  !!v && (PRESET_IDS as readonly string[]).includes(v);
+
 /**
- * Reads the active preset from the workspace sheriff.config.ts. Falls back to
- * an explicit override, then to 'inverted' (the recommended default).
+ * The actual factory call is the source of truth — detect it FIRST so a stale
+ * marker in a comment cannot override the real config. Falls back to the marker,
+ * then to 'inverted' (the recommended default).
  */
 export function detectPreset(tree: Tree, override?: string): PresetId {
-  if (override && (PRESET_IDS as readonly string[]).includes(override)) {
-    return override as PresetId;
-  }
+  if (isPreset(override)) return override;
+
   const config = tree.exists('sheriff.config.ts')
     ? (tree.read('sheriff.config.ts', 'utf-8') ?? '')
     : '';
-  const marker = /arc-presets:preset=([\w-]+)/.exec(config)?.[1];
-  if (marker && (PRESET_IDS as readonly string[]).includes(marker)) {
-    return marker as PresetId;
-  }
-  // heuristic fallbacks from the config body
-  if (/hexagonalConfig\(\s*['"]hexagonal-strict/.test(config))
+
+  // 1. factory call — authoritative
+  if (/hexagonalConfig\(\s*['"]hexagonal-strict['"]/.test(config))
     return 'hexagonal-strict';
-  if (/hexagonalConfig\(\s*['"]hexagonal-fwcore/.test(config))
+  if (/hexagonalConfig\(\s*['"]hexagonal-fwcore['"]/.test(config))
     return 'hexagonal-fwcore';
-  if (/verticalSliceConfig\(\s*['"]blueprint/.test(config)) return 'blueprint';
-  if (/verticalSliceConfig\(\s*['"]inverted/.test(config)) return 'inverted';
+  if (/verticalSliceConfig\(\s*['"]blueprint['"]/.test(config))
+    return 'blueprint';
+  if (/verticalSliceConfig\(\s*['"]inverted['"]/.test(config))
+    return 'inverted';
+
+  // 2. marker — only when it is the SOLE content of a comment line, so a
+  //    "TODO: remove old marker: arc-presets:preset=..." note is ignored.
+  for (const line of config.split('\n')) {
+    const m = /^\s*\/\/\s*arc-presets:preset=([\w-]+)\s*$/.exec(line);
+    if (m && isPreset(m[1])) return m[1];
+  }
+
   return 'inverted';
 }

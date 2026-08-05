@@ -46,6 +46,7 @@ function hexagonalTemplate(
  */
 export const config = hexagonalConfig('${preset}', {
   apps: { ${JSON.stringify(app)}: [] },
+  // libDomains: [] — hexagon slices extracted to libs/domains/<slice>
 ${entryPointsBlock(opts.app)}});
 `;
 }

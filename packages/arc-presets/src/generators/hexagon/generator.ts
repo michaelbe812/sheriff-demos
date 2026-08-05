@@ -74,7 +74,9 @@ export default async function hexagonGenerator(
   }
 
   logger.info(
-    `arc-presets: hexagon slice '${fileName}' scaffolded (${preset}). Register it in sheriff.config.ts: apps: { <app>: ['${fileName}'] }.`,
+    options.app
+      ? `arc-presets: hexagon slice '${fileName}' scaffolded (${preset}). Register it in sheriff.config.ts: apps: { '${options.app}': ['${fileName}'] }.`
+      : `arc-presets: hexagon lib '${fileName}' scaffolded (${preset}). Register it in sheriff.config.ts: libDomains: ['${fileName}'] (and add an entryPoint for CI cross-checks).`,
   );
   await formatFiles(tree);
 }

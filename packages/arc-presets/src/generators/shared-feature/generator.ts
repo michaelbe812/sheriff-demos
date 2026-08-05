@@ -1,15 +1,25 @@
 import { formatFiles, logger, names, Tree } from '@nx/devkit';
+import { detectPreset } from '../detect-preset';
 
 export interface SharedFeatureGeneratorSchema {
   name: string;
   /** App name: scaffold under apps/<app>/src/app/<name>. Omit for a lib under libs/<name>/src. */
   app?: string;
+  /** Override the detected preset. */
+  preset?: 'blueprint' | 'inverted';
 }
 
 export default async function sharedFeatureGenerator(
   tree: Tree,
   options: SharedFeatureGeneratorSchema,
 ): Promise<void> {
+  const detected = detectPreset(tree, options.preset);
+  if (detected !== 'blueprint' && detected !== 'inverted') {
+    throw new Error(
+      `The 'shared-feature' generator is for the vertical-slice presets, but the active preset is '${detected}'. Hexagonal presets have no shared-feature concept — use 'app/shared/*' or a shared lib instead.`,
+    );
+  }
+
   const { className, fileName, propertyName, constantName } = names(
     options.name,
   );
