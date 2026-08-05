@@ -3,6 +3,10 @@ import { detectPreset } from '../detect-preset';
 import { isSheriffWired } from '../eslint';
 import { PRESETS } from '../../presets';
 import {
+  detectWorkspacePackageManager,
+  runScriptCommand,
+} from '../package-manager';
+import {
   FORK_CORE,
   FORK_ESLINT,
   UPSTREAM_CORE,
@@ -95,15 +99,18 @@ export default async function doctorGenerator(
     hint: 'add "sheriff:verify": "sheriff verify" to package.json scripts',
   });
 
+  const packageManager = detectWorkspacePackageManager(tree);
+
   logger.info('\narc-presets doctor:');
   for (const c of checks) {
     logger.info(`  ${c.ok ? '✓' : '✗'} ${c.label}`);
     if (!c.ok && c.hint) logger.info(`      → ${c.hint}`);
   }
   const failed = checks.filter((c) => !c.ok).length;
+  const verify = runScriptCommand(packageManager.name, 'sheriff:verify');
   logger.info(
     failed === 0
-      ? '\nAll checks passed. Run `<pm> sheriff:verify` for the runtime gate.\n'
+      ? `\nAll checks passed. Run \`${verify}\` for the runtime gate.\n`
       : `\n${failed} check(s) need attention.\n`,
   );
 }

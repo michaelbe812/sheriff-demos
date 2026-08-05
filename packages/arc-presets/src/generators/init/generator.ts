@@ -12,6 +12,11 @@ import { configTemplate } from '../../presets/templates';
 import { PRESET_MARKER } from '../detect-preset';
 import { wireEslint } from '../eslint';
 import {
+  detectWorkspacePackageManager,
+  installCommand,
+  runScriptCommand,
+} from '../package-manager';
+import {
   FORK_CORE,
   FORK_ESLINT,
   FORK_VERSION,
@@ -30,6 +35,10 @@ export interface InitGeneratorSchema {
   skipEslint?: boolean;
   ci?: boolean;
   aliasPrefix?: string;
+  /** Override the derived package manager instead of deriving it from the repo. */
+  packageManager?: string;
+  /** Write the dev dependencies, but do not run the install. */
+  skipInstall?: boolean;
 }
 
 export default async function initGenerator(
@@ -55,6 +64,15 @@ export default async function initGenerator(
 
   const useFork = installFork;
 
+  // 0. the target repo's package manager — drives the install and every hint
+  const packageManager = detectWorkspacePackageManager(
+    tree,
+    options.packageManager,
+  );
+  logger.info(
+    `arc-presets: package manager: ${packageManager.name} (${packageManager.detail})`,
+  );
+
   // 1. sheriff.config.ts (do not clobber an existing one)
   if (tree.exists('sheriff.config.ts')) {
     logger.warn(
@@ -76,7 +94,7 @@ export default async function initGenerator(
     [TS_ESLINT_UTILS]: TS_ESLINT_UTILS_VERSION,
     '@lambda-solutions/arc-presets': '^0.1.0',
   };
-  const installTask = addDependenciesToPackageJson(tree, {}, devDeps);
+  addDependenciesToPackageJson(tree, {}, devDeps);
 
   // 3. eslint wiring
   if (!options.skipEslint) {
@@ -96,19 +114,29 @@ export default async function initGenerator(
 
   // 5. optional CI workflow
   if (options.ci) {
-    tree.write('.github/workflows/sheriff.yml', ciWorkflow());
-    logger.info('arc-presets: added .github/workflows/sheriff.yml');
+    tree.write(
+      '.github/workflows/sheriff.yml',
+      ciWorkflow(packageManager.name, tree),
+    );
+    logger.info(
+      `arc-presets: added .github/workflows/sheriff.yml (${packageManager.name})`,
+    );
   }
 
   await formatFiles(tree);
+
+  const install = installCommand(packageManager.name);
+  const verify = runScriptCommand(packageManager.name, 'sheriff:verify');
 
   logger.info(
     [
       '',
       `arc-presets: '${preset.id}' preset scaffolded.`,
       `  - sheriff.config.ts written (${useFork ? 'fork' : 'upstream'} engine)`,
-      `  - dependencies added; run your package manager install`,
-      `  - run: <pm> sheriff:verify`,
+      options.skipInstall
+        ? `  - dev dependencies added; run \`${install}\` (--skipInstall was set)`
+        : `  - dev dependencies added and installed via ${packageManager.name}`,
+      `  - run: ${verify}`,
       preset.sliceKind === 'vertical'
         ? `  - scaffold slices: nx g @lambda-solutions/arc-presets:domain <name> [--app <app>]`
         : `  - scaffold slices: nx g @lambda-solutions/arc-presets:hexagon <name> [--app <app>]`,
@@ -117,5 +145,11 @@ export default async function initGenerator(
     ].join('\n'),
   );
 
-  return () => installPackagesTask(tree);
+  if (options.skipInstall) {
+    return () => {
+      // deps are written to package.json; the user installs them.
+    };
+  }
+
+  return () => installPackagesTask(tree, false, '', packageManager.name);
 }
