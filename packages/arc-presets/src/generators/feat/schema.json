@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "ArcPresetsFeat",
+  "title": "Generate a feat sub-slice inside a vertical-slice domain",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Feat name.",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Feat name?"
+    },
+    "domain": {
+      "type": "string",
+      "description": "Domain the feat lives in.",
+      "x-prompt": "Which domain?"
+    },
+    "app": {
+      "type": "string",
+      "description": "App name for an app-internal domain. Omit if the domain is a lib."
+    },
+    "preset": {
+      "type": "string",
+      "description": "Override the detected preset.",
+      "enum": ["blueprint", "inverted"]
+    }
+  },
+  "required": ["name", "domain"]
+}

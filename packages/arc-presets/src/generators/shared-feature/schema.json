@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "ArcPresetsSharedFeature",
+  "title": "Generate a root-level shared feature (port + store + providers)",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Shared feature name.",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Shared feature name?"
+    },
+    "app": {
+      "type": "string",
+      "description": "App name: scaffold under apps/<app>/src/app/<name>. Omit for a lib under libs/<name>/src."
+    }
+  },
+  "required": ["name"]
+}

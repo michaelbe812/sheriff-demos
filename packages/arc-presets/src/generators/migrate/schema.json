@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "ArcPresetsMigrate",
+  "title": "Migrate the workspace from the 'blueprint' preset to 'inverted'",
+  "type": "object",
+  "properties": {
+    "app": {
+      "type": "string",
+      "description": "Restrict migration to a single app (optional)."
+    }
+  }
+}

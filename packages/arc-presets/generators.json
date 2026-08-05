@@ -1,0 +1,41 @@
+{
+  "name": "arc-presets",
+  "version": "0.1.0",
+  "generators": {
+    "init": {
+      "factory": "./dist/generators/init/generator",
+      "schema": "./dist/generators/init/schema.json",
+      "description": "Set up Sheriff in this workspace from an architecture preset (config + deps + eslint + verify script)"
+    },
+    "domain": {
+      "factory": "./dist/generators/domain/generator",
+      "schema": "./dist/generators/domain/schema.json",
+      "description": "Generate a vertical-slice domain (app-internal or as nx lib)"
+    },
+    "feat": {
+      "factory": "./dist/generators/feat/generator",
+      "schema": "./dist/generators/feat/schema.json",
+      "description": "Generate a feat sub-slice (private, with feat-port) inside a domain"
+    },
+    "shared-feature": {
+      "factory": "./dist/generators/shared-feature/generator",
+      "schema": "./dist/generators/shared-feature/schema.json",
+      "description": "Generate a root-level shared feature (port contract + store + providers)"
+    },
+    "hexagon": {
+      "factory": "./dist/generators/hexagon/generator",
+      "schema": "./dist/generators/hexagon/schema.json",
+      "description": "Generate a hexagon slice (domain/ports/adapters) for the hexagonal presets"
+    },
+    "migrate": {
+      "factory": "./dist/generators/migrate/generator",
+      "schema": "./dist/generators/migrate/schema.json",
+      "description": "Migrate the workspace from the blueprint preset to inverted"
+    },
+    "doctor": {
+      "factory": "./dist/generators/doctor/generator",
+      "schema": "./dist/generators/doctor/schema.json",
+      "description": "Check that Sheriff is correctly wired (config, deps, eslint, script)"
+    }
+  }
+}
