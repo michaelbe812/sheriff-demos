@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "ArcPresetsInit",
+  "title": "Set up Sheriff in this workspace from an architecture preset",
+  "type": "object",
+  "properties": {
+    "preset": {
+      "type": "string",
+      "description": "Architecture preset to scaffold.",
+      "enum": ["blueprint", "inverted", "hexagonal-fwcore", "hexagonal-strict"],
+      "default": "inverted",
+      "x-prompt": {
+        "message": "Which architecture preset?",
+        "type": "list",
+        "items": [
+          { "value": "inverted", "label": "Vertical Slice, inverted (recommended)" },
+          { "value": "blueprint", "label": "Vertical Slice, base (no infra/)" },
+          { "value": "hexagonal-fwcore", "label": "Hexagonal, framework-aware core" },
+          { "value": "hexagonal-strict", "label": "Hexagonal, strict (needs fork)" }
+        ]
+      }
+    },
+    "app": {
+      "type": "string",
+      "description": "Primary app name (seeds entryPoints)."
+    },
+    "installFork": {
+      "type": "boolean",
+      "description": "Install the @lambda-solutions Sheriff fork (v1) instead of upstream @softarc.",
+      "default": true
+    },
+    "skipEslint": {
+      "type": "boolean",
+      "description": "Do not touch eslint.config.* (print a snippet instead).",
+      "default": false
+    },
+    "ci": {
+      "type": "boolean",
+      "description": "Also drop a GitHub Actions workflow that runs sheriff verify.",
+      "default": false
+    },
+    "aliasPrefix": {
+      "type": "string",
+      "description": "tsconfig path-alias prefix for extracted libs.",
+      "default": "@blueprint"
+    }
+  },
+  "required": ["preset"]
+}

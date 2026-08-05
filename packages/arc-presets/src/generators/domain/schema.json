@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "ArcPresetsDomain",
+  "title": "Generate a vertical-slice domain",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Domain name.",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Domain name?"
+    },
+    "app": {
+      "type": "string",
+      "description": "App name: scaffold app-internal under apps/<app>/src/app/domains. Omit for a lib."
+    },
+    "feat": {
+      "type": "string",
+      "description": "First feat to scaffold inside the domain."
+    },
+    "preset": {
+      "type": "string",
+      "description": "Override the detected preset.",
+      "enum": ["blueprint", "inverted"]
+    },
+    "aliasPrefix": {
+      "type": "string",
+      "description": "tsconfig alias prefix for libs.",
+      "default": "@blueprint"
+    }
+  },
+  "required": ["name"]
+}

@@ -1,0 +1,86 @@
+import { formatFiles, logger, names, Tree, updateJson } from '@nx/devkit';
+import { detectPreset } from '../detect-preset';
+import { VerticalPreset, writeFeat, writeSliceBuckets } from '../scaffold';
+
+export interface DomainGeneratorSchema {
+  name: string;
+  /** App name: scaffold app-internal under apps/<app>/src/app/domains. Omit for a lib. */
+  app?: string;
+  /** First feat to scaffold inside the domain. */
+  feat?: string;
+  /** Override the detected preset. */
+  preset?: VerticalPreset;
+  /** tsconfig alias prefix for libs (default @blueprint). */
+  aliasPrefix?: string;
+}
+
+export default async function domainGenerator(
+  tree: Tree,
+  options: DomainGeneratorSchema,
+): Promise<void> {
+  const detected = detectPreset(tree, options.preset);
+  if (detected !== 'blueprint' && detected !== 'inverted') {
+    throw new Error(
+      `The 'domain' generator scaffolds vertical-slice domains, but the active preset is '${detected}'. Use the 'hexagon' generator instead.`,
+    );
+  }
+  const preset: VerticalPreset = detected;
+
+  const { fileName } = names(options.name);
+  const aliasPrefix = options.aliasPrefix ?? '@blueprint';
+
+  const root = options.app
+    ? `apps/${options.app}/src/app/domains/${fileName}`
+    : `libs/domains/${fileName}/src`;
+
+  writeSliceBuckets(tree, root, fileName, preset);
+  if (options.feat) {
+    writeFeat(tree, root, options.feat, preset);
+  }
+
+  if (!options.app) {
+    const libRoot = `libs/domains/${fileName}`;
+    tree.write(
+      `${libRoot}/project.json`,
+      JSON.stringify(
+        {
+          name: `domain-${fileName}`,
+          $schema: '../../../node_modules/nx/schemas/project-schema.json',
+          projectType: 'library',
+          sourceRoot: `${libRoot}/src`,
+          tags: [],
+          targets: { lint: { executor: '@nx/eslint:lint' } },
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+    tree.write(
+      `${libRoot}/tsconfig.json`,
+      JSON.stringify(
+        {
+          extends: '../../../tsconfig.base.json',
+          compilerOptions: { strict: true, target: 'es2022', module: 'preserve' },
+          include: ['src/**/*.ts'],
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+    if (tree.exists('tsconfig.base.json')) {
+      updateJson(tree, 'tsconfig.base.json', (json) => {
+        json.compilerOptions ??= {};
+        json.compilerOptions.paths ??= {};
+        json.compilerOptions.paths[`${aliasPrefix}/domains/${fileName}/*`] = [
+          `./libs/domains/${fileName}/src/*`,
+        ];
+        return json;
+      });
+    }
+    logger.info(
+      `Add an entry point for CI cross-checks: entryPoints: { 'domain-${fileName}': 'libs/domains/${fileName}/src/${fileName}.routes.ts' }`,
+    );
+  }
+
+  await formatFiles(tree);
+}

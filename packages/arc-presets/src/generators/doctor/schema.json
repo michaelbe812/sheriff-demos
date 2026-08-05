@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "ArcPresetsDoctor",
+  "title": "Check that Sheriff is correctly wired in this workspace",
+  "type": "object",
+  "properties": {}
+}

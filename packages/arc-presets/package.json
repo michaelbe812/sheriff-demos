@@ -1,0 +1,40 @@
+{
+  "name": "@lambda-solutions/arc-presets",
+  "version": "0.1.0",
+  "description": "Sheriff architecture presets: config factory + Nx generators + installer for vertical-slice and hexagonal architectures, with the @lambda-solutions Sheriff fork.",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "generators": "./generators.json",
+  "files": [
+    "dist",
+    "generators.json",
+    "presets",
+    "README.md"
+  ],
+  "keywords": [
+    "sheriff",
+    "architecture",
+    "nx",
+    "generator",
+    "vertical-slice",
+    "hexagonal",
+    "ports-and-adapters"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json && node ./scripts/copy-assets.mjs",
+    "test": "vitest run",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "@nx/devkit": ">=21"
+  },
+  "devDependencies": {
+    "@nx/devkit": "23.1.0",
+    "@softarc/sheriff-core": "^0.19.6",
+    "@types/node": "^22.0.0",
+    "nx": "23.1.0",
+    "typescript": "~5.9.0",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "ArcPresetsHexagon",
+  "title": "Generate a hexagon slice (Ports & Adapters)",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Slice name.",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Slice name?"
+    },
+    "app": {
+      "type": "string",
+      "description": "App name: scaffold under apps/<app>/src/app/domains. Omit for a lib."
+    },
+    "preset": {
+      "type": "string",
+      "description": "Override the detected preset.",
+      "enum": ["hexagonal-fwcore", "hexagonal-strict"]
+    }
+  },
+  "required": ["name"]
+}
