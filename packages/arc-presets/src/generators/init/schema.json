@@ -43,6 +43,16 @@
       "type": "string",
       "description": "tsconfig path-alias prefix for extracted libs.",
       "default": "@blueprint"
+    },
+    "packageManager": {
+      "type": "string",
+      "description": "Override the package manager. By default it is derived from the target repo (nx.json cli.packageManager, the package.json packageManager field, or the lockfile).",
+      "enum": ["npm", "pnpm", "yarn", "bun"]
+    },
+    "skipInstall": {
+      "type": "boolean",
+      "description": "Add the dev dependencies to package.json but do not run the install.",
+      "default": false
     }
   },
   "required": ["preset"]

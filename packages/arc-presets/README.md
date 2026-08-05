@@ -23,15 +23,32 @@ The four presets and the reasoning behind each are documented in
 ```sh
 pnpm add -D @lambda-solutions/arc-presets
 nx g @lambda-solutions/arc-presets:init --preset inverted --app client
-pnpm install          # installs the Sheriff engine the init added
 pnpm sheriff:verify
 ```
 
 `init` does four things:
 1. writes `sheriff.config.ts` for the chosen preset,
-2. adds the Sheriff engine deps (fork v1, or upstream `@softarc` with `--installFork=false`),
+2. adds the Sheriff engine as **dev dependencies** (fork v1, or upstream
+   `@softarc` with `--installFork=false`) and installs them with the target
+   repo's package manager,
 3. wires `sheriff.configs.all` into `eslint.config.*` (or prints a snippet),
 4. adds a `sheriff:verify` npm script (and, with `--ci`, a GitHub Actions workflow).
+
+### Package manager detection
+
+`init` derives the package manager from the *target repo* — it never assumes the
+one that happens to run the generator — and uses it for the install, for the
+`--ci` workflow, and for every command it prints. Resolution order:
+
+1. `--packageManager` (explicit override),
+2. `cli.packageManager` in `nx.json`,
+3. the corepack `packageManager` field in `package.json`,
+4. a lockfile (`bun.lockb` / `bun.lock`, `yarn.lock`, `pnpm-lock.yaml`, `package-lock.json`),
+5. nx's own detection as a fallback.
+
+The chosen manager is logged with its reason, e.g.
+`arc-presets: package manager: pnpm (pnpm-lock.yaml)`. Pass `--skipInstall` to
+write the dev dependencies to `package.json` without running the install.
 
 ### init options
 
@@ -41,8 +58,10 @@ pnpm sheriff:verify
 | `--app` | – | primary app name (seeds `entryPoints`) |
 | `--installFork` | `true` | install the fork; `false` uses upstream `@softarc` (blocked for `hexagonal-strict`) |
 | `--skipEslint` | `false` | don't touch `eslint.config.*`; print a snippet |
-| `--ci` | `false` | drop `.github/workflows/sheriff.yml` |
+| `--ci` | `false` | drop `.github/workflows/sheriff.yml` (uses the detected package manager) |
 | `--aliasPrefix` | `@blueprint` | tsconfig path-alias prefix for extracted libs |
+| `--packageManager` | *derived* | force `npm` / `pnpm` / `yarn` / `bun` instead of deriving it |
+| `--skipInstall` | `false` | add the dev dependencies but don't run the install |
 
 ## Generators
 
