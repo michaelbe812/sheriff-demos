@@ -3,8 +3,8 @@ import { names, Tree } from '@nx/devkit';
 /**
  * Slice file templates for the vertical-slice presets. Preset-aware:
  *   - 'blueprint' — api/ holds a concrete class (no infra/, no providers)
- *   - 'inverted'  — api/index.ts holds an ABSTRACT contract, the impl lives in
- *                   infra/, wired at the slice root by <name>.providers.ts
+ *   - 'inverted'  — api/index.ts holds an ABSTRACT contract that declares its
+ *                   own default impl from infra/ (self-providing, no providers)
  */
 
 export type VerticalPreset = 'blueprint' | 'inverted';
@@ -68,20 +68,37 @@ export class ${className}Api {
 `;
 }
 
-/** inverted: abstract contract in api/index.ts. */
+/** inverted: abstract contract in api/index.ts, self-providing. */
 export function apiContractFile(name: string): string {
   const { className, fileName } = names(name);
-  return `import { ${className} } from '../types/${fileName}.model';
+  return `import { inject, Injectable } from '@angular/core';
+import { ${className} } from '../types/${fileName}.model';
+import { Http${className}Api } from '../infra/http-${fileName}-api';
 
 /**
- * PUBLIC PORT of the ${fileName} domain — CONTRACT ONLY. Consumers bind to this
- * abstract class (which is both the TYPE and the DI TOKEN); the implementation
- * lives in infra/ and is wired at the slice root by provide${className}().
- * \`type:api\` has no clearance towards \`type:infra\`: this file structurally
- * cannot name its own implementation. That is what makes it inverted.
+ * PUBLIC PORT of the ${fileName} domain. Consumers bind to this abstract class,
+ * which is both the TYPE and the DI TOKEN.
+ *
+ * SELF-PROVIDING: the contract names its own DEFAULT implementation via
+ * \`useFactory\`, so this slice needs no providers file and no provide${className}()
+ * call — \`inject(${className}Api)\` works out of the box. An explicit provider
+ * still wins (explicit beats \`providedIn: 'root'\`), which is the swap point
+ * for tests and alternative transports.
+ *
+ * The trade: this file imports infra/, so the arrow points AT infrastructure —
+ * layered, not inverted. Consumers stay decoupled (they name only the token),
+ * but the contract knows one impl by name and api/ <-> infra/ is a real import
+ * cycle. Other slices are unaffected: infra/ has no \`port\` tag.
+ *
+ * Keep every member abstract — the contract declares WHICH impl is the
+ * default, it never contains one.
  */
 export type { ${className} } from '../types/${fileName}.model';
 
+@Injectable({
+  providedIn: 'root',
+  useFactory: (): ${className}Api => inject(Http${className}Api),
+})
 export abstract class ${className}Api {
   abstract load(): Promise<${className}[]>;
 }
@@ -97,27 +114,17 @@ import { ${className} } from '../types/${fileName}.model';
 /**
  * The port's implementation (type:infra) — the only place that knows how the
  * data arrives. Not tagged \`port\`, so no other domain can reach it.
+ *
+ * \`implements\`, not \`extends\`: the port imports this file to declare it as its
+ * default, so \`extends\` would need the base class as a VALUE at definition
+ * time and break on the cycle. \`implements\` still errors on signature drift.
  */
 @Injectable({ providedIn: 'root' })
-export class Http${className}Api extends ${className}Api {
+export class Http${className}Api implements ${className}Api {
   async load(): Promise<${className}[]> {
     const response = await fetch('/api/${fileName}');
     return (await response.json()) as ${className}[];
   }
-}
-`;
-}
-
-export function providersFile(name: string): string {
-  const { className, fileName } = names(name);
-  return `import { Provider } from '@angular/core';
-import { ${className}Api } from './api';
-import { Http${className}Api } from './infra/http-${fileName}-api';
-
-/** Slice root (entry): wires the port contract to its implementation. */
-export function provide${className}(): Provider {
-  // the abstract class IS the token — no separate InjectionToken needed
-  return { provide: ${className}Api, useClass: Http${className}Api };
 }
 `;
 }
@@ -198,7 +205,7 @@ export function writeSliceBuckets(
     // buckets — api/ keeps its own `type:api, port` tags.
     tree.write(`${root}/api/index.ts`, apiContractFile(name));
     tree.write(`${root}/infra/http-${fileName}-api.ts`, infraFile(name));
-    tree.write(`${root}/${fileName}.providers.ts`, providersFile(name));
+    // no <slice>.providers.ts: the port provides itself (see apiContractFile)
   } else {
     tree.write(`${root}/api/${fileName}-api.ts`, apiConcreteFile(name));
   }

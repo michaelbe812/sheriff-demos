@@ -46,14 +46,21 @@ describe('init generator', () => {
 });
 
 describe('domain generator', () => {
-  it('inverted domain writes infra + providers', async () => {
+  it('inverted domain writes infra and a self-providing port, no providers file', async () => {
     const tree = createTreeWithEmptyWorkspace();
     await initGenerator(tree, { preset: 'inverted', app: 'client' });
     await domainGenerator(tree, { name: 'booking', app: 'client' });
     const base = 'apps/client/src/app/domains/booking';
     expect(tree.exists(`${base}/api/index.ts`)).toBe(true);
     expect(tree.exists(`${base}/infra/http-booking-api.ts`)).toBe(true);
-    expect(tree.exists(`${base}/booking.providers.ts`)).toBe(true);
+    // the port declares its own default impl, so no wiring file is scaffolded
+    expect(tree.exists(`${base}/booking.providers.ts`)).toBe(false);
+    const port = tree.read(`${base}/api/index.ts`, 'utf-8')!;
+    expect(port).toContain('useFactory');
+    expect(port).toContain('inject(HttpBookingApi)');
+    expect(tree.read(`${base}/infra/http-booking-api.ts`, 'utf-8')).toContain(
+      'implements BookingApi',
+    );
   });
 
   it('blueprint domain has no infra', async () => {

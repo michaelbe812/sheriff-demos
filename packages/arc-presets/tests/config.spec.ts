@@ -12,18 +12,26 @@ describe('verticalSliceConfig', () => {
     expect(cfg.depRules).not.toHaveProperty('type:infra');
   });
 
-  it('inverted adds infra bucket and inversion rule', () => {
+  it('inverted adds infra bucket and lets the port declare its default impl', () => {
     const cfg = verticalSliceConfig('inverted');
     const keys = Object.keys(cfg.modules ?? {});
     expect(keys.some((k) => k.includes('/infra'))).toBe(true);
     expect(cfg.depRules).toHaveProperty('type:infra');
-    // api may NOT name infra
+    // SELF-PROVIDING port: api MAY name infra to declare its default via
+    // useFactory — layered, not inverted (see vertical-slice.ts).
     const apiRule = (cfg.depRules as Record<string, unknown>)['type:api'];
     expect(apiRule).toEqual([
       'type:types',
       'type:utils',
       'type:api',
+      'type:infra',
     ]);
+  });
+
+  it('blueprint keeps type:api free of infra (no infra bucket exists)', () => {
+    const cfg = verticalSliceConfig('blueprint');
+    const apiRule = (cfg.depRules as Record<string, unknown>)['type:api'];
+    expect(apiRule).toEqual(['type:types', 'type:utils', 'type:api']);
   });
 
   it('merges extra modules and dep rules', () => {

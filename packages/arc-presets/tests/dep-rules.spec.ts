@@ -33,7 +33,10 @@ const allows = (rule: DepRule, context: DepRuleContext): boolean => {
 const invertedRules = verticalSliceConfig('inverted').depRules!;
 
 describe('verticalSliceConfig dep rule predicates', () => {
-  it('blocks type:api imports to type:infra in the inverted preset', () => {
+  it('allows type:api -> type:infra in the inverted preset (self-providing port)', () => {
+    // The port declares its own default impl via useFactory, so it must be
+    // able to name it. Everyone else (data/ui/feat, foreign domains) stays
+    // blocked — see the tests below.
     expect(
       allows(
         invertedRules['type:api'],
@@ -45,7 +48,7 @@ describe('verticalSliceConfig dep rule predicates', () => {
             'apps/client/src/app/domains/booking/infra/http-booking-api.ts',
         }),
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('allows slice roots, but not feat roots, to wire type:infra', () => {

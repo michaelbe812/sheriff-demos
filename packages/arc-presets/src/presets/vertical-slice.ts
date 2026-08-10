@@ -11,8 +11,8 @@ type DepRules = SheriffConfig['depRules'];
 /**
  * Vertical-slice blueprint — the shared engine behind the `blueprint` and
  * `inverted` presets. Both share ONE parametrised factory; `inverted` is
- * `blueprint` plus an `infra/` bucket and the inversion rules that keep the
- * port (`api/`) from ever naming its own implementation.
+ * `blueprint` plus an `infra/` bucket that holds the port's implementation and
+ * stays invisible to everyone except the port itself and the slice root.
  *
  * Principle: EVERYTHING is a slice with the same internal layer matrix; access
  * from outside only through a port.
@@ -27,7 +27,8 @@ type DepRules = SheriffConfig['depRules'];
  *   types   -> (nothing)
  *   utils   -> types, utils
  *   events  -> types, utils, events
- *   api     -> types, utils, api                 (CONTRACT, never infra)
+ *   api     -> types, utils, api (+ infra in `inverted`: the port declares its
+ *              own DEFAULT impl — layered, not inverted; see the rule below)
  *   infra   -> types, utils, api, infra          (inverted preset only)
  *   data    -> types, utils, api, data, events   (binds to the token, not infra)
  *   ui      -> types, utils, ui, events          (NOT api, NOT data)
@@ -118,10 +119,22 @@ export const blueprintDepRules = (preset: VerticalPreset): DepRules => ({
   'type:types': noDependencies,
   'type:utils': ['type:types', 'type:utils'],
   'type:events': ['type:types', 'type:utils', 'type:events'],
-  // The port is a CONTRACT: it may name its own types, never its impl.
-  // In the inverted preset `type:api` deliberately has no clearance towards
-  // `type:infra` — that is what makes the dependency inverted, not layered.
-  'type:api': ['type:types', 'type:utils', 'type:api'],
+  // In the inverted preset the port is a SELF-PROVIDING contract: it may name
+  // its own impl to declare a DEFAULT via
+  // `@Injectable({providedIn:'root', useFactory: () => inject(HttpXApi)})`,
+  // so a slice needs no providers file and no provideX() call.
+  //
+  // The trade, stated plainly: this arrow points back at infrastructure, so
+  // the relation is LAYERED, not inverted. Substitutability survives —
+  // consumers name only the token and an explicit provider still wins — but
+  // the contract knows one impl by name and api/ <-> infra/ is a real import
+  // cycle (fine at runtime, classes hoist). Encapsulation towards OTHER slices
+  // is untouched: infra/ carries no `port` tag, so the scope axis blocks it.
+  // In the `blueprint` preset there is no infra/ bucket at all.
+  'type:api':
+    preset === 'inverted'
+      ? ['type:types', 'type:utils', 'type:api', 'type:infra']
+      : ['type:types', 'type:utils', 'type:api'],
   ...(preset === 'inverted'
     ? {
         // The impl side: implements the contract, talks to shared/api (http)
