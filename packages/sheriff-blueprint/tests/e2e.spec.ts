@@ -98,10 +98,12 @@ describe('eslint dependency-rule fires through the packaged config', () => {
 });
 
 /**
- * The port is a CONTRACT, its impl lives in infra/. These four tests are the
- * teeth behind that claim — without them "inverted" is a code comment.
+ * infra/ is slice-private and api/ is the only seam. The port may name its own
+ * default impl (that arrow is layered, by design); everyone else — foreign
+ * domains, stores, feats — must go through the token. These tests are the
+ * teeth behind that claim.
  */
-describe('inverted domain ports: infra/ is unreachable, api/ is the seam', () => {
+describe('domain ports: infra/ is slice-private, api/ is the seam', () => {
   it('blocks a foreign domain from reaching booking/infra', () => {
     const file = writeTmp(
       'apps/client/src/app/domains/checkin/data/tmp-e2e-infra-viol.ts',
@@ -127,16 +129,17 @@ describe('inverted domain ports: infra/ is unreachable, api/ is the seam', () =>
     expect(output).toContain('type:data');
   });
 
-  it('blocks the contract from naming its own implementation', () => {
-    // type:api -> type:infra. If this were allowed the arrow would point at
-    // infrastructure again and the inversion would be decorative.
+  it('allows the contract to name its own default implementation', () => {
+    // type:api -> type:infra is ALLOWED by design: the token declares the impl
+    // it falls back to via `useFactory`, so a slice needs no providers file.
+    // The trade is explicit — this arrow points back at infrastructure, so the
+    // relation is layered, not inverted. Substitutability survives (consumers
+    // still name only the token); structural ignorance does not.
     const file = writeTmp(
-      'libs/domains/booking/src/api/tmp-e2e-infra-viol.ts',
+      'libs/domains/booking/src/api/tmp-e2e-infra-ok.ts',
       `import { HttpBookingApi } from '../infra/http-booking-api';\nexport const x = HttpBookingApi;\n`,
     );
-    const output = eslintOn(file);
-    expect(output).toContain('@softarc/sheriff/dependency-rule');
-    expect(output).toContain('type:api');
+    expect(eslintOn(file)).not.toContain('@softarc/sheriff/dependency-rule');
   });
 
   it('blocks a feat from reaching its own slice\'s infra', () => {

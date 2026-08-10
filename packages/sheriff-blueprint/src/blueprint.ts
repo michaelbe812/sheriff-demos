@@ -28,7 +28,8 @@ type DepRules = SheriffConfig['depRules'];
  *   types   -> (nothing)
  *   utils   -> types, utils
  *   events  -> types, utils, events      (signal-store event definitions)
- *   api     -> types, utils, api
+ *   api     -> types, utils, api, infra  (contract + its DEFAULT impl, see
+ *              the `type:api` rule: layered, not inverted)
  *   data    -> types, utils, api, data, events   (stores, business services)
  *   ui      -> types, utils, ui, events  (dumb components; component-local
  *              stores live INSIDE the ui bucket — intra-module imports are
@@ -52,12 +53,13 @@ export const slice = (path: string, scope: string): Modules => ({
   [`${path}/types`]: [scope, 'type:types'],
   [`${path}/utils`]: [scope, 'type:utils'],
   [`${path}/events`]: [scope, 'type:events'],
-  // The PUBLIC PORT: contract only — interfaces + InjectionToken, no impl.
-  // Consumers (own data/, foreign domains) bind to this and nothing else.
+  // The PUBLIC PORT: the contract plus its DEFAULT wiring. Consumers (own
+  // data/, foreign domains) bind to this and nothing else; the token resolves
+  // to a default impl without a providers file.
   [`${path}/api`]: [scope, 'type:api', 'port'],
   // The port's implementation: HTTP clients, mappers, third-party SDKs.
-  // NOT tagged `port`, so it is invisible outside the slice — only the slice
-  // root (entry) may see it, to wire it onto the token.
+  // NOT tagged `port`, so it stays invisible OUTSIDE the slice. Inside, the
+  // port itself and the slice root (entry) may name it.
   [`${path}/infra`]: [scope, 'type:infra'],
   [`${path}/data`]: [scope, 'type:data'],
   [`${path}/ui`]: [scope, 'type:ui'],
@@ -145,10 +147,19 @@ export const blueprintDepRules = (): DepRules => ({
   'type:types': noDependencies,
   'type:utils': ['type:types', 'type:utils'],
   'type:events': ['type:types', 'type:utils', 'type:events'],
-  // The port is a CONTRACT: it may name its own types, never its impl.
-  // `type:api` deliberately has no clearance towards `type:infra` — that is
-  // what makes the dependency inverted rather than merely layered.
-  'type:api': ['type:types', 'type:utils', 'type:api'],
+  // The port carries its own DEFAULT IMPLEMENTATION: `type:api` has clearance
+  // towards `type:infra` so the token can name the impl it falls back to
+  // (`@Injectable({providedIn:'root', useFactory: () => inject(HttpX)})`).
+  //
+  // This is a DELIBERATE trade: the arrow api -> infra points back at
+  // infrastructure, so the dependency is LAYERED, not inverted. What the port
+  // still buys is substitutability — consumers name only the token, and an
+  // explicit provider at the composition root beats the default. What it no
+  // longer buys is structural ignorance: the contract knows one impl by name,
+  // and api/ <-> infra/ is a genuine import cycle (resolved by class
+  // hoisting). Encapsulation towards FOREIGN slices is untouched — infra/
+  // carries no `port` tag, so the scope axis still blocks it.
+  'type:api': ['type:types', 'type:utils', 'type:api', 'type:infra'],
   // The impl side: implements the contract, talks to shared/api (http) and
   // its own types/utils. It may NOT reach data/ or ui/ — nothing calls
   // inward from infrastructure.

@@ -41,7 +41,9 @@ export function ${propertyName}Label(entity: ${className}): string {
 
 export function apiPortFile(name: string): string {
   const { className, fileName } = names(name);
-  return `import { ${className} } from '../types/${fileName}.model';
+  return `import { inject, Injectable } from '@angular/core';
+import { ${className} } from '../types/${fileName}.model';
+import { Http${className}Api } from '../infra/http-${fileName}-api';
 
 /**
  * PUBLIC PORT of the ${fileName} domain: the only module other domains may
@@ -53,20 +55,30 @@ export function apiPortFile(name: string): string {
  * BUCKET level keeps every rule; one at LIB level would merge the buckets
  * into a single module and destroy the layer matrix.
  *
- * CONTRACT ONLY — the implementation lives in infra/ and is wired at the
- * slice root by provide${className}(). Consumers bind to this abstract class,
- * so the transport can be swapped or faked without touching a single store.
- * \`type:api\` has no clearance towards \`type:infra\`: this file structurally
- * cannot name its own implementation. That is what makes it inverted.
+ * SELF-PROVIDING PORT — the contract names its own DEFAULT implementation via
+ * \`useFactory\`, so this slice needs no providers file and no provide${className}()
+ * call: \`inject(${className}Api)\` works out of the box. An explicit provider
+ * still wins (explicit beats \`providedIn: 'root'\`) — that is the swap point
+ * for tests and alternative transports.
+ *
+ * The trade: this file imports infra/, so the arrow points AT infrastructure —
+ * layered, not inverted. Consumers stay decoupled (they name only the token),
+ * but the contract knows one impl by name and api/ <-> infra/ is a real import
+ * cycle. See docs/architecture.md; revert \`type:api\` to forbid \`type:infra\`
+ * if you want the hard inversion back.
  *
  * \`abstract\` is load-bearing — the class is the TYPE and the DI TOKEN in one
- * artifact, and cannot be instantiated or provided as its own impl. Keep every
- * member abstract: a method body here would put implementation in the contract.
+ * artifact and cannot be instantiated. Keep every member abstract: a method
+ * body here would put implementation in the contract.
  * (An \`InjectionToken\` + interface is the equivalent alternative; see
  * docs/architecture.md for the trade-off.)
  */
 export type { ${className} } from '../types/${fileName}.model';
 
+@Injectable({
+  providedIn: 'root',
+  useFactory: (): ${className}Api => inject(Http${className}Api),
+})
 export abstract class ${className}Api {
   abstract load(): Promise<${className}[]>;
 }
@@ -82,27 +94,17 @@ import { ${className} } from '../types/${fileName}.model';
 /**
  * The port's implementation (type:infra) — the only place that knows how the
  * data arrives. Not tagged \`port\`, so no other domain can reach it.
+ *
+ * \`implements\`, not \`extends\`: the port imports this file to declare it as its
+ * default, so \`extends\` would need the base class as a VALUE at definition
+ * time and break on the cycle. \`implements\` still errors on signature drift.
  */
 @Injectable({ providedIn: 'root' })
-export class Http${className}Api extends ${className}Api {
+export class Http${className}Api implements ${className}Api {
   async load(): Promise<${className}[]> {
     const response = await fetch('/api/${fileName}');
     return (await response.json()) as ${className}[];
   }
-}
-`;
-}
-
-export function providersFile(name: string): string {
-  const { className, fileName } = names(name);
-  return `import { Provider } from '@angular/core';
-import { ${className}Api } from './api';
-import { Http${className}Api } from './infra/http-${fileName}-api';
-
-/** Slice root (entry): wires the port contract to its implementation. */
-export function provide${className}(): Provider {
-  // the abstract class IS the token — no separate InjectionToken needed
-  return { provide: ${className}Api, useClass: Http${className}Api };
 }
 `;
 }
@@ -117,7 +119,8 @@ import { ${className} } from '../types/${fileName}.model';
 @Injectable({ providedIn: 'root' })
 export class ${className}Store {
   // binds to the CONTRACT, never to the impl — type:data has no clearance
-  // towards type:infra, so only the slice root can wire them together
+  // towards type:infra, so this resolves to whatever the port declared as its
+  // default, or to an explicit override
   private readonly api = inject(${className}Api);
   private readonly entities = signal<${className}[]>([]);
 
@@ -178,7 +181,7 @@ export function writeSliceBuckets(tree: Tree, root: string, name: string): void 
   // buckets — the api/ module keeps its own `type:api, port` tags.
   tree.write(`${root}/api/index.ts`, apiPortFile(name));
   tree.write(`${root}/infra/http-${fileName}-api.ts`, infraFile(name));
-  tree.write(`${root}/${fileName}.providers.ts`, providersFile(name));
+  // no <slice>.providers.ts: the port provides itself (see apiPortFile)
   tree.write(`${root}/data/${fileName}.store.ts`, storeFile(name));
   tree.write(`${root}/ui/.gitkeep`, '');
 }
