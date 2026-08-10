@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 // ERLAUBT: der Kurz-Alias zeigt auf den PORT (api/index.ts) — der Contract,
 // nicht die Impl. Die Shell (app:client) darf `port`, `entry` und `shared`.
@@ -16,11 +16,16 @@ import { BookingApi } from '@blueprint/domains/booking/api';
   imports: [RouterOutlet],
   template: '<router-outlet />',
 })
-export class App {
+export class App implements OnInit{
   /**
    * Demo: die Shell bindet an den Contract. `BookingApi` ist eine abstrakte
    * Klasse (Variante B) — sie IST das DI-Token. Welche Impl dahinter steckt,
-   * entscheidet provideBooking() am Slice-Root; hier ist sie unsichtbar.
+   * bestimmt der Port selbst per `useFactory` (Self-Providing Port) — ohne
+   * Eintrag in app.config.ts. Hier ist sie so oder so unsichtbar.
    */
   private readonly bookingApi = inject(BookingApi);
+
+  async ngOnInit() {
+    await this.bookingApi.loadBookings()
+  }
 }

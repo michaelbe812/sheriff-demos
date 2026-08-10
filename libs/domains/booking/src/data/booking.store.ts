@@ -9,8 +9,8 @@ import { isConfirmed } from '../utils/booking.utils';
 export class BookingStore {
   // binds to the ABSTRACT class, not the impl — the store cannot name
   // HttpBookingApi even if it wanted to (type:data has no clearance towards
-  // type:infra). BookingApi is abstract, so this can only ever resolve to
-  // whatever provideBooking() wired.
+  // type:infra). BookingApi is abstract, so this resolves to the port's own
+  // default impl, or to whatever an explicit provider overrode it with.
   private readonly api = inject(BookingApi);
   private readonly bookings = signal<Booking[]>([
     { id: 'b1', guestName: 'Ada Lovelace', checkinDate: '2026-08-01', status: 'pending' },

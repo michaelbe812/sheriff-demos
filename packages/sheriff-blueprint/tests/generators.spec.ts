@@ -46,6 +46,11 @@ describe('domain generator', () => {
     const port = tree.read(`${root}/api/index.ts`, 'utf-8')!;
     expect(port).toContain('PUBLIC PORT');
     expect(port).toContain('export abstract class InventoryApi');
+    // SELF-PROVIDING port: the contract declares its own default impl, so the
+    // slice ships without a providers file and needs no provideX() call.
+    expect(port).toContain('useFactory');
+    expect(port).toContain('inject(HttpInventoryApi)');
+    expect(tree.exists(`${root}/inventory.providers.ts`)).toBe(false);
     expect(tree.read('libs/domains/inventory/project.json', 'utf-8')).toContain('"domain-inventory"');
   });
 

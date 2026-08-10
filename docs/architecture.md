@@ -6,7 +6,7 @@ Skalierbare `sheriff.config.ts` für alle Projekte. Funktioniert identisch für 
 
 **Alles ist ein Slice mit derselben Layer-Matrix; Zugriff von außen nur über einen Port.**
 
-- Domain-`api/` → Tag `port` — public API für andere Domains. **Contract only**: Interface + `InjectionToken`, keine Implementierung.
+- Domain-`api/` → Tag `port` — public API für andere Domains: Contract (Interface + `InjectionToken` bzw. abstrakte Klasse) **plus die Deklaration seiner Default-Impl**.
 - Domain-`infra/` → `type:infra` — die Implementierung des Ports (HTTP, SDKs). **Kein `port`-Tag**, also außerhalb der Slice unsichtbar.
 - Feat-`api/` → Tag `feat-port` — public API für Geschwister-Feats, nie sichtbar außerhalb der Domain
 - Shared-Features (auth, layout, …) = Domains mit gleichem Mechanismus (deep modules, schmale API)
@@ -15,7 +15,32 @@ Skalierbare `sheriff.config.ts` für alle Projekte. Funktioniert identisch für 
 
 Ursprünglich war `api/` beides: öffentlicher Port **und** HTTP-Adapter — eine `@Injectable`-Klasse mit `fetch` darin. Wer den Port importierte (auch fremde Domains), hing an der Implementierung: kein Fake für Tests, kein Wechsel auf GraphQL ohne Anfassen aller Aufrufer. Der Abhängigkeitspfeil zeigte **zur** Infrastruktur.
 
-Jetzt gilt: `type:api` hat **keine** Clearance zu `type:infra`. Der Contract kann seine eigene Impl nicht benennen — die Inversion ist damit strukturell erzwungen, nicht Disziplinsache. Auch `type:data` darf `infra` nicht sehen: Stores binden an das Token, verdrahtet wird ausschließlich am Slice-Root (`<slice>.providers.ts`, `type:feature`). Das ist dasselbe Muster, das `auth` schon immer nutzte — jetzt für alle Slices.
+Jetzt gilt: **alle außer dem Port selbst** binden ans Token. `type:data` darf `infra` nicht sehen, `type:ui` und jedes `feat-<x>/` ebenso wenig, und fremde Domains scheitern schon an der Scope-Achse (`infra/` trägt kein `port`-Tag). Der Wechsel auf GraphQL oder einen In-Memory-Fake fasst genau eine Datei an.
+
+### Self-Providing Port: `api → infra` ist erlaubt
+
+`type:api` hat **Clearance zu `type:infra`** — bewusst. Der Port deklariert seine eigene Default-Impl:
+
+```ts
+@Injectable({
+  providedIn: 'root',
+  useFactory: (): BookingApi => inject(HttpBookingApi),
+})
+export abstract class BookingApi {
+  abstract loadBookings(): Promise<Booking[]>;
+}
+```
+
+Damit braucht eine Slice **keine `<slice>.providers.ts` und keinen `provideX()`-Aufruf** im Composition Root: `inject(BookingApi)` funktioniert sofort. Ein expliziter Provider gewinnt weiterhin (explizite Provider schlagen `providedIn: 'root'`) — genau das ist der Austauschpunkt für Tests und Varianten.
+
+**Der Preis, offen benannt:** Der Pfeil zeigt wieder **zur** Infrastruktur — die Beziehung ist **geschichtet, nicht invertiert**. Was bleibt, ist Austauschbarkeit: Konsumenten kennen nur das Token. Was verloren geht:
+
+- Der Contract ist nicht mehr unwissend über seine Impl — er nennt genau eine beim Namen.
+- `api/ ↔ infra/` ist ein echter Import-Zyklus. Er funktioniert (Klassen werden gehoisted), ist aber real und kann bei Bundler-Reihenfolge zurückkommen.
+- In `infra/` muss es `implements` statt `extends` heißen: `extends` bräuchte die Basisklasse als **Wert** zur Definitionszeit und knallt am Zyklus. `implements` prüft der Compiler weiterhin auf Signatur-Drift.
+- Fehlt die Impl mal, gibt es keinen DI-Fehler mehr, sondern stillen Fallback auf echtes HTTP — auch im Test, wenn niemand überschreibt.
+
+Wer die harte Inversion will, setzt `'type:api'` zurück auf `['type:types', 'type:utils', 'type:api']` und verdrahtet wieder per `<slice>.providers.ts` am Slice-Root (`type:feature`) — so macht es `auth` und `checkin` weiterhin.
 
 „Ausschließlich am Slice-Root" ist dabei wörtlich zu nehmen und war anfangs *nicht* durchgesetzt: `type:feature` hängt auch an jedem `feat-<x>/`-Ordner, sodass ein Feat `infra/` direkt greifen konnte — am eigenen Port vorbei. Die Regel unterscheidet beide inzwischen am Dateipfad (`inAnyFeat`), weil Upstream-Sheriff die Tags der importierenden Datei nicht in den Regel-Kontext gibt. Zwei e2e-Tests decken beide Seiten ab: Feat → `infra` blockiert, Slice-Root → `infra` weiterhin erlaubt.
 
@@ -66,9 +91,10 @@ libs/
 
 Slice-Shape (Domain, Shared-Feature — app-intern oder Lib):
   <slice>.routes.ts / shell    + entry           einziger Einstieg für App-Shell
-  <slice>.providers.ts         + entry           verdrahtet Port → Impl (einziger Ort)
+  <slice>.providers.ts         + entry           optional: verdrahtet Port → Impl
+                                                 (entfällt beim Self-Providing Port)
   types/   utils/   events/   data/   ui/
-  api/                         + port            PUBLIC PORT (Contract: Interface + Token)
+  api/                         + port            PUBLIC PORT (Contract + Default-Impl)
   infra/                       type:infra        Impl des Ports — slice-privat
   feat-<feat>/                 + feat:<feat>     strikt privat, gleiche Buckets
     api/                       + feat-port       public für Geschwister-Feats
@@ -88,7 +114,7 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
 | **types**   | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | **utils**   | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | **events**  | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **api**     | ✓ | ✓ | ✗* | ✓ | ✗** | ✗ | ✗ | ✗ |
+| **api**     | ✓ | ✓ | ✗* | ✓ | ✓** | ✗ | ✗ | ✗ |
 | **infra**   | ✓ | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ |
 | **data**    | ✓ | ✓ | ✓ | ✓ | ✗** | ✓ | ✗ | ✗ |
 | **ui**      | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ |
@@ -96,7 +122,7 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
 
 *api→events bei Bedarf: `'type:events'` in der `'type:api'`-Regel ergänzen (Einzeiler).
 
-**Die beiden ✗, die die Inversion tragen: `api → infra` (der Contract kennt seine Impl nicht) und `data → infra` (Stores binden ans Token). Nur `feature` (= Slice-Root, `<slice>.providers.ts`) sieht beide Seiten und verdrahtet sie. Getestet in `tests/e2e.spec.ts` — Regel entfernen ⇒ Test rot.
+**`api → infra` ist **erlaubt** (Self-Providing Port, s.o.) — das ✓ ist die bewusste Entscheidung für Ergonomie statt Inversion. Die Kapselung trägt jetzt `data → infra ✗` (Stores binden ans Token), `ui → infra ✗`, `feat-<x> → infra ✗` und die Scope-Achse gegenüber fremden Domains. Getestet in `tests/e2e.spec.ts` — inklusive eines Tests, der `api → infra` explizit als erlaubt festhält.
 
 - `data` = Signal Stores + Business-Logic-Services (domain- oder feat-shared)
 - `events` = Signal-Store-Events, definition-only (Type + Creator). ui/feature werfen, data handelt → deshalb eigener Bucket, den ui importieren darf (data nicht)
@@ -134,8 +160,8 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
   ```
 
   ```ts
-  import { Booking, BookingApi } from '@blueprint/domains/booking/api';   // Port
-  import { provideBooking }      from '@blueprint/domains/booking/booking.providers'; // entry
+  import { Booking, BookingApi } from '@blueprint/domains/booking/api';          // Port
+  import bookingRoutes           from '@blueprint/domains/booking/booking.routes'; // entry
   ```
 
   Der Wildcard löst technisch **alles** auf — er ist keine Zugriffsgrenze, sondern nur Modul-Auflösung. Die Grenze zieht Sheriff über die Tags: `.../booking/data/booking.store` resolved zwar, wird aber geblockt. Das ist bewusst so, damit ein Verstoß als *Architektur*-Fehler mit Regelnamen erscheint statt als „Modul nicht gefunden". Verifiziert in `tests/e2e.spec.ts`.
