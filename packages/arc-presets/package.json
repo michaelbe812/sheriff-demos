@@ -3,15 +3,12 @@
   "version": "0.1.0",
   "description": "Sheriff architecture presets: config factory + Nx generators + installer for vertical-slice and hexagonal architectures, with the @lambda-solutions Sheriff fork.",
   "license": "MIT",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
   "generators": "./generators.json",
-  "files": [
-    "dist",
-    "generators.json",
-    "presets",
-    "README.md"
-  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "sheriff",
     "architecture",
@@ -22,9 +19,8 @@
     "ports-and-adapters"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.lib.json && node ./scripts/copy-assets.mjs",
-    "test": "vitest run",
-    "prepare": "npm run build"
+    "build": "nx build arc-presets",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "@nx/devkit": ">=21"
