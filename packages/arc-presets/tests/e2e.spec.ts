@@ -16,6 +16,8 @@ import type { PresetId } from '../src/presets';
 const e2eEnabled = !!process.env.ARC_PRESETS_E2E;
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, '..');
+/** Build output — mirrors project.json's `outputPath`. */
+const distRoot = resolve(packageRoot, '../../dist/packages/arc-presets');
 const createdWorkspaces: string[] = [];
 
 interface CommandResult {
@@ -107,6 +109,7 @@ const createWorkspace = async (name: string): Promise<string> => {
       '@lambda-solutions/sheriff-core': '^1.0.0',
       '@nx/devkit': '23.1.0',
       '@nx/eslint': '23.1.0',
+      '@typescript-eslint/parser': '^8.0.0',
       '@typescript-eslint/utils': '^8.0.0',
       eslint: '^9.8.0',
       nx: '23.1.0',
@@ -207,8 +210,15 @@ const writeSheriffOnlyEslintConfig = (workspace: string): void => {
     join(workspace, 'eslint.config.mjs'),
     [
       "import sheriff from '@lambda-solutions/eslint-plugin-sheriff';",
+      "import tsParser from '@typescript-eslint/parser';",
       '',
-      'export default [sheriff.configs.all];',
+      // Sheriff's config brings rules, not a parser. Without an explicit TS
+      // parser espree chokes on the first type annotation, which surfaces as a
+      // "Parsing error" long before any dependency rule is evaluated.
+      'export default [',
+      "  { files: ['**/*.ts'], languageOptions: { parser: tsParser } },",
+      '  sheriff.configs.all,',
+      '];',
       '',
     ].join('\n'),
   );
@@ -221,7 +231,11 @@ describe.skipIf(!e2eEnabled)('arc-presets real package e2e', () => {
   beforeAll(async () => {
     await run(packageRoot, 'npm', ['run', 'build']);
     const packDir = mkdtempSync(join(tmpdir(), 'arc-presets-pack-'));
-    await run(packageRoot, 'pnpm', ['pack', '--pack-destination', packDir]);
+    // Pack the BUILD OUTPUT, not the source root: package.json points `main`
+    // at ./src/index.js, which only exists in dist/. Packing packageRoot ships
+    // the .ts sources instead and every generator dies on `Unexpected token
+    // 'export'` — the package under test must be the one users install.
+    await run(distRoot, 'pnpm', ['pack', '--pack-destination', packDir]);
     const tarball = readdirSync(packDir).find((entry) => entry.endsWith('.tgz'));
     if (!tarball) {
       throw new Error(`pnpm pack did not produce a tarball in ${packDir}`);
@@ -279,6 +293,26 @@ describe.skipIf(!e2eEnabled)('arc-presets real package e2e', () => {
       'apps/client/src/app/domains/booking/data/data-to-api.ts',
     );
     expect(allowed.status).toBe(0);
+  });
+
+  it('lets the inverted port name its own impl (self-providing) through eslint', async () => {
+    // The scaffolded api/index.ts already imports infra/ for its useFactory
+    // default — if the rule regressed, linting the generated port would fail.
+    const workspace = await scaffoldPreset('inverted');
+    writeSheriffOnlyEslintConfig(workspace);
+
+    const port = readFileSync(
+      join(workspace, 'apps/client/src/app/domains/booking/api/index.ts'),
+      'utf-8',
+    );
+    expect(port).toContain('useFactory');
+    expect(port).toContain('inject(HttpBookingApi)');
+
+    const linted = await runEslint(
+      workspace,
+      'apps/client/src/app/domains/booking/api/index.ts',
+    );
+    expect(linted.status).toBe(0);
   });
 
   it('blocks hexagonal adapters/driving -> adapters/driven imports through eslint', async () => {

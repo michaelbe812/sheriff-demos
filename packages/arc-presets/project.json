@@ -18,8 +18,16 @@
             "glob": "**/schema.json",
             "output": "src"
           },
-          "packages/arc-presets/generators.json",
-          "packages/arc-presets/README.md",
+          {
+            "input": "packages/arc-presets",
+            "glob": "generators.json",
+            "output": "."
+          },
+          {
+            "input": "packages/arc-presets",
+            "glob": "README.md",
+            "output": "."
+          },
           {
             "input": "packages/arc-presets/presets",
             "glob": "**/*",
