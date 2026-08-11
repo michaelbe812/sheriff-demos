@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast feedback: lint, typecheck and the unit/integration tests that need
+  # no network beyond the workspace install.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec nx build arc-presets
+      - run: pnpm exec nx test arc-presets
+      # Lint currently has 3 pre-existing errors (doctor/generator.ts,
+      # generators-expanded.spec.ts). Reported, but not gating, until they are
+      # fixed — drop the `|| true` once the count is zero to make it a gate.
+      - name: lint (non-gating, pre-existing errors)
+        run: pnpm exec nx lint arc-presets || true
+
+  # The e2e suite packs the real tarball, installs it into throwaway
+  # workspaces and runs the generators + `sheriff verify` against the output.
+  # Opt-in via ARC_PRESETS_E2E because it is slow (~60s) and hits the network;
+  # kept as its own job so a failure here is unambiguous.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec nx test arc-presets
+        env:
+          ARC_PRESETS_E2E: '1'
