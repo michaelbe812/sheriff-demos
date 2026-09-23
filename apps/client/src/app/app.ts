@@ -20,8 +20,8 @@ export class App implements OnInit{
   /**
    * Demo: die Shell bindet an den Contract. `BookingApi` ist eine abstrakte
    * Klasse (Variante B) — sie IST das DI-Token. Welche Impl dahinter steckt,
-   * bestimmt der Port selbst per `useFactory` (Self-Providing Port) — ohne
-   * Eintrag in app.config.ts. Hier ist sie so oder so unsichtbar.
+   * bestimmt der Slice-Root per provideBooking() (app.config.ts). Hier ist
+   * sie unsichtbar.
    */
   private readonly bookingApi = inject(BookingApi);
 
