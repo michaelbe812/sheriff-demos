@@ -8,9 +8,13 @@ import { afterEach, describe, expect, it } from 'vitest';
  * consumes createSheriffConfig() from this package, eslint.config.mjs uses
  * sheriff.configs.all — so these tests prove the whole chain
  * (package -> sheriff -> eslint) end to end.
+ *
+ * Skipped in workspaces that enforce the blueprint with pure Nx boundaries
+ * instead (no root sheriff.config.ts, see docs/nx-umsetzung.md).
  */
 
 const workspaceRoot = join(__dirname, '..', '..', '..');
+const isSheriffWorkspace = existsSync(join(workspaceRoot, 'sheriff.config.ts'));
 const tmpFiles: string[] = [];
 
 function writeTmp(relPath: string, content: string): string {
@@ -36,14 +40,14 @@ afterEach(() => {
   }
 });
 
-describe('sheriff CLI on the real workspace', () => {
+describe.skipIf(!isSheriffWorkspace)('sheriff CLI on the real workspace', () => {
   it('verify passes for all entry points', () => {
     const output = execSync('npx sheriff verify', { cwd: workspaceRoot, encoding: 'utf-8', stdio: 'pipe' });
     expect(output).toContain('All projects validated successfully');
   });
 });
 
-describe('eslint dependency-rule fires through the packaged config', () => {
+describe.skipIf(!isSheriffWorkspace)('eslint dependency-rule fires through the packaged config', () => {
   it('blocks utils -> api (layer matrix holds inside shared)', () => {
     const file = writeTmp(
       'apps/client/src/app/shared/utils/tmp-e2e-viol.ts',
