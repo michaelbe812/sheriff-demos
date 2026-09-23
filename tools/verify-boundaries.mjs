@@ -132,6 +132,16 @@ function tagDecision(fromLib, importPath) {
   return violated.length > 0 ? `blocked by ${names.join(', ')}` : 'allowed';
 }
 
+/** Which Nx check fired, in a word. */
+function messageKind(message) {
+  if (message.startsWith('Circular')) return 'cycle';
+  if (message.includes('is not allowed to import')) return 'bannedExternalImports';
+  if (message.startsWith('Projects cannot be imported by a relative')) return 'relative import';
+  if (message.startsWith('Buildable')) return 'buildable -> non-buildable';
+  if (message.includes('Deep import')) return 'no-restricted-imports (deep)';
+  return 'tags';
+}
+
 const importOf = (code) => code.match(/['"]([^'"]+)['"]/)?.[1] ?? code;
 
 const rows = [];
@@ -144,27 +154,18 @@ for (const [rule, fromLib, code, expected, ruleId] of cases) {
     rule, fromLib, code, expected, actual, tags,
     passed: actual === expected && tagsAgree,
     message: violations[0] ? shortMessage(violations[0].message) : '',
+    kind: violations[0] ? messageKind(violations[0].message) : '',
   });
 }
 
 const markdown = process.argv.includes('--markdown');
-/** Which Nx check fired, in a word. */
-function messageKind(message) {
-  if (message.startsWith('Circular')) return 'cycle';
-  if (message.includes('is not allowed to import')) return 'bannedExternalImports';
-  if (message.startsWith('Projects cannot be imported by a relative')) return 'relative import';
-  if (message.startsWith('Buildable')) return 'buildable -> non-buildable';
-  if (message.includes('Deep import')) return 'no-restricted-imports (deep)';
-  return 'tags';
-}
-
 const libOf = (dir) => dir.replace(/^libs\//, '').replace(/\/src.*$/, '');
 
 if (markdown) {
   console.log('| # | Regel | von | Import | erwartet | ESLint | Tag-Entscheid |');
   console.log('|---|---|---|---|---|---|---|');
   rows.forEach((row, i) =>
-    console.log(`| ${i + 1} | ${row.rule} | \`${libOf(row.fromLib)}\` | \`${importOf(row.code)}\` | ${row.expected} | ${row.passed ? '✅' : '❌'} ${row.actual}${row.message ? ` — ${messageKind(row.message)}` : ''} | ${row.tags ?? '–'} |`),
+    console.log(`| ${i + 1} | ${row.rule} | \`${libOf(row.fromLib)}\` | \`${importOf(row.code)}\` | ${row.expected} | ${row.passed ? '✅' : '❌'} ${row.actual}${row.kind ? ` — ${row.kind}` : ''} | ${row.tags ?? '–'} |`),
   );
 } else {
   rows.forEach((row, i) =>
