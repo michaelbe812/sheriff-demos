@@ -4,7 +4,7 @@
   "projectType": "application",
   "prefix": "hex",
   "sourceRoot": "apps/hexagonal-demo/src",
-  "tags": [],
+  "tags": ["app:hexagonal-demo"],
   "targets": {
     "build": {
       "executor": "@angular/build:application",

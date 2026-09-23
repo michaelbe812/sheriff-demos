@@ -1,6 +1,7 @@
 import nx from "@nx/eslint-plugin";
-import baseConfig from "../../eslint.config.mjs";
+import baseConfig from "../eslint.config.mjs";
 
+/** Shared by all libs — Nx resolves the nearest flat config upwards from each lib root. */
 export default [
     ...nx.configs["flat/angular"],
     ...nx.configs["flat/angular-template"],
@@ -17,11 +18,5 @@ export default [
                 { type: "element", prefix: "hex", style: "kebab-case" }
             ]
         }
-    },
-    // Boundaries live in the root config (@nx/enforce-module-boundaries). The
-    // app is a thin shell: it may only import `entry`/`port`/`scope:shared` libs.
-    {
-        files: ["**/*.html"],
-        rules: {}
     }
 ];
