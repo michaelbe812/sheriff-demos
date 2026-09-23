@@ -70,6 +70,19 @@ function sameTagConstraints(tags) {
     ];
 }
 
+/**
+ * Nx resolves `@blueprint/<lib>/<deep/path>` to the lib and checks only the
+ * tags — the deep import itself passes. Public API = index.ts only, so every
+ * path below a lib alias is banned (TS would fail too, but later and vaguer).
+ */
+function deepImportPatterns() {
+    const { paths } = JSON.parse(readFileSync(join(workspaceRoot, "tsconfig.base.json"), "utf-8")).compilerOptions;
+    return Object.keys(paths).map((alias) => ({
+        group: [`${alias}/**`],
+        message: `Deep import into ${alias} — only its public API (index.ts) is importable.`,
+    }));
+}
+
 export const blueprintDepConstraints = [
     ...layerConstraints,
     ...httpOnlyInApi,
@@ -103,7 +116,8 @@ export default [
                     allow: ["^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$"],
                     depConstraints: blueprintDepConstraints
                 }
-            ]
+            ],
+            "no-restricted-imports": ["error", { patterns: deepImportPatterns() }]
         }
     },
     {
