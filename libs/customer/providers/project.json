@@ -1,0 +1,18 @@
+{
+  "name": "customer-providers",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/customer/providers/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:customer",
+    "type:providers",
+    "entry"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

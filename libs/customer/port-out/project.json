@@ -1,0 +1,17 @@
+{
+  "name": "customer-port-out",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/customer/port-out/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:customer",
+    "type:port-out"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

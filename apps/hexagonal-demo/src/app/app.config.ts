@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { appRoutes } from './app.routes';
-import { provideCustomerApi } from './domains/customer/ports/customer.providers';
+import { provideCustomerApi } from '@hex/customer/providers';
 
 /**
  * Composition root.
@@ -14,8 +14,9 @@ import { provideCustomerApi } from './domains/customer/ports/customer.providers'
  * be visible there. Slice-private wiring stays on each slice's own route.
  *
  * Note what is NOT imported here: no repository, no adapter, no store. The
- * root only ever names `entry`- and `port`-tagged modules, which is exactly
- * what the `app:*` rule permits.
+ * root only ever names `entry`- and `port`-tagged libs, which is exactly
+ * what the `app:*` constraint permits. `customer-providers` is imported
+ * statically here; `customer-shell` is lazy — hence two separate libs.
  */
 export const appConfig: ApplicationConfig = {
   providers: [

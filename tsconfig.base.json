@@ -10,11 +10,69 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": ["es2020", "dom"],
+    "lib": [
+      "es2020",
+      "dom"
+    ],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "strict": false,
-    "paths": {}
+    "paths": {
+      "@hex/booking/domain": [
+        "./libs/booking/domain/src/index.ts"
+      ],
+      "@hex/booking/port-in": [
+        "./libs/booking/port-in/src/index.ts"
+      ],
+      "@hex/booking/port-out": [
+        "./libs/booking/port-out/src/index.ts"
+      ],
+      "@hex/booking/adapter-driving": [
+        "./libs/booking/adapter-driving/src/index.ts"
+      ],
+      "@hex/booking/adapter-driven": [
+        "./libs/booking/adapter-driven/src/index.ts"
+      ],
+      "@hex/booking/providers": [
+        "./libs/booking/providers/src/index.ts"
+      ],
+      "@hex/booking/shell": [
+        "./libs/booking/shell/src/index.ts"
+      ],
+      "@hex/customer/domain": [
+        "./libs/customer/domain/src/index.ts"
+      ],
+      "@hex/customer/port-in": [
+        "./libs/customer/port-in/src/index.ts"
+      ],
+      "@hex/customer/port-out": [
+        "./libs/customer/port-out/src/index.ts"
+      ],
+      "@hex/customer/adapter-driving": [
+        "./libs/customer/adapter-driving/src/index.ts"
+      ],
+      "@hex/customer/adapter-driven": [
+        "./libs/customer/adapter-driven/src/index.ts"
+      ],
+      "@hex/customer/providers": [
+        "./libs/customer/providers/src/index.ts"
+      ],
+      "@hex/customer/shell": [
+        "./libs/customer/shell/src/index.ts"
+      ],
+      "@hex/shared/types": [
+        "./libs/shared/types/src/index.ts"
+      ],
+      "@hex/shared/util": [
+        "./libs/shared/util/src/index.ts"
+      ],
+      "@hex/shared/ui": [
+        "./libs/shared/ui/src/index.ts"
+      ]
+    }
   },
-  "exclude": ["node_modules", "tmp"]
+  "exclude": [
+    "node_modules",
+    "tmp"
+  ]
 }

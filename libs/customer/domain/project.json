@@ -1,0 +1,17 @@
+{
+  "name": "customer-domain",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/customer/domain/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:customer",
+    "type:domain"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

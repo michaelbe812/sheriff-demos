@@ -7,7 +7,7 @@ import { RouterLink, RouterOutlet } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header>
-      <h1>Ports &amp; Adapters — Sheriff Blueprint</h1>
+      <h1>Ports &amp; Adapters — Nx Blueprint</h1>
       <nav>
         <a routerLink="/bookings">Bookings</a>
         <a routerLink="/customers">Customers</a>

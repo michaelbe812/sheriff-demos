@@ -1,0 +1,17 @@
+{
+  "name": "booking-adapter-driving",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/adapter-driving/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:booking",
+    "type:adapter-driving"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "booking-port-in",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/port-in/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:booking",
+    "type:port-in",
+    "port"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

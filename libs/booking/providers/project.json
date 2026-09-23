@@ -1,0 +1,18 @@
+{
+  "name": "booking-providers",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/providers/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:booking",
+    "type:providers",
+    "entry"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

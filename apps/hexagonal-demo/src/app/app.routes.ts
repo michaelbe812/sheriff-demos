@@ -1,20 +1,20 @@
 import { Route } from '@angular/router';
 
 /**
- * The app shell sees each slice ONLY through its `entry`-tagged routes file.
- * `app:hexagonal-demo` has clearance towards `entry`, `port` and `shared` —
- * never towards a slice's application/ or adapters/.
+ * The app shell sees each slice ONLY through its `entry`-tagged shell lib.
+ * `app:*` may depend on `entry`, `port` and `scope:shared` — never on a
+ * slice's domain or adapters.
  */
 export const appRoutes: Route[] = [
   { path: '', pathMatch: 'full', redirectTo: 'bookings' },
   {
     path: 'bookings',
     loadChildren: () =>
-      import('./domains/booking/booking.routes').then((m) => m.bookingRoutes),
+      import('@hex/booking/shell').then((m) => m.bookingRoutes),
   },
   {
     path: 'customers',
     loadChildren: () =>
-      import('./domains/customer/customer.routes').then((m) => m.customerRoutes),
+      import('@hex/customer/shell').then((m) => m.customerRoutes),
   },
 ];

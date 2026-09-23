@@ -1,0 +1,17 @@
+{
+  "name": "customer-adapter-driving",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/customer/adapter-driving/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:customer",
+    "type:adapter-driving"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

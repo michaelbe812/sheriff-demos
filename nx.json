@@ -32,9 +32,22 @@
         "{workspaceRoot}/.eslintrc.json",
         "{workspaceRoot}/.eslintignore",
         "{workspaceRoot}/eslint.config.mjs",
-        "{workspaceRoot}/sheriff.config.ts",
-        "{workspaceRoot}/tools/eslint-rules/**/*"
+        "{workspaceRoot}/tools/eslint-rules/**/*",
+        "{workspaceRoot}/libs/eslint.config.mjs"
       ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{workspaceRoot}/libs/tsconfig.lib.json"
+      ],
+      "options": {
+        "command": "tsc -p {projectRoot}/tsconfig.json"
+      }
     }
   },
   "generators": {
