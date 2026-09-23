@@ -6,6 +6,8 @@ Alle Status­angaben stammen aus tatsächlich ausgeführtem `sheriff verify` bzw
 
 > **Update (5. August 2026):** Der Fork ist inzwischen als **v1.0.0 auf npm** veröffentlicht (`@lambda-solutions/sheriff-core`, `@lambda-solutions/eslint-plugin-sheriff`). Damit ist eine Fork-Bindung erstmals ohne „Repo auf einer Festplatte" tragbar, und `feat/deny-rules-config` ist reparierbar (Fork per `pnpm add -D @lambda-solutions/sheriff-core@1 @lambda-solutions/eslint-plugin-sheriff@1` installierbar). Die Empfehlung unten (Upstream, kein Fork) bleibt als sicherste Default-Wahl bestehen; die Fork-Ansätze sind aber keine reinen Notizen mehr.
 
+> **Nx-Variante:** alle Ansätze zusätzlich mit reinem Nx umgesetzt, siehe [`nx-ansaetze.md`](./nx-ansaetze.md).
+
 ---
 
 ## Läuft es? — die kurze Antwort
