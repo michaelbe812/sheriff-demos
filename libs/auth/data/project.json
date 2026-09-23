@@ -1,0 +1,12 @@
+{
+  "name": "auth-data",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/auth/data/src",
+  "tags": ["scope:auth", "type:data"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "booking-feat-check-booking-ui",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/feat-check-booking/ui/src",
+  "tags": ["scope:booking/feat-check-booking", "type:ui"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

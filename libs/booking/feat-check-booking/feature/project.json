@@ -1,0 +1,12 @@
+{
+  "name": "booking-feat-check-booking",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/feat-check-booking/feature/src",
+  "tags": ["scope:booking/feat-check-booking", "type:feature"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "checkin-api",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/checkin/api/src",
+  "tags": ["scope:checkin", "type:api", "port"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

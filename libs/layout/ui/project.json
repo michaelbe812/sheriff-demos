@@ -1,0 +1,12 @@
+{
+  "name": "layout-ui",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/layout/ui/src",
+  "tags": ["scope:layout", "type:ui"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}
