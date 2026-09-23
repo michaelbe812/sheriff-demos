@@ -159,6 +159,19 @@ export default [
                     // tags cannot depend on any lib (Sheriff's noTag rule)
                     depConstraints
                 }
+            ],
+            // Nx only checks imports it can map to a project: a deep import
+            // (`@blueprint/x/data/src/file`) matches no tsconfig path, so the
+            // boundary rule skips it and only tsc fails later. Make it an
+            // architecture error instead — the lib's index.ts is its public API.
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [{
+                        group: ["@blueprint/**/src", "@blueprint/**/src/**"],
+                        message: "Deep import: only the lib's public API (index.ts) may be imported."
+                    }]
+                }
             ]
         }
     },

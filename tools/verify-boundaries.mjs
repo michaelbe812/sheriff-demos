@@ -24,9 +24,10 @@ import { depConstraints } from '../eslint.config.mjs';
 const workspaceRoot = join(import.meta.dirname, '..');
 const RULE = '@nx/enforce-module-boundaries';
 
+const DEEP = 'no-restricted-imports';
 const HTTP = "import { HttpClient } from '@angular/common/http';";
 
-/** [rule, fromLib, importStatement, expected: 'red' | 'green'] */
+/** [rule, fromLib, importStatement, expected: 'red' | 'green', eslintRule?] */
 const cases = [
   // inversion
   ['feat -> infra', 'libs/booking/feat-check-booking/feature', "import '@blueprint/booking/infra';", 'red'],
@@ -73,6 +74,8 @@ const cases = [
   ['lib -> app', 'libs/booking/data', "import '../../../../apps/client/src/app/app';", 'red'],
   // encapsulation
   ['relative import across libs', 'libs/booking/feat-manage-booking/feature', "import '../../../data/src/booking.store';", 'red'],
+  ['deep import into lib', 'libs/checkin/feat-history/feature', "import '@blueprint/checkin/data/src/internal/checkin.mapper';", 'red', DEEP],
+  ['deep import cross-scope', 'libs/checkin/data', "import '@blueprint/booking/data/src/booking.store';", 'red', DEEP],
   ['untagged project (noTag)', 'packages/sheriff-blueprint/src', "import '@blueprint/shared/utils';", 'red'],
   // npm
   ['HttpClient in data', 'libs/booking/data', HTTP, 'red'],
@@ -84,11 +87,11 @@ const cases = [
 
 const eslint = new ESLint({ cwd: workspaceRoot });
 
-async function lintImport(fromLib, code) {
+async function lintImport(fromLib, code, ruleId = RULE) {
   const srcDir = fromLib.includes('/src') ? fromLib : `${fromLib}/src`;
   const filePath = join(workspaceRoot, srcDir, '__verify-boundaries__.ts');
   const [result] = await eslint.lintText(`${code}\n`, { filePath });
-  return result.messages.filter((message) => message.ruleId === RULE);
+  return result.messages.filter((message) => message.ruleId === ruleId);
 }
 
 const shortMessage = (text) => text.split('\n')[0].replace(/\s+/g, ' ').slice(0, 110);
@@ -132,8 +135,8 @@ function tagDecision(fromLib, importPath) {
 const importOf = (code) => code.match(/['"]([^'"]+)['"]/)?.[1] ?? code;
 
 const rows = [];
-for (const [rule, fromLib, code, expected] of cases) {
-  const violations = await lintImport(fromLib, code);
+for (const [rule, fromLib, code, expected, ruleId] of cases) {
+  const violations = await lintImport(fromLib, code, ruleId);
   const actual = violations.length > 0 ? 'red' : 'green';
   const tags = tagDecision(fromLib, importOf(code));
   const tagsAgree = tags === null || (expected === 'red') === tags.startsWith('blocked');
@@ -151,6 +154,7 @@ function messageKind(message) {
   if (message.includes('is not allowed to import')) return 'bannedExternalImports';
   if (message.startsWith('Projects cannot be imported by a relative')) return 'relative import';
   if (message.startsWith('Buildable')) return 'buildable -> non-buildable';
+  if (message.includes('Deep import')) return 'no-restricted-imports (deep)';
   return 'tags';
 }
 
