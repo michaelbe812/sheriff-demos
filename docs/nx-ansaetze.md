@@ -2,7 +2,7 @@
 
 Gegenstück zu [`ansaetze.md`](./ansaetze.md): dieselben drei Ansätze, aber nur mit Nx-Libs, Tags und `@nx/enforce-module-boundaries`. Sheriff war nur für Regeln innerhalb einer Lib erlaubt. Gebraucht wurde es am Ende **in keinem** der drei Ansätze.
 
-Alle Angaben stammen aus tatsächlich ausgeführten Läufen (Stand 23. September 2026). Die Details stehen je Branch in `docs/nx-umsetzung.md`.
+Alle Angaben stammen aus tatsächlich ausgeführten Läufen (Stand 23. September 2026). Details je Ansatz: [Blueprint](./nx-umsetzung-blueprint.md) · [Inverted](./nx-umsetzung-inverted.md) · [Hexagonal-Core](./nx-umsetzung-hexcore.md). Auf den Branches liegen sie jeweils als `docs/nx-umsetzung.md`.
 
 ## Läuft es?
 
