@@ -1,5 +1,7 @@
 # @berger-engineering/sheriff-blueprint
 
+> Im Workspace auf Branch `feat/nx-blueprint` wird das Package nicht benutzt: Dort erzwingt Nx das Regelwerk allein (`docs/nx-umsetzung.md`), und die e2e-Specs werden übersprungen, weil es keine `sheriff.config.ts` gibt.
+
 Geteiltes Sheriff-Regelwerk (vertical slices, Ports auf jeder Ebene) + Nx-Generatoren. Regel-Doku: `docs/architecture.md` im Blueprint-Repo.
 
 ## Setup in einem Projekt

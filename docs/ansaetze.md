@@ -14,6 +14,7 @@ Alle Status­angaben stammen aus tatsächlich ausgeführtem `sheriff verify` bzw
 | `feat/hexagonal-framework-core` | sheriff-fwcore · `19c7f56` | ✅ verify grün | nein |
 | `feat/sheriff-config-blueprint` | sheriff-blue-print · `9af33b9` | ✅ verify grün | nein |
 | `feat/deny-rules-config` | sheriff-hexagonal · `5d7941d` | ❌ läuft nicht | ja (nicht installiert) |
+| `feat/nx-blueprint` | nx-blueprint | ✅ 38/38 Boundary-Fälle, run-many grün | nein (ganz ohne Sheriff) |
 
 `feat/deny-rules-config` importiert in `sheriff.config.ts` aus `@lambda-solutions/sheriff-core`, die `package.json` listet aber nur `@softarc/sheriff-core`, und der Fork ist nicht installiert → `Cannot find module '@lambda-solutions/sheriff-core'`. War als Fork-Branch gedacht; in dem Zustand aber weder mit noch ohne Fork benutzbar.
 
@@ -107,6 +108,11 @@ Verifiziert gegen die echte Fork-Engine. Mit `denyRules` darf `'*'` zurück, die
 ### 4. Der Ausgangs-Blueprint — `feat/sheriff-config-blueprint`
 
 Der ursprüngliche Vertical-Slice-Blueprint als teilbares Package (`@berger-engineering/sheriff-blueprint`) mit Nx-Generatoren. **Ohne `infra/`** — die Port-Inversion aus Ansatz 1 lebt nur auf jenem Branch. Dieser Branch (der aktuelle) ist die Basis, von der die anderen abzweigen. Details in [`architecture.md`](./architecture.md).
+
+### 5. Ausgangs-Blueprint mit reinen Nx-Mitteln — `feat/nx-blueprint`
+
+Dasselbe Regelwerk wie Ansatz 4, aber **ohne Sheriff**: eine Nx-Lib pro Slice × Layer (32 Libs), Tags `scope:` / `type:` / `feat:` plus die Marker `port`, `feat-port` und `entry`, erzwungen durch `@nx/enforce-module-boundaries`. `sameTag` gibt es in Nx nicht; es wird durch eine generierte Constraint pro Scope bzw. Feat ersetzt. Was Nx zusätzlich kann: Zyklen, `bannedExternalImports`, affected/Cache pro Layer. Der Preis sind viele Libs und viel Boilerplate. Details, Limitierungen und Testergebnisse in [`nx-umsetzung.md`](./nx-umsetzung.md).
+
 
 ---
 
