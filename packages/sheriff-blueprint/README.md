@@ -52,4 +52,4 @@ nx g @berger-engineering/sheriff-blueprint:shared-feature auth --app client   # 
 
 ## Tests
 
-`nx test sheriff-blueprint` — Unit (Regel-Funktionen), Generatoren (devkit-Tree), e2e (echtes Workspace: `sheriff verify` + eslint-Violations über die gesamte Kette Package → Sheriff → ESLint).
+`nx test sheriff-blueprint` — Unit (Regel-Funktionen), Generatoren (devkit-Tree). Die e2e-Suite gegen das echte Workspace ist entfallen: Dieses Workspace nutzt Sheriff nicht mehr, sondern reine Nx-Boundaries (siehe `docs/nx-umsetzung.md`, Tests in `tools/verify-boundaries.mjs`).

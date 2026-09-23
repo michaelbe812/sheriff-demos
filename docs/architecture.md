@@ -1,5 +1,7 @@
 # Sheriff Blueprint — Architektur & Regelwerk
 
+> **Stand dieses Branches (`feat/nx-inverted-domain-ports`):** Das Workspace setzt den Ansatz mit **reinen Nx-Mitteln** um: eine Lib pro Slice × Layer, Tags, `@nx/enforce-module-boundaries`. Details stehen in [`nx-umsetzung.md`](./nx-umsetzung.md). Sheriff-Integration (`sheriff.config.ts`, ESLint-Plugin, Workspace-e2e) ist entfernt, der Port ist wieder hart invertiert (kein Self-Providing Port). Dieses Dokument beschreibt den Sheriff-Blueprint in `packages/sheriff-blueprint` und bleibt als Referenz. Pfade wie `apps/client/src/app/domains/…` oder `libs/domains/booking/src/…` und die Sheriff-Befehle unter „Verifikation" beziehen sich auf das alte Layout.
+
 Skalierbare `sheriff.config.ts` für alle Projekte. Funktioniert identisch für app-interne Domains (`apps/<app>/src/app/domains/…`) und extrahierte Nx-Libs (`libs/domains/…`) — Extraktion = reiner Folder-Move, null Regeländerung.
 
 ## Grundprinzip
