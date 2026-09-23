@@ -1,0 +1,15 @@
+{
+  "name": "booking-utils",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/utils/src",
+  "tags": [
+    "scope:booking",
+    "type:utils",
+    "feat:none"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "booking-feat-check-booking-feature",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/feat-check-booking/feature/src",
+  "tags": [
+    "scope:booking",
+    "type:feature",
+    "feat:check-booking"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

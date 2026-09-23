@@ -1,0 +1,16 @@
+{
+  "name": "auth-shell",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/auth/shell/src",
+  "tags": [
+    "scope:auth",
+    "type:feature",
+    "feat:none",
+    "entry"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

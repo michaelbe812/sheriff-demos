@@ -1,7 +1,7 @@
 import { Route } from '@angular/router';
-import { LayoutShell } from './layout/layout.shell';
+import { LayoutShell } from '@blueprint/layout/shell';
 
-// sheriff-violation-example: import { BookingCard } from '@blueprint/domains/booking/ui/booking-card'; // shell -> slice internals (only entry/port)
+// boundary-violation-example: import { BookingCard } from '@blueprint/booking/ui'; // shell -> slice internals (only entry/port)
 
 /** App shell: composes slices via their entries (routes/shells) only. */
 export const appRoutes: Route[] = [
@@ -11,11 +11,11 @@ export const appRoutes: Route[] = [
     children: [
       {
         path: 'bookings',
-        loadChildren: () => import('@blueprint/domains/booking/booking.routes'),
+        loadChildren: () => import('@blueprint/booking/shell').then((m) => m.bookingRoutes),
       },
       {
         path: 'checkin',
-        loadChildren: () => import('./domains/checkin/checkin.routes'),
+        loadChildren: () => import('@blueprint/checkin/shell').then((m) => m.checkinRoutes),
       },
       { path: '', pathMatch: 'full', redirectTo: 'bookings' },
     ],

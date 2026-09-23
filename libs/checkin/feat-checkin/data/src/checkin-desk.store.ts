@@ -1,8 +1,8 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 // Foreign domain ONLY via its public port (identical for app-internal or lib):
-import { Booking, BookingApi } from '@blueprint/domains/booking/api';
-import { CheckinStore } from '../../data/checkin.store';
-import { guestArrived } from '../../events/checkin.events';
+import { Booking, BookingApi } from '@blueprint/booking/api';
+import { CheckinStore } from '@blueprint/checkin/data';
+import { guestArrived } from '@blueprint/checkin/events';
 
 /** Feat-private store: orchestrates the desk — arrivals in, check-ins out. */
 @Injectable({ providedIn: 'root' })

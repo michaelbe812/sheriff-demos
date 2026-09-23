@@ -1,10 +1,10 @@
 import { Component, input, output } from '@angular/core';
-import { GuestArrived, guestArrived } from '../events/checkin.events';
-import { CheckinRecord } from '../types/checkin.model';
-import { checkinLabel } from '../utils/checkin.utils';
+import { GuestArrived, guestArrived } from '@blueprint/checkin/events';
+import { CheckinRecord } from '@blueprint/checkin/types';
+import { checkinLabel } from '@blueprint/checkin/utils';
 
-// sheriff-violation-example: import { CheckinStore } from '../data/checkin.store'; // ui -> data
-// sheriff-violation-example: import { toCheckinRecord } from '../data/internal/checkin.mapper'; // module-private internal/
+// boundary-violation-example: import { CheckinStore } from '@blueprint/checkin/data'; // ui -> data
+// boundary-violation-example: import { toCheckinRecord } from '../../../data/src/internal/checkin.mapper'; // module-private internal/
 
 @Component({
   selector: 'app-arrival-list',

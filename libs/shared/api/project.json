@@ -1,0 +1,15 @@
+{
+  "name": "shared-api",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/shared/api/src",
+  "tags": [
+    "scope:shared",
+    "type:api",
+    "feat:none"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

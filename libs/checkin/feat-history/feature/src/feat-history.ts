@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { CheckinStore } from '../data/checkin.store';
+import { CheckinStore } from '@blueprint/checkin/data';
 // Sibling feat ONLY via its feat-port:
-import { describeDesk } from '../feat-checkin/api/checkin-desk-api';
-import { checkinLabel } from '../utils/checkin.utils';
+import { describeDesk } from '@blueprint/checkin/feat-checkin/api';
+import { checkinLabel } from '@blueprint/checkin/utils';
 
-// sheriff-violation-example: import { CheckinDeskStore } from '../feat-checkin/data/checkin-desk.store'; // sibling feat internals
+// boundary-violation-example: import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data'; // sibling feat internals
 
 @Component({
   selector: 'app-feat-history',

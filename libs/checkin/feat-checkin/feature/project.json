@@ -1,0 +1,15 @@
+{
+  "name": "checkin-feat-checkin-feature",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/checkin/feat-checkin/feature/src",
+  "tags": [
+    "scope:checkin",
+    "type:feature",
+    "feat:checkin"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

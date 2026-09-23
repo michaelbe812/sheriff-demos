@@ -1,11 +1,11 @@
 import { Component, inject, input, output } from '@angular/core';
-import { BookingConfirmed, bookingConfirmed } from '../events/booking.events';
-import { Booking } from '../types/booking.model';
-import { bookingLabel } from '../utils/booking.utils';
+import { BookingConfirmed, bookingConfirmed } from '@blueprint/booking/events';
+import { Booking } from '@blueprint/booking/types';
+import { bookingLabel } from '@blueprint/booking/utils';
 import { BookingCardStore } from './booking-card.store';
 
-// sheriff-violation-example: import { BookingStore } from '../data/booking.store'; // ui -> data
-// sheriff-violation-example: import { BookingApi } from '../api'; // ui -> api
+// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // ui -> data
+// boundary-violation-example: import { BookingApi } from '@blueprint/booking/api'; // ui -> api
 
 /** Dumb component: types, utils, events, local store — nothing else. */
 @Component({

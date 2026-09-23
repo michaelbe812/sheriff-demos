@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { NavBar } from './ui/nav-bar';
+import { NavBar } from '@blueprint/layout/ui';
 
 /** Slice root (entry): what the app shell composes into its routes. */
 @Component({

@@ -1,14 +1,15 @@
 import { Routes } from '@angular/router';
 
-const checkinRoutes: Routes = [
+/** Slice root (entry): the only thing the app shell wires up. */
+export const checkinRoutes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./feat-checkin/feat-checkin').then((m) => m.FeatCheckin),
+    loadComponent: () =>
+      import('@blueprint/checkin/feat-checkin/feature').then((m) => m.FeatCheckin),
   },
   {
     path: 'history',
-    loadComponent: () => import('./feat-history/feat-history').then((m) => m.FeatHistory),
+    loadComponent: () =>
+      import('@blueprint/checkin/feat-history/feature').then((m) => m.FeatHistory),
   },
 ];
-
-export default checkinRoutes;

@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { CheckinApi } from '../api/checkin-api';
-import { GuestArrived } from '../events/checkin.events';
-import { CheckinRecord } from '../types/checkin.model';
+import { CheckinApi } from '@blueprint/checkin/api';
+import { GuestArrived } from '@blueprint/checkin/events';
+import { CheckinRecord } from '@blueprint/checkin/types';
 import { toCheckinRecord } from './internal/checkin.mapper';
 
 /** Domain-shared store: handles domain events, owns the checkin state. */

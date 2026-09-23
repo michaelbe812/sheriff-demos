@@ -1,0 +1,16 @@
+{
+  "name": "layout-shell",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/layout/shell/src",
+  "tags": [
+    "scope:layout",
+    "type:feature",
+    "feat:none",
+    "entry"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

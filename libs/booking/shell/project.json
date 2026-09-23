@@ -1,0 +1,16 @@
+{
+  "name": "booking-shell",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/shell/src",
+  "tags": [
+    "scope:booking",
+    "type:feature",
+    "feat:none",
+    "entry"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

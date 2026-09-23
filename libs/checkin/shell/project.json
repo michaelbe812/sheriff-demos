@@ -1,0 +1,16 @@
+{
+  "name": "checkin-shell",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/checkin/shell/src",
+  "tags": [
+    "scope:checkin",
+    "type:feature",
+    "feat:none",
+    "entry"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

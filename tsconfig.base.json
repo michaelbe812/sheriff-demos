@@ -10,14 +10,114 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": ["es2020", "dom"],
+    "lib": [
+      "es2020",
+      "dom"
+    ],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "strict": false,
     "paths": {
-      "@blueprint/domains/booking/*": ["./libs/domains/booking/src/*"],
-      "@blueprint/shared/utils/*": ["./libs/shared/utils/src/*"]
+      "@blueprint/auth/api": [
+        "./libs/auth/api/src/index.ts"
+      ],
+      "@blueprint/auth/data": [
+        "./libs/auth/data/src/index.ts"
+      ],
+      "@blueprint/auth/shell": [
+        "./libs/auth/shell/src/index.ts"
+      ],
+      "@blueprint/booking/api": [
+        "./libs/booking/api/src/index.ts"
+      ],
+      "@blueprint/booking/data": [
+        "./libs/booking/data/src/index.ts"
+      ],
+      "@blueprint/booking/events": [
+        "./libs/booking/events/src/index.ts"
+      ],
+      "@blueprint/booking/feat-check-booking/api": [
+        "./libs/booking/feat-check-booking/api/src/index.ts"
+      ],
+      "@blueprint/booking/feat-check-booking/data": [
+        "./libs/booking/feat-check-booking/data/src/index.ts"
+      ],
+      "@blueprint/booking/feat-check-booking/feature": [
+        "./libs/booking/feat-check-booking/feature/src/index.ts"
+      ],
+      "@blueprint/booking/feat-check-booking/ui": [
+        "./libs/booking/feat-check-booking/ui/src/index.ts"
+      ],
+      "@blueprint/booking/feat-manage-booking/feature": [
+        "./libs/booking/feat-manage-booking/feature/src/index.ts"
+      ],
+      "@blueprint/booking/shell": [
+        "./libs/booking/shell/src/index.ts"
+      ],
+      "@blueprint/booking/types": [
+        "./libs/booking/types/src/index.ts"
+      ],
+      "@blueprint/booking/ui": [
+        "./libs/booking/ui/src/index.ts"
+      ],
+      "@blueprint/booking/utils": [
+        "./libs/booking/utils/src/index.ts"
+      ],
+      "@blueprint/checkin/api": [
+        "./libs/checkin/api/src/index.ts"
+      ],
+      "@blueprint/checkin/data": [
+        "./libs/checkin/data/src/index.ts"
+      ],
+      "@blueprint/checkin/events": [
+        "./libs/checkin/events/src/index.ts"
+      ],
+      "@blueprint/checkin/feat-checkin/api": [
+        "./libs/checkin/feat-checkin/api/src/index.ts"
+      ],
+      "@blueprint/checkin/feat-checkin/data": [
+        "./libs/checkin/feat-checkin/data/src/index.ts"
+      ],
+      "@blueprint/checkin/feat-checkin/feature": [
+        "./libs/checkin/feat-checkin/feature/src/index.ts"
+      ],
+      "@blueprint/checkin/feat-history/feature": [
+        "./libs/checkin/feat-history/feature/src/index.ts"
+      ],
+      "@blueprint/checkin/shell": [
+        "./libs/checkin/shell/src/index.ts"
+      ],
+      "@blueprint/checkin/types": [
+        "./libs/checkin/types/src/index.ts"
+      ],
+      "@blueprint/checkin/ui": [
+        "./libs/checkin/ui/src/index.ts"
+      ],
+      "@blueprint/checkin/utils": [
+        "./libs/checkin/utils/src/index.ts"
+      ],
+      "@blueprint/layout/shell": [
+        "./libs/layout/shell/src/index.ts"
+      ],
+      "@blueprint/layout/ui": [
+        "./libs/layout/ui/src/index.ts"
+      ],
+      "@blueprint/shared/api": [
+        "./libs/shared/api/src/index.ts"
+      ],
+      "@blueprint/shared/types": [
+        "./libs/shared/types/src/index.ts"
+      ],
+      "@blueprint/shared/ui": [
+        "./libs/shared/ui/src/index.ts"
+      ],
+      "@blueprint/shared/utils": [
+        "./libs/shared/utils/src/index.ts"
+      ]
     }
   },
-  "exclude": ["node_modules", "tmp"]
+  "exclude": [
+    "node_modules",
+    "tmp"
+  ]
 }

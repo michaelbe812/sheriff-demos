@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { BookingStore } from '../../data/booking.store';
-import { bookingConfirmed } from '../../events/booking.events';
+import { BookingStore } from '@blueprint/booking/data';
+import { bookingConfirmed } from '@blueprint/booking/events';
 
 /** Feat-private store; may use domain-shared data (same slice family). */
 @Injectable({ providedIn: 'root' })

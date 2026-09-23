@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
-import { Booking } from '../types/booking.model';
+import { Booking } from '@blueprint/booking/types';
 
 /**
  * PUBLIC PORT of the booking domain: the only module other domains may
  * import. Cross-domain needed types are re-exported here — the types bucket
  * itself stays private.
  */
-export type { Booking } from '../types/booking.model';
+export type { Booking } from '@blueprint/booking/types';
 
 @Injectable({ providedIn: 'root' })
 export class BookingApi {

@@ -1,15 +1,15 @@
 import { Component, inject } from '@angular/core';
 // Shared-feature ONLY via its port:
-import { AUTH_API } from '../../../auth/api/auth-api';
-import { AppButton } from '../../../shared/ui/button';
-import { pluralize } from '../../../shared/utils/pluralize';
-import { CheckinStore } from '../data/checkin.store';
-import { GuestArrived } from '../events/checkin.events';
-import { ArrivalList } from '../ui/arrival-list';
-import { CheckinDeskStore } from './data/checkin-desk.store';
+import { AUTH_API } from '@blueprint/auth/api';
+import { AppButton } from '@blueprint/shared/ui';
+import { pluralize } from '@blueprint/shared/utils';
+import { CheckinStore } from '@blueprint/checkin/data';
+import { GuestArrived } from '@blueprint/checkin/events';
+import { ArrivalList } from '@blueprint/checkin/ui';
+import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data';
 
-// sheriff-violation-example: import { BookingStore } from '@blueprint/domains/booking/data/booking.store'; // foreign domain internals
-// sheriff-violation-example: import { AuthStore } from '../../../auth/data/auth.store'; // shared-feature internals
+// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // foreign domain internals
+// boundary-violation-example: import { AuthStore } from '@blueprint/auth/data'; // shared-feature internals
 
 /** Smart container: domain store + feat-private desk store + dumb ui. */
 @Component({

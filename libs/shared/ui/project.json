@@ -1,0 +1,15 @@
+{
+  "name": "shared-ui",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/shared/ui/src",
+  "tags": [
+    "scope:shared",
+    "type:ui",
+    "feat:none"
+  ],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

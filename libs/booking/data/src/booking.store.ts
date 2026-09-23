@@ -1,8 +1,8 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { BookingApi } from '../api';
-import { BookingConfirmed } from '../events/booking.events';
-import { Booking } from '../types/booking.model';
-import { isConfirmed } from '../utils/booking.utils';
+import { BookingApi } from '@blueprint/booking/api';
+import { BookingConfirmed } from '@blueprint/booking/events';
+import { Booking } from '@blueprint/booking/types';
+import { isConfirmed } from '@blueprint/booking/utils';
 
 /** Domain-shared store: usable by feature containers, never by ui. */
 @Injectable({ providedIn: 'root' })

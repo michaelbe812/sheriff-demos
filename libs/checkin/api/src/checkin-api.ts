@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiHttp } from '../../../shared/api/http-client';
+import { ApiHttp } from '@blueprint/shared/api';
 
 /** PUBLIC PORT of the checkin domain — cross-domain types re-exported here. */
-export type { CheckinRecord } from '../types/checkin.model';
+export type { CheckinRecord } from '@blueprint/checkin/types';
 
 /** Raw backend shape; mapped to the domain model in data/internal. */
 export interface CheckinDto {

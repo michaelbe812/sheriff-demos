@@ -1,5 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { AuthApi, AuthUser } from '../api/auth-api';
+import { AuthApi, AuthUser } from '@blueprint/auth/api';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore implements AuthApi {

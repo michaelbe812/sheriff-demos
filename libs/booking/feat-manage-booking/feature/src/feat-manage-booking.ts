@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { BookingStore } from '../data/booking.store';
+import { BookingStore } from '@blueprint/booking/data';
 // Sibling feat ONLY via its feat-port:
-import { describeCheck } from '../feat-check-booking/api/check-booking-api';
-import { BookingCard } from '../ui/booking-card';
+import { describeCheck } from '@blueprint/booking/feat-check-booking/api';
+import { BookingCard } from '@blueprint/booking/ui';
 
-// sheriff-violation-example: import { CheckBookingStore } from '../feat-check-booking/data/check-booking.store'; // sibling feat internals
+// boundary-violation-example: import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/data'; // sibling feat internals
 
 @Component({
   selector: 'app-feat-manage-booking',
