@@ -1,7 +1,7 @@
 import { formatFiles, type GeneratorCallback, logger, type Tree } from '@nx/devkit';
 import { readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
-import YAML from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import {
   CLIENT_PARTS,
   GENERATED_FOLDER,
@@ -48,7 +48,7 @@ async function loadSpec(tree: Tree, spec: string, url: string | undefined, proje
   }
   let document: { openapi?: string; paths?: Record<string, unknown> };
   try {
-    document = YAML.parse(text);
+    document = parseYaml(text);
   } catch (error) {
     throw new Error(`${spec}: no valid YAML/JSON (${(error as Error).message})`);
   }
@@ -62,7 +62,7 @@ async function loadSpec(tree: Tree, spec: string, url: string | undefined, proje
   ];
   return {
     file: 'openapi.yaml',
-    content: [...header, YAML.stringify(document, { lineWidth: 0, aliasDuplicateObjects: false })].join('\n'),
+    content: [...header, stringifyYaml(document, { lineWidth: 0, aliasDuplicateObjects: false })].join('\n'),
   };
 }
 
