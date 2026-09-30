@@ -9,7 +9,7 @@
   ],
   "targets": {
     "build": {
-      "executor": "@blueprint/tooling:ng-lib-application",
+      "executor": "@blueprint/tooling-ng-lib:application",
       "outputs": [
         "{options.outputPath}"
       ],

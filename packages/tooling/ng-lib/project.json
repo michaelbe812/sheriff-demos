@@ -1,0 +1,12 @@
+{
+  "name": "tooling-ng-lib",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/tooling/ng-lib/src",
+  "tags": ["type:tooling", "tooling:ng-lib"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}

@@ -54,6 +54,9 @@ importers:
       '@blueprint/tooling':
         specifier: workspace:*
         version: link:packages/tooling
+      '@blueprint/tooling-ng-lib':
+        specifier: workspace:*
+        version: link:packages/tooling/ng-lib
       '@eslint/js':
         specifier: ^9.8.0
         version: 9.39.5
@@ -179,6 +182,8 @@ importers:
         version: 0.19.6(typescript@6.0.3)
 
   packages/tooling: {}
+
+  packages/tooling/ng-lib: {}
 
 packages:
 

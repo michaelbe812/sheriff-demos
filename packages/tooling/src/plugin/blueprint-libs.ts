@@ -47,13 +47,13 @@ export { deriveTags } from './lib-conventions';
 /** libs (committed src/index.ts) + the client list — one plugin, one pass */
 const MARKER = `{${LIBS_DIR}/**/src/index.ts,${CLIENTS_CONFIG_FILE}}`;
 
-/** Executors of this package (executors.json). */
+/** Executors of @blueprint/tooling-ng-lib (packages/tooling/ng-lib). */
 export const NG_LIB_EXECUTORS = {
-  build: '@blueprint/tooling:ng-lib-build',
-  test: '@blueprint/tooling:ng-lib-test',
+  build: '@blueprint/tooling-ng-lib:build',
+  test: '@blueprint/tooling-ng-lib:test',
 };
-const NG_LIB_INPUT = '{workspaceRoot}/packages/tooling/src/executors/ng-lib/**/*';
-const TYPECHECK_SCRIPT = 'packages/tooling/scripts/typecheck-lib.mjs';
+const NG_LIB_INPUT = '{workspaceRoot}/packages/tooling/ng-lib/src/**/*';
+const TYPECHECK_SCRIPT = 'packages/tooling/ng-lib/scripts/typecheck-lib.mjs';
 const TYPECHECK_SCRIPT_INPUT = `{workspaceRoot}/${TYPECHECK_SCRIPT}`;
 
 /** Shared tsconfigs every lib compiles with — they live outside the lib, so they are explicit inputs. */

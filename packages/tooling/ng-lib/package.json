@@ -1,0 +1,7 @@
+{
+  "name": "@blueprint/tooling-ng-lib",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ng-lib-Executoren build/application/test (Libs ohne ng-package.json/package.json/tsconfig pro Lib, Nx-Interna an einer Stelle) und typecheck-lib.",
+  "executors": "./executors.json"
+}

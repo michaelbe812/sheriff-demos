@@ -2,7 +2,7 @@
 //
 // Problem 1: Der Angular-Builder liest die Optionen des buildTarget. Nx mappt nur ng-packagr-lite/package
 //   auf @angular/build:ng-packagr, und dieser Pfad liest <root>/ng-package.json (nur für Styles/Assets).
-//   @blueprint/tooling:ng-lib-build kennt er nicht. Lösung: Nx' Builder-Context liest Executor und Optionen aus
+//   @blueprint/tooling-ng-lib:build kennt er nicht. Lösung: Nx' Builder-Context liest Executor und Optionen aus
 //   context.projectGraph. Der Wrapper reicht eine Kopie des Kontexts weiter, in der das buildTarget
 //   @angular/build:ng-packagr mit einer temporären ng-package.json ist. Kein Monkeypatching.
 // Problem 2: Eine gemeinsame spec-tsconfig mit **/*.spec.ts würde pro Lib alle Specs des Workspaces
@@ -12,7 +12,7 @@ const { join, relative, resolve } = require('path');
 const unitTestExecutor = require('@nx/angular/src/executors/unit-test/unit-test.impl').default;
 const { tmpDirFor, toPosix, writeJson } = require('./lib');
 
-const NG_LIB_BUILD_EXECUTOR = '@blueprint/tooling:ng-lib-build';
+const NG_LIB_BUILD_EXECUTOR = '@blueprint/tooling-ng-lib:build';
 const NG_PACKAGR_BUILDER = '@angular/build:ng-packagr';
 
 /** Gleiche Auflösung wie @nx/angular:unit-test: Default `::development` → <projekt>:build:development. */

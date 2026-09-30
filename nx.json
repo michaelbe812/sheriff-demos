@@ -26,14 +26,14 @@
       "executor": "@nx/eslint:lint",
       "cache": true
     },
-    "@blueprint/tooling:ng-lib-application": {
+    "@blueprint/tooling-ng-lib:application": {
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": [
         "production",
         "^production",
         "{workspaceRoot}/tsconfig.base.json",
-        "{workspaceRoot}/packages/tooling/src/executors/ng-lib/**/*",
+        "{workspaceRoot}/packages/tooling/ng-lib/src/**/*",
         {
           "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
           "transitive": true

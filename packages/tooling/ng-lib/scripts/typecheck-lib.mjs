@@ -6,7 +6,7 @@
  * Same semantics as the former `tsc -p <lib>/tsconfig.json`: the lib's
  * src/**\/*.ts are root files, imported libs are checked through the paths.
  *
- * Usage: node packages/tooling/scripts/typecheck-lib.mjs <projectRoot>
+ * Usage: node packages/tooling/ng-lib/scripts/typecheck-lib.mjs <projectRoot>
  */
 import { existsSync } from 'node:fs';
 import { createRequire, enableCompileCache } from 'node:module';
@@ -16,7 +16,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 enableCompileCache?.();
 const ts = createRequire(import.meta.url)('typescript');
 
-const workspaceRoot = join(import.meta.dirname, '../../..');
+const workspaceRoot = join(import.meta.dirname, '../../../..');
 const projectRoot = process.argv[2];
 if (!projectRoot) throw new Error('usage: typecheck-lib.mjs <projectRoot>');
 // escape hatch: a lib that needs other compiler options (e.g. stricter) may still ship its own tsconfig.json
