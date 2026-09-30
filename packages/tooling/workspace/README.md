@@ -53,7 +53,7 @@ libs/layout/ui: scope "layout" is not in lib-scopes.json (auth, booking, checkin
 libs/booking/ui/project.json: tags ["scope:bookng","type:ui","feat:none"], path implies ["scope:booking","type:ui","feat:none"]
 ```
 
-`domain`, `move`/`rename` und `remove` pflegen die Liste; die Generatoren lehnen Pfade mit unbekanntem Scope ab (`libPathError` mit Tippfehler-Hinweis). `generated` ist reserviert und nie ein Scope: `libs/generated/<client>` gehört zu `shared`, `libs/<d>/generated/<client>` zur Domain. Die depConstraints (`sameTagConstraints()` in `eslint.config.mjs`) leiten Scopes aus den Graph-Tags (= `project.json`) ab.
+`domain`, `move`/`rename` und `remove` pflegen die Liste; die Generatoren lehnen Pfade mit unbekanntem Scope (`libPathError` mit Tippfehler-Hinweis) und Ordner, die nicht kebab-case sind (`feat-CheckIn`), ab; von Hand angelegte meldet `verify` (Ordnerregel). `generated` ist reserviert und nie ein Scope: `libs/generated/<client>` gehört zu `shared`, `libs/<d>/generated/<client>` zur Domain. Die depConstraints (`sameTagConstraints()` in `eslint.config.mjs`) leiten Scopes aus den Graph-Tags (= `project.json`) ab.
 
 ## Sync-Generator
 
