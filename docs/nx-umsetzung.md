@@ -161,7 +161,7 @@ Nx wendet **alle** Constraints an, die auf die Tags der Quelle passen, und verkn
 
 ```js
 // Layer-Matrix
-type:types   -> []                         + bannedExternalImports ['*']
+type:types   -> types                      + bannedExternalImports ['*']   (Scope-Regeln gelten: shared → shared, Domain → eigene + shared)
 type:utils   -> types, utils
 type:events  -> types, utils, events
 type:api     -> types, utils, api
@@ -310,7 +310,7 @@ describe('BookingStore', () => {
 
 Nx zählt Spec-Imports als Projekt-Kante: `booking-data → booking-testing`. Damit das zyklenfrei bleibt:
 
-- Testing-Libs importieren nur `type:types`, `type:testing` und `scope:shared`. `types` importiert nichts, eine types-Spec gegen testing wäre ein Zyklus und ist blockiert (verify-Fall).
+- Testing-Libs importieren nur `type:types`, `type:testing` und `scope:shared`. `types` importiert nur andere `types`, eine types-Spec gegen testing wäre ein Zyklus und ist blockiert (verify-Fall).
 - `shared/testing` importiert keine Blueprint-Lib. So dürfen auch Specs in `shared/*` es nutzen.
 - Import einer Testing-Lib in eine Lib, die schon Specs gegen diese Testing-Lib hat → Nx meldet „Circular dependency“ vor der Tag-Regel (verify: `testing -> data`).
 - `^build`: Testing-Libs haben kein `build`, Nx überspringt sie. `test` hat kein `dependsOn`. `run-many -t build` läuft ohne Task-Zyklus.
@@ -375,7 +375,9 @@ Die 4 Lint-Warnungen in `sheriff-blueprint` (`no-non-null-assertion` in Tests) g
 |---|---|---|
 | layer: ui → data / ui → api | blockiert | ✅ `type:ui` |
 | layer: utils → api (shared) | blockiert | ✅ `type:utils` |
-| layer: types → irgendwas | blockiert | ✅ `type:types` |
+| layer: types → types (eigener Scope, shared) | erlaubt | ✅ |
+| layer: types → utils | blockiert | ✅ `type:types` |
+| layer: types → fremde Domain-types, shared types → Domain-types | blockiert | ✅ `scope:<s>` / `scope:shared` |
 | layer: events → data / api → data | blockiert | ✅ als Zyklus; ohne Zyklus `type:events`/`type:api` |
 | layer: data → ui | blockiert | ✅ `type:data` |
 | layer: ui → events, data → api, feature → ui | erlaubt | ✅ |

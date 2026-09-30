@@ -31,6 +31,8 @@ const UNTAGGED_LIB = 'libs/tmp-verify-untagged';
 // It lives in a new feat of a known scope: a new scope would need an entry in the scope list (nx.json).
 const NEW_LIB = 'libs/booking/feat-tmpverify/ui';
 const NEW_LIB_ALIAS = '@blueprint/booking/feat-tmpverify/ui';
+// second temporary lib in the same feat: a types lib of the booking scope besides booking/types
+const NEW_TYPES_LIB = 'libs/booking/feat-tmpverify/types';
 const NEW_LIB_EXPECTED = { name: 'booking-feat-tmpverify-ui', tags: ['scope:booking', 'type:ui', 'feat:tmpverify'], targets: ['build', 'lint', 'typecheck'] };
 const CYCLE = 'Circular dependency';
 
@@ -45,7 +47,11 @@ const cases = [
   blocked('layer: ui -> data', 'libs/booking/ui', '@blueprint/booking/data', 'type:ui'),
   blocked('layer: ui -> api', 'libs/booking/ui', '@blueprint/booking/api', 'type:ui'),
   blocked('layer: utils -> api (in shared)', 'libs/shared/utils', '@blueprint/shared/api', 'type:utils'),
-  blocked('layer: types -> nothing', 'libs/booking/types', '@blueprint/shared/types', 'type:types'),
+  allowed('layer: types -> types (shared)', 'libs/booking/types', '@blueprint/shared/types'),
+  allowed('layer: types -> types (own scope)', NEW_TYPES_LIB, '@blueprint/booking/types'),
+  blocked('layer: types -> utils', 'libs/booking/types', '@blueprint/shared/utils', 'type:types'),
+  blocked('layer: types -> foreign domain types', 'libs/booking/types', '@blueprint/checkin/types', 'scope:booking'),
+  blocked('layer: shared types -> domain types', 'libs/shared/types', '@blueprint/booking/types', 'scope:shared'),
   blocked('layer: events -> data', 'libs/booking/events', '@blueprint/booking/data', ['type:events', CYCLE]),
   blocked('layer: api -> data', 'libs/booking/api', '@blueprint/booking/data', ['type:api', CYCLE]),
   // without a cycle the layer constraint itself answers (type axis is checked before scope)
@@ -275,6 +281,8 @@ function checkNewLib(projectGraph) {
 function createNewLib() {
   mkdirSync(join(NEW_LIB, 'src'), { recursive: true });
   writeFileSync(join(NEW_LIB, 'src/index.ts'), 'export const probe = 1;\n');
+  mkdirSync(join(NEW_TYPES_LIB, 'src'), { recursive: true });
+  writeFileSync(join(NEW_TYPES_LIB, 'src/index.ts'), 'export type Probe = string;\n');
 }
 
 function createUntaggedLib() {

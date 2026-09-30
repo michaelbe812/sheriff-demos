@@ -34,7 +34,8 @@ const productionLayers = ["type:types", "type:utils", "type:events", "type:api",
 
 /** Layer matrix (type axis): X may only depend on the listed layers. */
 const layerConstraints = [
-    { sourceTag: "type:types", onlyDependOnLibsWithTags: [], bannedExternalImports: ["*"] },
+    // types build on other types only (own slice or shared — the scope constraints still apply), no npm at all
+    { sourceTag: "type:types", onlyDependOnLibsWithTags: ["type:types"], bannedExternalImports: ["*"] },
     { sourceTag: "type:utils", onlyDependOnLibsWithTags: ["type:types", "type:utils"] },
     { sourceTag: "type:events", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:events"] },
     { sourceTag: "type:api", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:api"] },
