@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import type { Booking, BookingId } from '@hex/booking/domain';
+import type { Booking, BookingId } from '@hex/booking/model';
 
 /** Driven port — private to the booking slice. */
 export interface BookingRepositoryPort {

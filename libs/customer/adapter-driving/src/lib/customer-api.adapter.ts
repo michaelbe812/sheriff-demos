@@ -3,8 +3,8 @@ import {
   discountPercentFor,
   LoadCustomerUseCase,
   loyaltyTierFor,
-  toCustomerId,
 } from '@hex/customer/domain';
+import { toCustomerId } from '@hex/customer/model';
 import {
   CustomerApiPort,
   CustomerSummary,

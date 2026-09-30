@@ -15,7 +15,8 @@
  *              ['*'] } — proves a catch-all cannot widen anything in Nx
  *
  * Also checks tag hygiene (one scope + one type per lib, a constraint for every
- * tag) and that the accepted domain <-> port-out cycle really needs its ignore.
+ * tag) and that the lib graph is acyclic without any ignore (buildable libs
+ * with `dependsOn: ^build` need a DAG).
  * Exits 1 on any mismatch.
  */
 import { existsSync } from 'node:fs';
@@ -28,7 +29,6 @@ const { createProjectGraphAsync } = await import('nx/src/devkit-exports.js');
 
 const WORKSPACE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BOUNDARY_RULE = '@nx/enforce-module-boundaries';
-const RESTRICTED_IMPORTS_RULE = '@typescript-eslint/no-restricted-imports';
 
 const APP = 'apps/hexagonal-demo/src/app';
 const lib = (name) => `libs/${name}/src/lib`;
@@ -80,8 +80,14 @@ const CASES = [
   ['app -> adapter-driving', APP, `import { BookingPage } from '@hex/booking/adapter-driving';`, 'red'],
   ['app -> fremde app', APP, `import { App } from '../../../client/src/app/app';`, 'red'],
   ['deep import an public API vorbei', lib('booking/adapter-driving'), `import { CustomerStore } from '../../../../customer/domain/src/lib/customer.store';`, 'red'],
-  ['port-out: value-import der domain', lib('booking/port-out'), `import { totalPrice } from '@hex/booking/domain';`, 'red', RESTRICTED_IMPORTS_RULE],
-  ['port-out: type-import der domain', lib('booking/port-out'), `import type { Booking } from '@hex/booking/domain';`, 'green', RESTRICTED_IMPORTS_RULE],
+  ['port-out: value-import der domain', lib('booking/port-out'), `import { BookingStore } from '@hex/booking/domain';`, 'red'],
+  ['port-out: type-import der domain', lib('booking/port-out'), `import type { BookingStore } from '@hex/booking/domain';`, 'red'],
+  ['port-out -> eigenes model', lib('booking/port-out'), `import type { Booking } from '@hex/booking/model';`, 'green'],
+  ['domain -> eigenes model', lib('booking/domain'), `import { totalPrice } from '@hex/booking/model';`, 'green'],
+  ['adapter-driving -> eigenes model', lib('booking/adapter-driving'), `import { toGuestRef } from '@hex/booking/model';`, 'green'],
+  ['model -> domain', lib('booking/model'), `import { canCancel } from '@hex/booking/domain';`, 'red'],
+  ['model -> @angular/core (frameworkfrei)', lib('booking/model'), `import { signal } from '@angular/core';`, 'red'],
+  ['cross-slice: domain -> fremdes model', lib('booking/domain'), `import { toCustomerId } from '@hex/customer/model';`, 'red'],
 ];
 
 const VARIANTS = {
@@ -147,12 +153,26 @@ async function runCase([name, directory, code, expected, ruleId = BOUNDARY_RULE]
   return { name, expected, verdicts, passed, message: tagsOnlyMessage !== message ? `${message} / tags-only: ${tagsOnlyMessage}` : message };
 }
 
-/** The domain <-> port-out ignore is load-bearing: without it the legal import is red. */
-async function checkCycleIgnoreIsNeeded() {
-  VARIANTS['no-cycle-ignore'] = (options) => ({ ...options, ignoredCircularDependencies: [] });
-  const errors = await lintProbe(lib('booking/domain'), `import { BOOKING_REPOSITORY } from '@hex/booking/port-out';`, 'no-cycle-ignore', BOUNDARY_RULE);
-  delete VARIANTS['no-cycle-ignore'];
-  return errors.some((m) => m.messageId === 'noCircularDependencies') ? [] : ['domain -> port-out is not circular without the ignore — drop ignoredCircularDependencies'];
+/**
+ * Buildable libs build in dependency order (`dependsOn: ^build`), so the lib
+ * graph must be a DAG — no accepted cycle, no ignore.
+ */
+function checkNoLibCycles(graph, options) {
+  const problems = (options.ignoredCircularDependencies ?? []).length > 0 ? ['ignoredCircularDependencies is not empty'] : [];
+  const libs = new Set(Object.keys(graph.nodes));
+  const state = new Map(); // undefined = unvisited, 1 = on stack, 2 = done
+  const visit = (name, path) => {
+    if (state.get(name) === 2) return;
+    if (state.get(name) === 1) {
+      problems.push(`lib cycle: ${[...path.slice(path.indexOf(name)), name].join(' -> ')}`);
+      return;
+    }
+    state.set(name, 1);
+    for (const { target } of graph.dependencies[name] ?? []) if (libs.has(target)) visit(target, [...path, name]);
+    state.set(name, 2);
+  };
+  libs.forEach((name) => visit(name, []));
+  return problems;
 }
 
 function checkTagHygiene(graph, depConstraints) {
@@ -178,7 +198,7 @@ const { moduleBoundaryOptions } = await import(pathToFileURL(join(WORKSPACE_ROOT
 
 const results = [];
 for (const testCase of CASES) results.push(await runCase(testCase));
-const problems = [...checkTagHygiene(graph, moduleBoundaryOptions.depConstraints), ...(await checkCycleIgnoreIsNeeded())];
+const problems = [...checkTagHygiene(graph, moduleBoundaryOptions.depConstraints), ...checkNoLibCycles(graph, moduleBoundaryOptions)];
 
 console.log(`| # | Fall | erwartet | ${Object.keys(VARIANTS).join(' | ')} | ok | Meldung |`);
 console.log(`|---|---|---|${Object.keys(VARIANTS).map(() => '---').join('|')}|---|---|`);

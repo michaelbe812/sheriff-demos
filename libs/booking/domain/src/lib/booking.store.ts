@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Booking, BookingId, GuestRef, totalPrice } from './booking';
+import { Booking, BookingId, GuestRef, totalPrice } from '@hex/booking/model';
 import { BOOKING_REPOSITORY } from '@hex/booking/port-out';
 import { BookRoomUseCase } from './book-room.use-case';
 import { CancelBookingUseCase } from './cancel-booking.use-case';

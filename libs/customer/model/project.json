@@ -1,0 +1,17 @@
+{
+  "name": "customer-model",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/customer/model/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:customer",
+    "type:model"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

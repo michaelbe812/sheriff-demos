@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import type { Customer, CustomerId } from '@hex/customer/domain';
+import type { Customer, CustomerId } from '@hex/customer/model';
 
 /**
  * Driven port — what the core needs FROM the world. Private to this slice:

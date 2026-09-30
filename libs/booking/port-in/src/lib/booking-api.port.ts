@@ -1,5 +1,5 @@
 import { InjectionToken } from '@angular/core';
-import type { Booking } from '@hex/booking/domain';
+import type { Booking } from '@hex/booking/model';
 
 /**
  * Public API of the booking slice. Nothing imports it yet — and that is fine:

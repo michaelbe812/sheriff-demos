@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Booking, BookingId } from '@hex/booking/domain';
+import { Booking, BookingId } from '@hex/booking/model';
 import { BookingRepositoryPort } from '@hex/booking/port-out';
 
 /** Driven adapter. Replace with an HttpClient version — nothing inward moves. */

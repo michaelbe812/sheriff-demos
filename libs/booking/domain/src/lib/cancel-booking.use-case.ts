@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Booking, BookingId } from './booking';
+import { Booking, BookingId } from '@hex/booking/model';
 import { canCancel, cancel } from './booking-policy';
 import { BOOKING_REPOSITORY } from '@hex/booking/port-out';
 

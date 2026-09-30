@@ -1,4 +1,4 @@
-import { Customer } from './customer';
+import { Customer } from '@hex/customer/model';
 
 /**
  * Pure business rule. No `inject()` anywhere in this folder — that is the

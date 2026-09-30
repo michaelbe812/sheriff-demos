@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Customer, CustomerId } from './customer';
+import { Customer, CustomerId } from '@hex/customer/model';
 import {
   discountPercentFor,
   LoyaltyTier,

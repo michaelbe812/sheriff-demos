@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Customer } from './customer';
+import { Customer } from '@hex/customer/model';
 import { LoadCustomerUseCase } from './load-customer.use-case';
 
 /**

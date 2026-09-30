@@ -21,6 +21,9 @@
       "@hex/booking/domain": [
         "./libs/booking/domain/src/index.ts"
       ],
+      "@hex/booking/model": [
+        "./libs/booking/model/src/index.ts"
+      ],
       "@hex/booking/port-in": [
         "./libs/booking/port-in/src/index.ts"
       ],
@@ -41,6 +44,9 @@
       ],
       "@hex/customer/domain": [
         "./libs/customer/domain/src/index.ts"
+      ],
+      "@hex/customer/model": [
+        "./libs/customer/model/src/index.ts"
       ],
       "@hex/customer/port-in": [
         "./libs/customer/port-in/src/index.ts"

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { Booking, BookingStore, toGuestRef, totalPrice } from '@hex/booking/domain';
+import { BookingStore } from '@hex/booking/domain';
+import { Booking, toGuestRef, totalPrice } from '@hex/booking/model';
 import { MoneyPipe } from '@hex/shared/ui';
 
 /**

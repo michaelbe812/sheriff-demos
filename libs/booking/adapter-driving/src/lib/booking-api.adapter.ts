@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { Booking, BookingStore } from '@hex/booking/domain';
+import { BookingStore } from '@hex/booking/domain';
+import { Booking } from '@hex/booking/model';
 import { BookingApiPort } from '@hex/booking/port-in';
 
 /**

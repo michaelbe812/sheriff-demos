@@ -1,6 +1,6 @@
 /**
  * Domain core — plain TypeScript. No Angular, no rxjs, no imports at all.
- * Testable without a TestBed. Sheriff tag: core:customer / type:domain.
+ * Testable without a TestBed. Nx tags: scope:customer / type:model.
  */
 export type CustomerId = string & { readonly __brand: 'CustomerId' };
 

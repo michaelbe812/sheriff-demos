@@ -1,0 +1,17 @@
+{
+  "name": "booking-model",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/model/src",
+  "prefix": "hex",
+  "tags": [
+    "scope:booking",
+    "type:model"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {}
+  }
+}

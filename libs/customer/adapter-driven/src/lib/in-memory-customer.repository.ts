@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Customer, CustomerId, toCustomerId } from '@hex/customer/domain';
+import { Customer, CustomerId, toCustomerId } from '@hex/customer/model';
 import { CustomerRepositoryPort } from '@hex/customer/port-out';
 
 /**

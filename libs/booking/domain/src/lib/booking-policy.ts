@@ -1,4 +1,4 @@
-import { Booking } from './booking';
+import { Booking } from '@hex/booking/model';
 
 /**
  * Pure business rules. Testable with `new`, no TestBed, no HTTP mock — the
