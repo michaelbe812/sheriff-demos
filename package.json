@@ -28,6 +28,7 @@
     "@berger-engineering/sheriff-blueprint": "workspace:*",
     "@blueprint/tooling": "workspace:*",
     "@eslint/js": "^9.8.0",
+    "@faker-js/faker": "10.6.0",
     "@hey-api/openapi-ts": "0.83.1",
     "@nx-plugin-openapi/core": "1.0.0",
     "@nx-plugin-openapi/plugin-hey-api": "1.0.0",
@@ -54,6 +55,9 @@
     "msw": "^3.0.0",
     "ng-packagr": "~22.0.2",
     "nx": "23.1.0",
+    "openapi-msw": "2.0.0",
+    "openapi-typescript": "7.13.0",
+    "orval": "8.38.0",
     "playwright": "^1.63.0",
     "prettier": "~3.6.2",
     "tslib": "^2.3.0",
@@ -67,6 +71,8 @@
     "peerDependencyRules": {
       "allowedVersions": {
         "msw": "3",
+        "openapi-msw>msw": "3",
+        "openapi-typescript>typescript": "6",
         "@nx/devkit>nx": "23"
       }
     }

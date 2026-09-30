@@ -24,6 +24,11 @@
       "implementation": "./src/executors/openapi/update-spec.js",
       "schema": "./src/executors/openapi/client.schema.json",
       "description": "Downloads the spec from its url (openapi-clients.json) and writes it normalized into the committed spec file."
+    },
+    "openapi-generate-testing": {
+      "implementation": "./src/executors/openapi/generate-testing.js",
+      "schema": "./src/executors/openapi/testing.schema.json",
+      "description": "Testing lib of a client from its spec: openapi-typescript (paths), orval msw mocks (faker), openapi-msw (<client>Http), default handlers (src/generated/**, gitignored)."
     }
   }
 }

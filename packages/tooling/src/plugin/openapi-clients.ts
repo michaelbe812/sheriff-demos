@@ -53,8 +53,11 @@ interface AdapterRegistration {
 
 export const OPENAPI_EXECUTORS = {
   generate: '@blueprint/tooling:openapi-generate',
+  generateTesting: '@blueprint/tooling:openapi-generate-testing',
   updateSpec: '@blueprint/tooling:openapi-update-spec',
 };
+/** npm packages of the testing pipeline (cache inputs of the testing lib's generate) */
+const TESTING_PACKAGES = ['openapi-typescript', 'orval', 'yaml'];
 export const DEFAULT_ADAPTER = 'openapi-tools';
 const FACADE_DIR = 'packages/tooling/src/openapi';
 const REGISTRY_FILE = join(__dirname, '../openapi/adapters/registry.json');
@@ -135,6 +138,29 @@ function generateTarget(
     metadata: {
       description: `Generates the client (${adapter}) into ${CLIENT_CODE_PARTS.join('/')}/src/generated from ${specFile}`,
     },
+  };
+}
+
+/**
+ * `generate` of a client's testing lib (<client>/testing): spec → openapi-typescript + orval mocks +
+ * openapi-msw. Its options hold only name/placement/spec — an adapter switch keeps its cache.
+ */
+export function generateTestingTarget(workspaceRoot: string, clientPath: string): TargetConfiguration {
+  const client = parseClientPath(clientPath) as ClientPath;
+  const specFile = findSpecFile(workspaceRoot, clientPath);
+  return {
+    executor: OPENAPI_EXECUTORS.generateTesting,
+    cache: true,
+    inputs: [
+      `{workspaceRoot}/${specFile}`,
+      `{workspaceRoot}/${FACADE_DIR}/facade.mjs`,
+      `{workspaceRoot}/${FACADE_DIR}/testing/**/*`,
+      '{workspaceRoot}/packages/tooling/src/executors/openapi/generate-testing.js',
+      { externalDependencies: TESTING_PACKAGES },
+    ],
+    outputs: ['{projectRoot}/src/generated'],
+    options: { name: client.name, placement: client.placement, spec: { file: specFile } },
+    metadata: { description: `Generates MSW handlers, faker factories and the typed <client>Http from ${specFile}` },
   };
 }
 

@@ -1,3 +1,4 @@
+import { faker } from '@faker-js/faker';
 import { setupWorker } from 'msw/browser';
 import { test as testBase } from 'vitest';
 
@@ -7,6 +8,12 @@ import { test as testBase } from 'vitest';
  * Exported for `beforeEach(() => worker.use(...defaultHandlers))`.
  */
 export const worker = setupWorker();
+
+/**
+ * Seed of the shared faker instance, reset before every test: the generated default handlers of the
+ * OpenAPI clients (`<client>Handlers`, orval + faker) answer the same data in every run.
+ */
+export const FAKER_SEED = 42;
 
 let workerStarted: Promise<unknown> | undefined;
 
@@ -29,13 +36,15 @@ function startWorker(): Promise<unknown> {
  * `worker` is an auto fixture: Vitest resolves fixtures for `beforeEach`
  * too, so the worker runs before a spec's `beforeEach` adds its default
  * handlers. `worker.use(...)` inside a test is prepended and wins;
- * `resetHandlers()` after each test removes both.
+ * `resetHandlers()` after each test removes both. faker is re-seeded per test (deterministic
+ * generated handlers, independent of test order).
  */
 export const test = testBase.extend<{ worker: typeof worker }>({
   worker: [
     // Vitest reads fixture dependencies from the destructuring pattern — `{}` = none
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
+      faker.seed(FAKER_SEED);
       await startWorker();
       await use(worker);
       worker.resetHandlers();

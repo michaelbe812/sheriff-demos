@@ -52,7 +52,11 @@ const layerConstraints = [
 ];
 
 /** Test tooling never ships: banned in production code, allowed in type:testing and specs. */
-const testOnlyPackages = ["msw", "msw/*", "vitest", "vitest/*", "@vitest/*", "@testing-library/*", "playwright", "playwright/*"];
+const testOnlyPackages = [
+    "msw", "msw/*", "vitest", "vitest/*", "@vitest/*", "@testing-library/*", "playwright", "playwright/*",
+    // generated testing libs of the OpenAPI clients: typed MSW + faker factories
+    "openapi-msw", "@faker-js/*",
+];
 const noTestPackagesInProduction = [...productionLayers, "type:app"].map((sourceTag) => ({
     sourceTag,
     bannedExternalImports: testOnlyPackages,

@@ -244,7 +244,7 @@ function checkLibConfigFiles() {
 }
 
 /**
- * Scans the client bundle for any trace of MSW or Vitest. As Nx target (`tooling:verify`) the
+ * Scans the client bundle for any trace of MSW, Vitest or faker. As Nx target (`tooling:verify`) the
  * build is a dependsOn task; run directly, the script builds the client itself.
  */
 function checkClientBundle() {
@@ -257,10 +257,11 @@ function checkClientBundle() {
   }
   const distDir = 'dist/apps/client';
   const files = readdirSync(distDir, { recursive: true }).filter((f) => statSync(join(distDir, f)).isFile());
-  const testOnlyMarkers = /\bmsw\b|mockServiceWorker|setupWorker|vitest/i;
+  // faker: the generated testing libs (orval mocks) must never reach the app
+  const testOnlyMarkers = /\bmsw\b|mockServiceWorker|setupWorker|vitest|faker/i;
   for (const file of files) {
     if (testOnlyMarkers.test(file) || testOnlyMarkers.test(readFileSync(join(distDir, file), 'latin1'))) {
-      problems.push(`${distDir}/${file}: contains msw/vitest`);
+      problems.push(`${distDir}/${file}: contains msw/vitest/faker`);
     }
   }
   return { problems, files: files.length };
@@ -356,7 +357,7 @@ function report(rows, libConfigs, schema, isolation, newLib, bundle) {
   isolation.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Neue Lib (nur ${NEW_LIB}/src/index.ts): ${newLib.problems.length ? 'NICHT ' : ''}automatisch Projekt ${JSON.stringify(newLib.actual ?? {})}`);
   newLib.problems.forEach((p) => console.log(`  - ${p}`));
-  console.log(`client-Bundle: ${bundle.files} Dateien auf msw/vitest geprüft, ${bundle.problems.length} Treffer`);
+  console.log(`client-Bundle: ${bundle.files} Dateien auf msw/vitest/faker geprüft, ${bundle.problems.length} Treffer`);
   bundle.problems.forEach((p) => console.log(`  - ${p}`));
 }
 

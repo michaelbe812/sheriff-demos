@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "outputCapture": "direct-nodejs",
+  "$schema": "https://json-schema.org/schema",
+  "title": "Testing lib of an OpenAPI client",
+  "description": "Set by the crystal plugin — only what the testing lib depends on (not the adapter), so an adapter switch keeps its cache.",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "placement": {
+      "oneOf": [
+        { "const": "shared" },
+        {
+          "type": "object",
+          "properties": { "domain": { "type": "string" } },
+          "required": ["domain"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "spec": {
+      "type": "object",
+      "properties": { "file": { "type": "string" } },
+      "required": ["file"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["name", "placement", "spec"],
+  "additionalProperties": false
+}

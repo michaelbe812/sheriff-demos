@@ -34,7 +34,13 @@ import {
   projectNameFor,
   TESTING_LAYER,
 } from './lib-conventions';
-import { clientPartEdges, type ClientsConfig, createClientProjects, readClientsConfig } from './openapi-clients';
+import {
+  clientPartEdges,
+  type ClientsConfig,
+  createClientProjects,
+  generateTestingTarget,
+  readClientsConfig,
+} from './openapi-clients';
 
 export { deriveTags } from './lib-conventions';
 
@@ -139,7 +145,16 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         NG_LIB_INPUT,
         '{workspaceRoot}/vitest-base.config.mts',
         GENERATED_CODE_INPUT,
-        { externalDependencies: ['vitest', '@vitest/browser-playwright', 'msw', '@angular/build'] },
+        {
+          externalDependencies: [
+            'vitest',
+            '@vitest/browser-playwright',
+            'msw',
+            'openapi-msw',
+            '@faker-js/faker',
+            '@angular/build',
+          ],
+        },
       ],
       dependsOn: [GENERATE_DEPS],
       options: {
@@ -171,6 +186,13 @@ function createLibNode(
   }
   // gitignored generated code is invisible to the graph: part → client (generate, affected), api → core → types
   const implicitDependencies = client ? clientPartEdges(workspaceRoot, client) : [];
+  const targets = libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`));
+  if (client?.part === TESTING_LAYER) {
+    // the client's testing lib generates its own code (from the spec only) before lint/typecheck
+    targets['generate'] = generateTestingTarget(workspaceRoot, client.path);
+    for (const name of ['lint', 'typecheck'])
+      targets[name].dependsOn = ['generate', ...(targets[name].dependsOn ?? [])];
+  }
   return {
     projects: {
       [projectRoot]: {
@@ -180,7 +202,7 @@ function createLibNode(
         projectType: 'library',
         tags,
         metadata: { js: { packageName: aliasFor(libPath) } },
-        targets: libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`)),
+        targets,
         ...(implicitDependencies.length ? { implicitDependencies } : {}),
       },
     },
