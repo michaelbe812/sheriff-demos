@@ -3,10 +3,7 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "sourceRoot": "packages/tooling/workspace/src",
-  "tags": [
-    "type:tooling",
-    "tooling:workspace"
-  ],
+  "tags": ["type:tooling", "tooling:workspace"],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"
@@ -16,11 +13,9 @@
       "cache": true,
       "inputs": [
         "default",
+        "^default",
         {
-          "externalDependencies": [
-            "typescript",
-            "@nx/devkit"
-          ]
+          "externalDependencies": ["typescript", "@nx/devkit"]
         }
       ],
       "options": {
@@ -32,12 +27,9 @@
       "cache": true,
       "inputs": [
         "default",
+        "^default",
         {
-          "externalDependencies": [
-            "vitest",
-            "@nx/devkit",
-            "typescript"
-          ]
+          "externalDependencies": ["vitest", "@nx/devkit", "typescript"]
         }
       ],
       "options": {

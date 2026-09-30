@@ -662,6 +662,7 @@ nx g @blueprint/tooling-workspace:component libs/booking/ui/src/booking-badge
 pnpm exec nx run-many -t build lint test typecheck   # 50 Projekte, 149 Tasks + 6 generate grün (build 43, lint 50, typecheck 48, test 8)
 pnpm verify                                           # nx run tooling-verify:verify: 134/134 Fälle + Config-Wächter + Tag-Schema/Scope-Liste + Test-Isolation + neue Lib + generierte Clients + client-Bundle
 pnpm exec nx sync:check                               # app.routes.ts ↔ Slice-Shells
+pnpm exec nx run tooling-openapi:test-integration    # OpenAPI-Lib: echte Adapter, msw, tsc, nx im Fixture-Workspace; Coverage ≥ 95 %
 pnpm verify:nx-internals                              # nach nx migrate, siehe Tooling & Generatoren
 ```
 

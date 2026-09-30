@@ -9,7 +9,9 @@
     "noEmit": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false
   },
-  "include": ["src/**/*.ts", "vitest.config.mts"]
+  "include": ["src/**/*.ts", "src/**/*.mts", "test/**/*.mts", "vitest.config.mts"]
 }

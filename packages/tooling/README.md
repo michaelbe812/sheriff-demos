@@ -59,6 +59,7 @@ Vorher `@blueprint/tooling:<generator>`; die Generatoren selbst sind unveränder
 | Befehl | prüft |
 |---|---|
 | `nx run-many -t lint test typecheck -p 'tooling-*'` | Specs pro Lib (Vitest, Node): conventions, workspace, openapi |
+| `nx run tooling-openapi:test-integration` | Integrationstests der OpenAPI-Lib (echte Adapter, msw, tsc, `nx` im Fixture-Workspace) mit Coverage ≥ 95 % (Stand 100 % / 98,5 % Branches), siehe [openapi](openapi/README.md#tests) |
 | `pnpm verify` (`nx run tooling-verify:verify`) | siehe [verify](verify/README.md) |
 | `pnpm verify:nx-internals` | nach `nx migrate` / Angular-Update |
 

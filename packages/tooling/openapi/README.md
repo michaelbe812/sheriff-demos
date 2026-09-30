@@ -20,4 +20,19 @@ Kurzfassung:
 - Der Header im generierten Code nennt weiter `@blueprint/tooling (openapi, <adapter>)`: er landet im dist, eine Änderung würde den dist-Snapshot brechen.
 - Neuer Adapter: Modul in `src/facade/adapters/` (`generate`, `classify`, siehe `contract.d.ts`) + Eintrag in `registry.json` (Pakete, Inputs, Runtime) + `enum` in `openapi-clients.schema.json` und im `client`-Schema.
 
-Tests: `nx test tooling-openapi` (Generator `client`).
+## Tests
+
+| Target | Projekt (Vitest) | Inhalt | Dauer |
+|---|---|---|---|
+| `nx test tooling-openapi` | `unit`: `src/**/*.spec.{ts,mts}` | Plugin (`createNodesV2`: Projekte, Tags, Targets, `json`-Inputs, Kanten, Testing-`generate`, Graph-Fehler: kaputtes JSON, unbekannter Adapter, fehlende/doppelte Spec, Scope außerhalb der Liste, Teil ohne Eintrag), Tree-Helfer (`openapi-clients.json`, move/remove, Umbenennen der Testing-Exporte), Generator `client` (shared/Domain, Datei/URL, alle Adapter, Idempotenz, Validierung), Split/Barrel auf synthetischem Roh-Output, Registry, Spec-Serialisierung, Adapter-Randfälle (nx-plugin-openapi gegen Stub-Backend, fehlende CLI) | ~3 s |
+| `nx run tooling-openapi:test-integration` | `unit` + `integration`: `test/integration/**/*.spec.mts`, **mit Coverage** | Facade end-to-end pro Adapter (openapi-tools mit echter Jar, hey-api, nx-plugin-openapi mit beiden Backends) in einem Fixture-Workspace unter `tmp/openapi-it/`: Klassifizierung, Split, Import-Umschreibung auf Aliase, Barrels inkl. doppelter Exportnamen, Header, zweiter Lauf byte-identisch, `tsc` gegen die Aliase. Testing-Generierung (openapi-typescript, orval, openapi-msw) + die generierten Handler laufen in msw 3 (Node) und liefern Daten laut Spec. Executoren mit Executor-Kontext, `update-spec` gegen lokalen HTTP-Server (updated/unchanged/500/ohne url/nicht erreichbar, YAML/JSON normalisiert). Fehlerpfade: Generator-Prozess scheitert, Java fehlt (simuliert), ungültige Spec. `nx` selbst im Fixture-Workspace mit beiden Plugins: gemischte Projekt-Config, `nx run …:generate` + Cache | ~45 s (Java 11+) |
+
+Coverage (V8) gilt für die Summe beider Projekte, deshalb misst nur `test-integration`: Schwelle **95 %** für Lines, Branches, Functions, Statements (darunter rot). Ausgenommen nur `src/**/*.d.ts` (reine Typen, Vertrag) und die Specs; JSON-Schemas zählen nicht als Code. Stand: **100 % Statements/Lines/Functions, 98,5 % Branches** (257/261; die 4 offenen sind `??`-Fallbacks auf Werte, die nie nullish sind, z. B. `tree.read()` nach `tree.exists()`).
+
+```sh
+pnpm exec nx test tooling-openapi                     # schnell, ohne Coverage
+pnpm exec nx run tooling-openapi:test-integration     # alles + Coverage, Output gecacht
+open packages/tooling/openapi/coverage/index.html     # HTML-Report (auch lcov.info, coverage-summary.json)
+```
+
+Die Integrationstests brauchen Java (openapi-tools) und laufen in der CI (`run-many`/`affected -t … test-integration`). Beweise: Test-Datei weg → 88 % → Target rot; eine Logikzeile in `split.mjs` invertiert → Test rot.

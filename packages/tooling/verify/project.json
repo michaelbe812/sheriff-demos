@@ -3,10 +3,7 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "sourceRoot": "packages/tooling/verify/scripts",
-  "tags": [
-    "type:tooling",
-    "tooling:verify"
-  ],
+  "tags": ["type:tooling", "tooling:verify"],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"
@@ -16,9 +13,7 @@
       "cache": true,
       "dependsOn": [
         {
-          "projects": [
-            "client"
-          ],
+          "projects": ["client"],
           "target": "build"
         }
       ],
@@ -35,11 +30,7 @@
           "dependentTasksOutputFiles": "**/*"
         },
         {
-          "externalDependencies": [
-            "eslint",
-            "@nx/eslint-plugin",
-            "nx"
-          ]
+          "externalDependencies": ["eslint", "@nx/eslint-plugin", "nx"]
         }
       ],
       "options": {

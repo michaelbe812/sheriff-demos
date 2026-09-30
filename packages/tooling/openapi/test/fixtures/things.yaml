@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: Things API
+  version: 1.0.0
+servers:
+  - url: http://api.test/v1
+tags:
+  - name: things
+  - name: owners
+paths:
+  /things:
+    get:
+      tags: [things]
+      operationId: listThings
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ThingKind'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Thing'
+              example:
+                - id: t-1
+                  name: Lamp
+                  kind: tool
+                  owner:
+                    id: o-1
+                    name: Ada
+  /things/{id}:
+    get:
+      tags: [things]
+      operationId: getThing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Thing'
+        '404':
+          description: Not found
+  /owners:
+    get:
+      tags: [owners]
+      operationId: listOwners
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Owner'
+components:
+  schemas:
+    ThingKind:
+      type: string
+      enum: [tool, toy]
+    Owner:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          example: o-1
+        name:
+          type: string
+          example: Ada
+    Thing:
+      type: object
+      required: [id, name, kind]
+      properties:
+        id:
+          type: string
+          example: t-1
+        name:
+          type: string
+          example: Lamp
+        kind:
+          $ref: '#/components/schemas/ThingKind'
+        owner:
+          $ref: '#/components/schemas/Owner'

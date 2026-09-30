@@ -1,0 +1,13 @@
+openapi: 3.0.3
+info:
+  title: Ping API
+  version: 1.0.0
+servers:
+  - url: http://api.test
+paths:
+  /ping:
+    get:
+      operationId: ping
+      responses:
+        '204':
+          description: pong
