@@ -1,4 +1,5 @@
 import nx from "@nx/eslint-plugin";
+import { createProjectGraphAsync, readCachedProjectGraph } from "@nx/devkit";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -82,6 +83,22 @@ function deepImportPatterns() {
         message: `Deep import into ${alias} — only its public API (index.ts) is importable.`,
     }));
 }
+
+/**
+ * @nx/enforce-module-boundaries reads the CACHED project graph and silently
+ * skips (warning only) when there is none — e.g. plain `eslint` or the IDE
+ * after a fresh clone / `nx reset`. `nx lint` builds it itself; for every
+ * other entry point build it once here, so the boundaries always apply.
+ */
+async function ensureProjectGraph() {
+    try {
+        readCachedProjectGraph();
+    } catch {
+        await createProjectGraphAsync({ exitOnError: false });
+    }
+}
+
+await ensureProjectGraph();
 
 export const blueprintDepConstraints = [
     ...layerConstraints,
