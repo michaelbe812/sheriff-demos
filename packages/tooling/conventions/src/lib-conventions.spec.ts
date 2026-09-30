@@ -28,6 +28,14 @@ describe('deriveTags', () => {
     expect(libPathError('payment/ui', { scopes })).toContain('nx g @blueprint/tooling-workspace:domain payment');
   });
 
+  it('rejects folder names that are not kebab-case (scope, feat, client)', () => {
+    expect(libPathError('booking/feat-CheckIn/ui', { scopes })).toContain('folder "CheckIn" must be kebab-case');
+    expect(libPathError('booking/feat-check_in/ui', { scopes })).toContain('folder "check_in" must be kebab-case');
+    expect(libPathError('Payment/ui')).toContain('folder "Payment" must be kebab-case');
+    expect(libPathError('generated/PetClient/api', { scopes })).toContain('folder "PetClient" must be kebab-case');
+    expect(libPathError('booking/feat-check-booking/ui', { scopes })).toBeUndefined();
+  });
+
   it('accepts every scope without a list (backwards compatible)', () => {
     expect(deriveTags('anything/ui')).toContain('scope:anything');
   });

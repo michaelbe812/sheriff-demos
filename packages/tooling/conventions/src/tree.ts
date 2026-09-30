@@ -10,9 +10,7 @@ import {
   type Tree,
   updateNxJson,
 } from '@nx/devkit';
-import { LIBS_DIR, WORKSPACE_PLUGIN } from './lib-conventions';
-
-const KEBAB_CASE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+import { KEBAB_CASE, LIBS_DIR, WORKSPACE_PLUGIN } from './lib-conventions';
 
 export function assertKebabCase(value: string, what: string): void {
   if (!KEBAB_CASE.test(value)) throw new Error(`${what} "${value}" must be kebab-case (e.g. "check-booking").`);
