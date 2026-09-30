@@ -86,8 +86,9 @@ Inferierte Targets:
 | `lint` | `nx:run-commands` → `eslint .` im Lib-Ordner | immer |
 | `typecheck` | `nx:run-commands` → `node packages/tooling/ng-lib/scripts/typecheck-lib.mjs <root>` | immer |
 | `build` | `@blueprint/tooling-ng-lib:build` | nicht für `testing` |
-| `test` | `@blueprint/tooling-ng-lib:test` | nur wenn `src/` eine `*.spec.ts` enthält |
-| `test-ui` | `@blueprint/tooling-ng-lib:test` mit `ui: true`, `watch: true`, `browsers: [chromium]` (headed): Vitest UI | wie `test`; `cache: false`, `continuous`, nie in CI (`run-many -t test` nimmt es nicht mit) |
+| `test` | `@blueprint/tooling-ng-lib:test` (headless, einmalig, gecacht). Vitest UI über dasselbe Target: `nx run <lib>:test --ui` | nur wenn `src/` eine `*.spec.ts` enthält |
+
+Es gibt genau ein Test-Target. **Vitest UI** ist ein Flag, keine Configuration: `--ui` schaltet im Executor watch und headed Chromium ein (`chromiumHeadless` → `chromium`, `--headless` erzwingt weiter headless). Eine Configuration `test:ui` wäre eine zweite Optionsmenge pro Lib im Graphen; das Flag hält die UI-Logik an einer Stelle (Executor) und braucht keine Plugin-Änderung. **Cache:** Nx hasht Overrides mit, ein `--ui`-Lauf trifft also nie den Eintrag des normalen `test` (und umgekehrt). Beendet man die UI regulär (Vitest `q`), meldet der Builder aber Erfolg, und Nx cachte den Lauf unter dem UI-Hash, der nächste `--ui`-Aufruf spielte nur die alte Ausgabe ab. Dagegen hat der Executor einen eigenen Hasher (`executors.json` → `hasher`, `src/test-hasher.js`): mit `ui` ein einmaliger Hash (nie ein Treffer), ohne `ui` unverändert der Nx-Hash. Belegt: `test` → `test --ui` (mit `q` beendet) → `test --ui` (startet die UI erneut, kein Replay) → `test` (Cache-Treffer des ersten Laufs). `verify:nx-internals` prüft, dass Nx den Hasher lädt.
 
 Eine `project.json` in einer Lib würde Nx zwar über die inferierten Werte legen, `tooling-verify:verify` meldet sie aber rot (Wächter gegen Config-Dateien). `typecheck-lib.mjs` nimmt technisch weiter eine lib-eigene `tsconfig.json`, auch die ist vom Wächter verboten.
 
@@ -654,15 +655,14 @@ nx g @blueprint/tooling-workspace:component libs/booking/ui/src/booking-badge
 
 ### Nach `nx migrate`
 
-`pnpm verify:nx-internals` vor dem Commit der Migration (und nach Angular-Updates): run-many mit `--skip-nx-cache` in frisches `dist/`, dist-Äquivalenz gegen `packages/tooling/verify/nx-internals/dist-hashes.json` (oder `--reference <kopie-von-dist-vorher>`), Marker-Test „App baut gegen dist“, MSW-Probe „fehlender Handler → Test rot“, MSW-Worker „von Vitest aus dem msw-Paket serviert“, `tooling-verify:verify`. Ändert das Update den Output bewusst: Unterschiede prüfen, dann `--update-snapshot`.
+`pnpm verify:nx-internals` vor dem Commit der Migration (und nach Angular-Updates): run-many mit `--skip-nx-cache` in frisches `dist/`, dist-Äquivalenz gegen `packages/tooling/verify/nx-internals/dist-hashes.json` (oder `--reference <kopie-von-dist-vorher>`), Marker-Test „App baut gegen dist“, MSW-Probe „fehlender Handler → Test rot“, MSW-Worker „von Vitest aus dem msw-Paket serviert“, Vitest UI „`test --ui` nie aus dem Cache“ (Nx lädt den Hasher), `tooling-verify:verify`. Ändert das Update den Output bewusst: Unterschiede prüfen, dann `--update-snapshot`.
 
 ## Verifikation
 
 ```sh
-pnpm exec nx run-many -t build lint test typecheck   # 54 Projekte, 157 Tasks + 6 generate grün (build 43, lint 54, typecheck 50, test 10)
+pnpm exec nx run-many -t build lint test typecheck   # inkl. tooling-openapi:test (Unit + Integration, Java, Coverage ≥ 95 %); 54 Projekte, 157 Tasks + 6 generate grün (build 43, lint 54, typecheck 50, test 10)
 pnpm verify                                           # nx run tooling-verify:verify: 134/134 Fälle + Config-Wächter + Tag-Schema/Scope-Liste + Test-Isolation + neue Lib + generierte Clients + client-Bundle
 pnpm exec nx sync:check                               # app.routes.ts ↔ Slice-Shells
-pnpm exec nx run tooling-openapi:test-integration    # OpenAPI-Lib: echte Adapter, msw, tsc, nx im Fixture-Workspace; Coverage ≥ 95 %
 pnpm verify:nx-internals                              # nach nx migrate, siehe Tooling & Generatoren
 ```
 
@@ -747,9 +747,9 @@ pnpm exec nx graph --focus=tooling-workspace     # Tooling-Libs: workspace → c
 pnpm exec nx run-many -t lint test typecheck -p 'tooling-*'   # Specs der Tooling-Libs
 pnpm exec nx show projects --affected --files packages/tooling/ng-lib/src/build.js   # alle Libs mit build/test + App
 
-# 5. Tests interaktiv: Vitest UI (watch, headed Chromium mit Browser-Vorschau, MSW läuft wie im Test), bis Strg+C
-pnpm test:ui booking-api                        # = nx test-ui booking-api → http://localhost:51204/__vitest__/
-pnpm exec nx run booking-api:test-ui --headless # UI ohne Browserfenster (Tests laufen headless, Ergebnis in der UI)
+# 5. Tests interaktiv: Vitest UI (watch, headed Chromium mit Browser-Vorschau, MSW läuft wie im Test), bis Strg+C oder q
+pnpm test:ui booking-api                        # = nx run booking-api:test --ui → http://localhost:51204/__vitest__/
+pnpm exec nx run booking-api:test --ui --headless   # UI ohne Browserfenster (Tests laufen headless, Ergebnis in der UI)
 pnpm exec nx run booking-api:test --browsers=chromium --watch   # nur headed, ohne UI
 
 # 6. neuen Client anlegen (Datei oder URL), nutzen, wieder entfernen

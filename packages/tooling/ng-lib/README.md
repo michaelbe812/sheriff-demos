@@ -6,7 +6,8 @@ Executoren für Angular-Libs ohne `ng-package.json`, `package.json` und `tsconfi
 |---|---|---|
 | `@blueprint/tooling-ng-lib:build` | `src/build.js` | erzeugt `ng-package.json`, `package.json`, tsconfig (dist-Paths der Abhängigkeiten) temporär unter `tmp/ng-lib/` und delegiert an `@nx/angular:ng-packagr-lite` |
 | `@blueprint/tooling-ng-lib:application` | `src/application.js` | `@nx/angular:application` gegen dist der Libs (Alias aus `tsconfig.base.json` statt lib-`package.json`) — `client:build` |
-| `@blueprint/tooling-ng-lib:test` | `src/test.js` | `@nx/angular:unit-test` (Vitest Browser Mode) mit gemeinsamer spec-tsconfig, `include` auf die Lib verengt, Build-Target als `@angular/build:ng-packagr` im Builder-Context. Alle übrigen Optionen gehen unverändert durch, auch `ui`/`watch`/`headless` (Target `test-ui`) |
+| `@blueprint/tooling-ng-lib:test` | `src/test.js` | `@nx/angular:unit-test` (Vitest Browser Mode) mit gemeinsamer spec-tsconfig, `include` auf die Lib verengt, Build-Target als `@angular/build:ng-packagr` im Builder-Context. Alle übrigen Optionen gehen unverändert durch; mit `ui` zusätzlich watch + headed Browser (Vitest UI) |
+| Hasher von `:test` | `src/test-hasher.js` | `--ui`-Läufe bekommen einen einmaligen Hash (nie aus dem Cache), sonst unverändert der Nx-Hash |
 | gemeinsame Helfer | `src/lib.js` | Alias-Auflösung, dist-Paths, tmp-Verzeichnis |
 | `typecheck-lib` | `scripts/typecheck-lib.mjs` | `typecheck` einer Lib gegen `libs/tsconfig.json`, `include` per TS-API im Speicher verengt |
 
@@ -14,9 +15,11 @@ Die Targets inferiert `@blueprint/tooling-workspace`; `client:build` nutzt `appl
 
 ## Vitest UI
 
-Target `test-ui` jeder Lib mit Specs (inferiert von `@blueprint/tooling-workspace`): derselbe Executor mit `ui: true`, `watch: true`, `browsers: ['chromium']` (headed, Angular schaltet dann Vitests Browser-UI mit Vorschau ein). `cache: false`, `continuous`, kein Teil von `run-many -t test`; unter `CI=true` schaltet der Angular-Builder `ui` ohnehin ab. Paket `@vitest/ui` (gleiche Version wie `vitest`).
+Kein eigenes Target: `nx run <lib>:test --ui`. Mit `ui` setzt der Executor `watch: true` und die Browser auf headed (`chromiumHeadless` → `chromium`, Angular schaltet dann Vitests Browser-UI mit Vorschau ein); `--headless` erzwingt weiter headless. Normale Läufe (`run-many -t test`) bleiben headless, einmalig, gecacht; unter `CI=true` schaltet der Angular-Builder `ui` ohnehin ab. Paket `@vitest/ui` (gleiche Version wie `vitest`).
+
+Flag statt Configuration `test:ui`: die UI-Logik liegt an einer Stelle (Executor), der Graph bleibt ein Target mit einer Optionsmenge. Cache: Overrides gehen in den Nx-Hash, ein UI-Lauf trifft nie den normalen `test`-Eintrag. Damit auch eine regulär beendete UI (Vitest `q`, Builder meldet Erfolg) beim nächsten `--ui` nicht nur aus dem Cache abgespielt wird, hasht `src/test-hasher.js` UI-Läufe einmalig (siehe `pnpm verify:nx-internals`).
 
 ```sh
-pnpm test:ui booking-api                         # = nx test-ui booking-api, UI: http://localhost:51204/__vitest__/
-pnpm exec nx run booking-api:test-ui --headless  # ohne Browserfenster
+pnpm test:ui booking-api                             # = nx run booking-api:test --ui, UI: http://localhost:51204/__vitest__/
+pnpm exec nx run booking-api:test --ui --headless    # ohne Browserfenster
 ```

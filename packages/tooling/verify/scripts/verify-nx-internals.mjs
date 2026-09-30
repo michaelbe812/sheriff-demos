@@ -18,9 +18,12 @@
  *   5. MSW worker: the browser gets `/mockServiceWorker.js` of the installed msw package, served by
  *      Vitest itself (`vitest:browser:resolve-virtual`, no publicDir, no committed copy) — a Vitest
  *      internal, so checked here: version + integrity checksum of the served script
- *   6. tooling-verify:verify (boundaries, tag schema, config guard, bundle scan)
+ *   6. Vitest UI (`test --ui`): Nx still loads the custom hasher of ng-lib:test (executors.json `hasher`),
+ *      a UI task gets a one-off hash (never a cache hit), a normal task the unchanged Nx hash
+ *   7. tooling-verify:verify (boundaries, tag schema, config guard, bundle scan)
  */
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -50,6 +53,15 @@ function step(name, run) {
     results.push({ name, ok: true, detail });
   } catch (error) {
     results.push({ name, ok: false, detail: String(error.stdout ?? '').slice(-600) + (error.message ?? error) });
+  }
+}
+
+async function stepAsync(name, run) {
+  process.stdout.write(`… ${name}\n`);
+  try {
+    results.push({ name, ok: true, detail: await run() });
+  } catch (error) {
+    results.push({ name, ok: false, detail: String(error.message ?? error) });
   }
 }
 
@@ -162,6 +174,21 @@ test('serves the worker of the installed msw package', async () => {
   }
 }
 
+/** ng-lib:test hashes `--ui` runs one-off (Vitest UI is never replayed from the cache), normal runs unchanged. */
+async function uiRunsNeverCached() {
+  const require = createRequire(import.meta.url);
+  const { getExecutorInformation } = require('nx/src/command-line/run/executor-utils');
+  const { hasherFactory } = getExecutorInformation('@blueprint/tooling-ng-lib', 'test', workspaceRoot, {});
+  if (!hasherFactory) throw new Error('Nx no longer reads the `hasher` of @blueprint/tooling-ng-lib:test (executors.json)');
+  const hasher = hasherFactory();
+  const context = { hasher: { hashTask: async () => ({ value: '123', details: {} }) }, taskGraph: {}, env: {} };
+  const normal = await hasher({ overrides: {} }, context);
+  const [ui1, ui2] = await Promise.all([1, 2].map(() => hasher({ overrides: { ui: true } }, context)));
+  if (normal.value !== '123') throw new Error(`normal test: hash changed (${normal.value})`);
+  if (ui1.value === ui2.value || ui1.value === '123') throw new Error('test --ui: hash not one-off');
+  return 'hasher loaded by Nx, normal hash unchanged, --ui one-off';
+}
+
 if (!args.includes('--skip-run-many')) {
   step('run-many build lint test typecheck --skip-nx-cache', () => {
     // fresh dist: leftovers of removed libs would fail the equivalence check
@@ -174,6 +201,7 @@ step('dist equivalence', compareDist);
 step('marker: app builds against dist', markerAppBuildsAgainstDist);
 step('MSW: missing handler turns the test red', missingHandlerFailsTest);
 step('MSW worker: served by Vitest from the msw package', mswWorkerServedByVitest);
+await stepAsync('Vitest UI: test --ui never from the cache', uiRunsNeverCached);
 step('tooling-verify:verify', () => {
   nx('run', 'tooling-verify:verify', '--skip-nx-cache');
   return 'green';

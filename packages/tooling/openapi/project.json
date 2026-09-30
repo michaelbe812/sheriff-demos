@@ -28,20 +28,6 @@
       "inputs": [
         "default",
         "^default",
-        {
-          "externalDependencies": ["vitest", "@nx/devkit", "typescript", "yaml", "prettier", "@nx-plugin-openapi/core"]
-        }
-      ],
-      "options": {
-        "command": "vitest run --config packages/tooling/openapi/vitest.config.mts --project unit"
-      }
-    },
-    "test-integration": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "inputs": [
-        "default",
-        "^default",
         "{workspaceRoot}/packages/tooling/workspace/src/plugin/**/*",
         "{workspaceRoot}/openapitools.json",
         "{workspaceRoot}/package.json",
@@ -77,7 +63,7 @@
       ],
       "outputs": ["{projectRoot}/coverage"],
       "metadata": {
-        "description": "Unit + integration tests (jar/Java, hey-api, nx-plugin-openapi, orval, msw, tsc, nx in a fixture workspace) with coverage; fails below 95 %"
+        "description": "All tests: unit + integration (jar/Java, hey-api, nx-plugin-openapi, orval, msw, tsc, nx in a fixture workspace) with coverage; fails below 95 %"
       },
       "options": {
         "command": "vitest run --config packages/tooling/openapi/vitest.config.mts --coverage"

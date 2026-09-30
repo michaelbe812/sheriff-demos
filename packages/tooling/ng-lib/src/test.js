@@ -8,6 +8,9 @@
 // Problem 2: Eine gemeinsame spec-tsconfig mit **/*.spec.ts würde pro Lib alle Specs des Workspaces
 //   kompilieren. Der Wrapper erzeugt eine tsconfig, die die gemeinsame erweitert und `include` auf die
 //   Specs dieser Lib setzt (wie ng-lib:build für den Build).
+// Vitest UI: `nx run <lib>:test --ui` (kein eigenes Target). Mit `ui` schaltet der Wrapper watch ein und
+//   die Browser auf headed (`chromiumHeadless` → `chromium`, Angular zeigt dann die Vorschau in der UI);
+//   `--headless` erzwingt weiter headless. Ohne `ui` gehen die Optionen unverändert durch.
 const { join, relative, resolve } = require('path');
 const unitTestExecutor = require('@nx/angular/src/executors/unit-test/unit-test.impl').default;
 const { tmpDirFor, toPosix, writeJson } = require('./lib');
@@ -54,7 +57,15 @@ function withNgPackagrBuildTarget(context, dir, buildTarget) {
   };
 }
 
-async function* ngLibTestExecutor(options, context) {
+/** `ui` → watch + headed Browser; sonst unverändert. */
+function withUiDefaults(options) {
+  if (!options.ui) return options;
+  const browsers = options.browsers?.map((browser) => browser.replace(/Headless$/, ''));
+  return { ...options, watch: true, ...(browsers && { browsers }) };
+}
+
+async function* ngLibTestExecutor(rawOptions, context) {
+  const options = withUiDefaults(rawOptions);
   const dir = tmpDirFor(context);
   const tsConfigFile = writeSpecTsConfig(context, dir, options.tsConfig);
   const buildTarget = parseBuildTarget(options.buildTarget, context.projectName);

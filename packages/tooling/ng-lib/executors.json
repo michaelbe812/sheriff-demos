@@ -12,8 +12,9 @@
     },
     "test": {
       "implementation": "./src/test.js",
+      "hasher": "./src/test-hasher.js",
       "schema": "@nx/angular/src/executors/unit-test/schema.json",
-      "description": "@nx/angular:unit-test für Libs ohne ng-package.json/tsconfig.spec.json pro Lib (tsConfig = gemeinsame spec-tsconfig, include wird auf die Lib verengt)."
+      "description": "@nx/angular:unit-test für Libs ohne ng-package.json/tsconfig.spec.json pro Lib (tsConfig = gemeinsame spec-tsconfig, include wird auf die Lib verengt). `--ui`: Vitest UI (watch, headed), nie aus dem Cache."
     }
   }
 }

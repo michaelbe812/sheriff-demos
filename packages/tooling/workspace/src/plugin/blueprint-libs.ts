@@ -126,7 +126,8 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
   if (isTestingLib) delete targets['build'];
   if (hasSpecFiles(join(workspaceRoot, projectRoot, 'src'))) {
     // Vitest browser mode (Chromium) via @nx/angular:unit-test; the wrapper narrows the shared
-    // spec tsconfig to this lib and maps the ng-lib build target for the Angular builder
+    // spec tsconfig to this lib and maps the ng-lib build target for the Angular builder.
+    // The only test target: Vitest UI is `nx run <lib>:test --ui` (the wrapper switches to watch + headed)
     targets['test'] = {
       executor: NG_LIB_EXECUTORS.test,
       cache: true,
@@ -156,15 +157,6 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         browsers: ['chromiumHeadless'],
         watch: false,
       },
-    };
-    // Vitest UI (`nx run <lib>:test-ui`, `pnpm test:ui <lib>`): watch + headed Chromium, the UI shows the
-    // browser preview. Interactive only: never cached, `continuous`, not part of `run-many -t test` (CI)
-    targets['test-ui'] = {
-      ...targets['test'],
-      cache: false,
-      continuous: true,
-      options: { ...targets['test'].options, ui: true, watch: true, browsers: ['chromium'] },
-      metadata: { description: 'Vitest UI (watch, headed Chromium) — interactive, not cached, not in CI' },
     };
   }
   return targets;

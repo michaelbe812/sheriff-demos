@@ -284,7 +284,8 @@ function checkScopeList(libs) {
  * Test-only code never ships — the static layers besides the lint rules,
  * read from the project graph (targets are inferred by the plugin):
  * no build target for testing libs, specs out of the lib build tsconfig and
- * the build's `production` inputs, a `test` target exactly where specs exist,
+ * the build's `production` inputs, a `test` target exactly where specs exist (the only test target:
+ * cached, headless, one-shot — the Vitest UI is `test --ui`),
  * no committed MSW worker (Vitest serves it from the msw package).
  */
 function checkTestIsolation(projectGraph) {
@@ -305,9 +306,13 @@ function checkTestIsolation(projectGraph) {
     }
     const hasSpecs = readdirSync(join(root, 'src'), { recursive: true }).some((f) => f.endsWith('.spec.ts'));
     if (hasSpecs !== Boolean(targets.test)) problems.push(`${root}: test target ${hasSpecs ? 'missing' : 'without specs'}`);
-    // Vitest UI: interactive only — exactly next to `test`, never cached
-    if (Boolean(targets.test) !== Boolean(targets['test-ui'])) problems.push(`${root}: test-ui must exist exactly where test does`);
-    if (targets['test-ui'] && (targets['test-ui'].cache !== false || !targets['test-ui'].options?.ui)) problems.push(`${root}: test-ui must be ui + cache: false`);
+    // one test target: Vitest UI is `test --ui` (ng-lib executor + hasher), the target itself stays headless, one-shot, cached
+    const extraTestTargets = Object.keys(targets).filter((name) => name.startsWith('test-') || name.startsWith('test:'));
+    if (extraTestTargets.length) problems.push(`${root}: only one test target, found ${extraTestTargets.join(', ')}`);
+    const test = targets.test;
+    if (test && (test.cache !== true || test.options?.ui || test.options?.watch !== false || !test.options?.browsers?.every((b) => b.endsWith('Headless')))) {
+      problems.push(`${root}: test must be cached, headless, watch: false, without ui`);
+    }
   }
   // Vitest serves the worker of the msw package itself — no copy anywhere, least of all in an app
   const committedWorkers = execFileSync('git', ['ls-files', '*mockServiceWorker.js'], { encoding: 'utf-8' }).split('\n').filter(Boolean);
@@ -480,12 +485,19 @@ function checkToolingLibs(projectGraph) {
     if (packages[dir].name !== `@blueprint/tooling-${dir}`) problems.push(`${toolingRoot}/${dir}: package must be @blueprint/tooling-${dir}`);
     if (node?.name !== `tooling-${dir}`) problems.push(`${toolingRoot}/${dir}: project must be tooling-${dir}`);
     for (const tag of ['type:tooling', `tooling:${dir}`]) if (!node?.data.tags?.includes(tag)) problems.push(`tooling-${dir}: missing tag ${tag}`);
+    const extraTestTargets = Object.keys(node?.data.targets ?? {}).filter((name) => name.startsWith('test-') || name.startsWith('test:'));
+    if (extraTestTargets.length) problems.push(`tooling-${dir}: only one test target, found ${extraTestTargets.join(', ')}`);
     for (const dependency of Object.keys(packages[dir].dependencies ?? {}).filter((name) => name.startsWith('@blueprint/tooling-'))) {
       const target = dependency.slice('@blueprint/tooling-'.length);
       for (const [subpath, file] of Object.entries(packages[target]?.exports ?? {})) {
         if (subpath !== './package.json') expectedPaths[`${dependency}${subpath.slice(1)}`] = `./${toolingRoot}/${target}/${file.slice(2)}`;
       }
     }
+  }
+  // openapi: `test` = unit + integration with coverage (threshold in vitest.config.mts), coverage cached as output
+  const openapiTest = Object.values(projectGraph.nodes).find(({ name }) => name === 'tooling-openapi')?.data.targets?.test;
+  if (!openapiTest?.options?.command?.includes('--coverage') || /--project\b/.test(openapiTest.options.command) || !openapiTest.outputs?.includes('{projectRoot}/coverage')) {
+    problems.push('tooling-openapi: test must run all vitest projects with --coverage, output {projectRoot}/coverage');
   }
   const { paths } = JSON.parse(readFileSync('tsconfig.base.json', 'utf-8')).compilerOptions;
   const actualPaths = Object.fromEntries(Object.entries(paths).filter(([alias]) => alias.startsWith('@blueprint/tooling-')));
@@ -510,6 +522,8 @@ const AFFECTED_PROBES = [
   { file: 'packages/tooling/openapi/src/facade/facade.mjs', expected: ['generated-pet-client', 'booking-api', 'client'] },
   { file: 'packages/tooling/openapi/src/testing/testing.mjs', expected: ['booking-generated-booking-client-testing'] },
   { file: 'openapi-clients.json', expected: ['generated-pet-client-api', 'booking-generated-booking-client-testing', 'client'] },
+  // integration tests of tooling-openapi run the jar and the lib plugin: their workspace inputs affect it
+  { file: 'openapitools.json', expected: ['tooling-openapi'] },
 ];
 
 function checkAffected() {
@@ -612,7 +626,7 @@ function report(rows, libConfigs, schema, isolation, newLib, tooling, affected, 
   libConfigs.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Tag-Schema + Scope-Liste: ${schema.count} Libs geprüft, ${schema.problems.length} Probleme`);
   schema.problems.forEach((p) => console.log(`  - ${p}`));
-  console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test (+ test-ui ungecacht) nur mit Specs, kein committeter MSW-Worker): ${isolation.problems.length} Probleme`);
+  console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, ein test-Target (gecacht, headless, UI per --ui) nur mit Specs, kein committeter MSW-Worker): ${isolation.problems.length} Probleme`);
   isolation.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Neue Lib (nur ${NEW_LIB}/src/index.ts): ${newLib.problems.length ? 'NICHT ' : ''}automatisch Projekt ${JSON.stringify(newLib.actual ?? {})}`);
   newLib.problems.forEach((p) => console.log(`  - ${p}`));

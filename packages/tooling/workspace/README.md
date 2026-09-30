@@ -4,7 +4,7 @@ Crystal-Plugin der Libs und alle Generatoren außer `client`. Projekt `tooling-w
 
 | Teil | Datei(en) | Aufgabe |
 |---|---|---|
-| Crystal-Plugin | `src/plugin/blueprint-libs.ts` (`nx.json` → `plugins[0]`, `options.scopes`) | macht jeden Ordner `libs/<scope>/<layer>` bzw. `libs/<scope>/feat-<f>/<layer>` mit `src/index.ts` zu einem Projekt (Name, Tags, Alias, Targets `lint`/`typecheck`/`build`/`test`/`test-ui`). Unbekannter Layer oder Scope → Graph-Fehler. Client-Libs `libs/[<d>/]generated/<client>/<teil>` sind normale Libs; Kanten, Client-Projekte und `generate` ergänzt `@blueprint/tooling-openapi` (zweites Plugin, gleiche Roots) |
+| Crystal-Plugin | `src/plugin/blueprint-libs.ts` (`nx.json` → `plugins[0]`, `options.scopes`) | macht jeden Ordner `libs/<scope>/<layer>` bzw. `libs/<scope>/feat-<f>/<layer>` mit `src/index.ts` zu einem Projekt (Name, Tags, Alias, Targets `lint`/`typecheck`/`build`/`test`; Vitest UI per `test --ui`). Unbekannter Layer oder Scope → Graph-Fehler. Client-Libs `libs/[<d>/]generated/<client>/<teil>` sind normale Libs; Kanten, Client-Projekte und `generate` ergänzt `@blueprint/tooling-openapi` (zweites Plugin, gleiche Roots) |
 | Generatoren | `src/generators/*`, `generators.json` | domain, layer, feat, testing, move, rename, remove, component, service, store |
 | Sync-Generator | `src/sync/app-routes` | `nx sync` / `nx sync:check`: Slice-Shells ↔ `app.routes.ts` |
 
