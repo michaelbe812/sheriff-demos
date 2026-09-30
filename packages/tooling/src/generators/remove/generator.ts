@@ -1,5 +1,6 @@
 import { formatFiles, logger, type Tree } from '@nx/devkit';
 import { aliasFor, LIBS_DIR } from '../../plugin/lib-conventions';
+import { updateClientEntries } from '../shared/clients';
 import { referencesAlias } from '../shared/imports';
 import { removeRoutes } from '../shared/routes';
 import {
@@ -20,7 +21,7 @@ export interface RemoveGeneratorSchema {
   skipFormat?: boolean;
 }
 
-/** Deletes a lib, feat or domain; takes its lazy routes and (for a domain) its scope out. */
+/** Deletes a lib, feat, domain or OpenAPI client; takes its lazy routes, (for a domain) its scope and its client entries out. */
 export async function removeGenerator(tree: Tree, options: RemoveGeneratorSchema): Promise<void> {
   const path = normalizeLibsPath(options.path);
   if (libsAt(tree, path).length === 0) throw new Error(`Nothing to remove: no lib at or below ${LIBS_DIR}/${path}`);
@@ -41,6 +42,8 @@ export async function removeGenerator(tree: Tree, options: RemoveGeneratorSchema
 
   for (const [file, content] of withoutRoutes) tree.write(file, content);
   for (const file of filesBelow(tree, `${LIBS_DIR}/${path}`)) tree.delete(file);
+  // an OpenAPI client at or below `path` leaves openapi-clients.json, too
+  updateClientEntries(tree, path);
   syncScopesWithLibs(tree, [scopeOf(path)]);
 
   const leftovers = mentionsOutsideSources(tree, alias);

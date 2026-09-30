@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintClient",
+  "title": "Generierter OpenAPI-Client",
+  "description": "libs/[<domain>/]generated/<name>/{openapi.yaml|json, types, api, core, testing} (nur src/index.ts), Eintrag in openapi-clients.json. Der Code entsteht per generate-Target.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Client-Name = Ordner, kebab-case (z.B. pet-client).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Client-Name?"
+    },
+    "domain": {
+      "type": "string",
+      "description": "Besitzende Domain (libs/<domain>/generated/<name>). Ohne: shared (libs/generated/<name>)."
+    },
+    "spec": {
+      "type": "string",
+      "description": "Spec: Datei (.yaml/.yml/.json, relativ zum Workspace) oder http(s)-URL (einmal geladen, als YAML normalisiert).",
+      "x-prompt": "Spec (Datei oder URL)?"
+    },
+    "url": {
+      "type": "string",
+      "description": "Quelle für update-spec (Default: --spec, wenn es eine URL ist)."
+    },
+    "adapter": {
+      "type": "string",
+      "description": "Code-Generator (Default: defaultAdapter in openapi-clients.json).",
+      "enum": ["openapi-tools", "hey-api", "nx-plugin-openapi"]
+    },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["name", "spec"]
+}

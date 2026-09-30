@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveTags, libPathError, parseLibPath } from './lib-conventions';
+import { deriveTags, libPathError, parseClientPath, parseLibPath } from './lib-conventions';
 
 const scopes = ['auth', 'booking', 'checkin', 'layout', 'shared'];
 
@@ -30,5 +30,58 @@ describe('deriveTags', () => {
 
   it('accepts every scope without a list (backwards compatible)', () => {
     expect(deriveTags('anything/ui')).toContain('scope:anything');
+  });
+});
+
+describe('generated OpenAPI clients', () => {
+  it('derives scope from the placement, type from the part, marker `generated`, never port', () => {
+    expect(deriveTags('generated/pet-client/api', { scopes })).toEqual([
+      'scope:shared',
+      'type:api',
+      'feat:none',
+      'generated',
+    ]);
+    expect(deriveTags('generated/pet-client/core', { scopes })).toEqual([
+      'scope:shared',
+      'type:api',
+      'feat:none',
+      'generated',
+    ]);
+    expect(deriveTags('booking/generated/booking-client/types', { scopes })).toEqual([
+      'scope:booking',
+      'type:types',
+      'feat:none',
+      'generated',
+    ]);
+    expect(deriveTags('booking/generated/booking-client/testing', { scopes })).toEqual([
+      'scope:booking',
+      'type:testing',
+      'feat:none',
+      'generated',
+    ]);
+    expect(parseLibPath('booking/generated/booking-client/api')?.client).toEqual({
+      path: 'booking/generated/booking-client',
+      name: 'booking-client',
+      part: 'api',
+    });
+  });
+
+  it('`generated` is reserved: wrong shapes and unknown parts fail with a hint', () => {
+    expect(() => deriveTags('generated/pet-client/ui', { scopes })).toThrow('not a generated client lib');
+    expect(() => deriveTags('generated/api', { scopes })).toThrow('not a generated client lib');
+    expect(() => deriveTags('booking/feat-x/generated/c/api', { scopes })).toThrow('not a generated client lib');
+    expect(() => deriveTags('payment/generated/c/api', { scopes })).toThrow('unknown scope "payment"');
+  });
+
+  it('parses client paths', () => {
+    expect(parseClientPath('generated/pet-client')).toEqual({
+      path: 'generated/pet-client',
+      name: 'pet-client',
+      scope: 'shared',
+      placement: 'shared',
+    });
+    expect(parseClientPath('booking/generated/booking-client')?.placement).toEqual({ domain: 'booking' });
+    expect(parseClientPath('booking/generated')).toBeUndefined();
+    expect(parseClientPath('generated/generated/x')).toBeUndefined();
   });
 });

@@ -1,6 +1,7 @@
 import { formatFiles, logger, type Tree } from '@nx/devkit';
 import { aliasFor, FEAT_PREFIX, LIBS_DIR, libPathError } from '../../plugin/lib-conventions';
 import { registerFeatRoute } from '../feat/generator';
+import { renameClientExports, updateClientEntries } from '../shared/clients';
 import { rewriteAliases } from '../shared/imports';
 import { findExportedRoutes, removeRoutes, renameRoutePath, updateFile } from '../shared/routes';
 import {
@@ -25,8 +26,8 @@ export interface MoveGeneratorSchema {
 
 /**
  * Moves a lib, a feat or a whole domain below libs/ and rewrites every `@blueprint/…` specifier in
- * apps/ and libs/ (static imports, `export … from`, dynamic `import()` in routes). Keeps route paths
- * and the scope list in step.
+ * apps/ and libs/ (static imports, `export … from`, dynamic `import()` in routes). Keeps route paths,
+ * the scope list and openapi-clients.json in step.
  */
 export async function moveGenerator(tree: Tree, options: MoveGeneratorSchema): Promise<void> {
   const from = normalizeLibsPath(options.from);
@@ -45,6 +46,8 @@ export async function moveGenerator(tree: Tree, options: MoveGeneratorSchema): P
     tree.delete(file);
   }
   rewriteAliases(tree, from, to);
+  // OpenAPI clients at or below `from`: entry in openapi-clients.json + their generated testing exports
+  for (const [fromClient, toClient] of updateClientEntries(tree, from, to)) renameClientExports(tree, fromClient, toClient as string);
   updateRoutePaths(tree, from, to, options.appRoutesFile ?? APP_ROUTES_FILE);
   syncScopesWithLibs(tree, [scopeOf(from), scopeOf(to)]);
 

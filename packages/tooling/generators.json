@@ -15,6 +15,11 @@
       "schema": "./src/generators/testing/schema.json",
       "description": "Testing-Lib einer bestehenden Domain: fixtures, handlers, scenarios."
     },
+    "client": {
+      "factory": "./src/generators/client/generator",
+      "schema": "./src/generators/client/schema.json",
+      "description": "Generierter OpenAPI-Client: Spec, Libs types/api/core/testing (nur index.ts), Eintrag in openapi-clients.json."
+    },
     "feat": {
       "factory": "./src/generators/feat/generator",
       "schema": "./src/generators/feat/schema.json",
