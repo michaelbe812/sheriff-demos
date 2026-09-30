@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main, feat/nx-blueprint]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Blueprint on pure Nx: every project's build/lint/test/typecheck, the
+  # app-routes sync check and the boundary proof (tooling:verify).
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NX_DAEMON: 'false'
+      NX_NO_CLOUD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # nx affected needs the base commit of the PR
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # unit/component tests run in Vitest browser mode (Chromium) with MSW
+      - run: pnpm exec playwright install --with-deps chromium
+      # slice shells <-> app.routes.ts (sync generator @blueprint/tooling:app-routes)
+      - run: pnpm exec nx sync:check
+
+      - uses: nrwl/nx-set-shas@v4
+        if: github.event_name == 'pull_request'
+      # PRs: only what the change affects. The libs have no graph edge to the tooling
+      # package (plugin + executors), so a tooling change runs everything.
+      - name: build lint test typecheck (affected)
+        if: github.event_name == 'pull_request'
+        run: |
+          if pnpm exec nx show projects --affected --json | grep -q '"tooling"'; then
+            pnpm exec nx run-many -t build lint test typecheck
+          else
+            pnpm exec nx affected -t build lint test typecheck
+          fi
+      - name: build lint test typecheck (all)
+        if: github.event_name != 'pull_request'
+        run: pnpm exec nx run-many -t build lint test typecheck
+
+      # boundaries (depConstraints cases), tag schema + scope list, no config files in libs/, bundle scan
+      - run: pnpm exec nx run tooling:verify
