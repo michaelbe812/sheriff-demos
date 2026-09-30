@@ -106,12 +106,7 @@ export function clientPartEdges(workspaceRoot: string, client: { path: string; p
   return [projectNameFor(client.path), ...siblings];
 }
 
-function generateTarget(
-  clientPath: string,
-  specFile: string,
-  definition: object,
-  adapter: string,
-): TargetConfiguration {
+function generateTarget(clientPath: string, specFile: string, adapter: string): TargetConfiguration {
   const registration = adapterRegistry()[adapter];
   if (!registration) {
     throw new Error(
@@ -123,6 +118,8 @@ function generateTarget(
     cache: true,
     inputs: [
       `{workspaceRoot}/${specFile}`,
+      // this client's entry only (+ the default adapter it may fall back to) — not the whole file
+      { json: `{workspaceRoot}/${CLIENTS_CONFIG_FILE}`, fields: ['defaultAdapter', `clients.${clientPath}`] },
       // which parts are committed (core is optional) — the parts are projects of their own
       ...CLIENT_CODE_PARTS.map((part) => `{workspaceRoot}/${LIBS_DIR}/${clientPath}/${part}/src/index.ts`),
       `{workspaceRoot}/${FACADE_DIR}/**/*`,
@@ -134,7 +131,7 @@ function generateTarget(
       ...registration.runtime.map((runtime) => ({ runtime })),
     ],
     outputs: CLIENT_CODE_PARTS.map((part) => `{projectRoot}/${part}/src/generated`),
-    options: definition,
+    options: { client: clientPath },
     metadata: {
       description: `Generates the client (${adapter}) into ${CLIENT_CODE_PARTS.join('/')}/src/generated from ${specFile}`,
     },
@@ -146,7 +143,6 @@ function generateTarget(
  * openapi-msw. Its options hold only name/placement/spec — an adapter switch keeps its cache.
  */
 export function generateTestingTarget(workspaceRoot: string, clientPath: string): TargetConfiguration {
-  const client = parseClientPath(clientPath) as ClientPath;
   const specFile = findSpecFile(workspaceRoot, clientPath);
   return {
     executor: OPENAPI_EXECUTORS.generateTesting,
@@ -159,7 +155,7 @@ export function generateTestingTarget(workspaceRoot: string, clientPath: string)
       { externalDependencies: TESTING_PACKAGES },
     ],
     outputs: ['{projectRoot}/src/generated'],
-    options: { name: client.name, placement: client.placement, spec: { file: specFile } },
+    options: { client: clientPath },
     metadata: { description: `Generates MSW handlers, faker factories and the typed <client>Http from ${specFile}` },
   };
 }
@@ -185,23 +181,16 @@ export function createClientProjects(
     }
     const specFile = findSpecFile(workspaceRoot, clientPath);
     const adapter = entry.adapter ?? config.defaultAdapter ?? DEFAULT_ADAPTER;
-    const definition = {
-      name: client.name,
-      placement: client.placement,
-      spec: { file: specFile, ...(entry.url ? { url: entry.url } : {}) },
-      generator: { adapter, options: entry.options ?? {} },
-    };
     const targets: Record<string, TargetConfiguration> = {
-      generate: generateTarget(clientPath, specFile, definition, adapter),
-    };
-    if (entry.url) {
-      targets['update-spec'] = {
+      generate: generateTarget(clientPath, specFile, adapter),
+      // always there (fails without url): adding a url must not change the project config (see above)
+      'update-spec': {
         executor: OPENAPI_EXECUTORS.updateSpec,
         cache: false,
-        options: definition,
-        metadata: { description: `Downloads ${entry.url} into ${specFile} (normalized)` },
-      };
-    }
+        options: { client: clientPath },
+        metadata: { description: `Downloads the entry's url into ${specFile} (normalized)` },
+      },
+    };
     const root = `${LIBS_DIR}/${clientPath}`;
     projects[root] = {
       name: projectNameFor(clientPath),

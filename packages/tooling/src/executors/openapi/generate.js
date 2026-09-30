@@ -1,11 +1,14 @@
-// Executor @blueprint/tooling:openapi-generate. Options = ClientDefinition (built by the crystal plugin
-// from openapi-clients.json + the client folder). Facade: packages/tooling/src/openapi/facade.mjs.
+// Executor @blueprint/tooling:openapi-generate. Option `client` = client path below libs/; the definition
+// (adapter, options, spec) comes from openapi-clients.json at run time. Facade: src/openapi/facade.mjs.
 const { join } = require('path');
 const { pathToFileURL } = require('url');
 
-async function openapiGenerateExecutor(client, context) {
-  const { generateClient } = await import(pathToFileURL(join(__dirname, '../../openapi/facade.mjs')).href);
+async function openapiGenerateExecutor({ client: clientPath }, context) {
+  const { generateClient, resolveClient } = await import(
+    pathToFileURL(join(__dirname, '../../openapi/facade.mjs')).href
+  );
   try {
+    const client = resolveClient(context.root, clientPath);
     const written = await generateClient(client, context.root);
     console.log(`${context.projectName}: ${client.generator.adapter} → ${JSON.stringify(written)} files`);
     return { success: true };

@@ -319,8 +319,8 @@ function checkLibConfigFiles() {
 /**
  * Generated OpenAPI clients, from the project graph + openapi-clients.json + git:
  *   consistency  every entry ↔ client folder ↔ exactly one spec ↔ the four libs (committed index.ts =
- *                `export * from './generated'`), every client folder has an entry, the entry is the
- *                generate target's options (= part of its hash)
+ *                `export * from './generated'`), every client folder has an entry, the entry is a json
+ *                input of generate (and not its options, which would reach every dependent's hash)
  *   graph        every part has an edge to its client project; every lib target waits for `^generate` and
  *                hashes the generated code (dependentTasksOutputFiles, transitive); generate is cached with
  *                the spec as input and src/generated as outputs; the testing lib generates before lint/typecheck
@@ -341,7 +341,7 @@ function checkGeneratedClients(projectGraph) {
     .filter((path) => /^([a-z][a-z0-9-]*\/)?generated\/[a-z][a-z0-9-]*$/.test(path) && statSync(join('libs', path)).isDirectory());
 
   for (const folder of clientFolders) if (!entries[folder]) problems.push(`libs/${folder}: client folder without entry in openapi-clients.json`);
-  for (const [clientPath, entry] of Object.entries(entries)) {
+  for (const clientPath of Object.keys(entries)) {
     const root = `libs/${clientPath}`;
     const specs = ['openapi.yaml', 'openapi.json'].filter((file) => existsSync(join(root, file)));
     if (specs.length !== 1) problems.push(`${root}: needs exactly one spec (openapi.yaml|json), found ${specs.length}`);
@@ -356,14 +356,14 @@ function checkGeneratedClients(projectGraph) {
       problems.push(`${root}: entry in openapi-clients.json, but no client project`);
       continue;
     }
-    const adapter = entry.adapter ?? config.defaultAdapter ?? 'openapi-tools';
-    if (generate?.options?.generator?.adapter !== adapter || JSON.stringify(generate?.options?.generator?.options ?? {}) !== JSON.stringify(entry.options ?? {})) {
-      problems.push(`${node.name}: generate options must be the openapi-clients.json entry (adapter ${adapter})`);
-    }
+    // the entry is a json input (fields) — never target options: those end up in every dependent's hash
+    if (JSON.stringify(generate?.options) !== JSON.stringify({ client: clientPath })) problems.push(`${node.name}: generate options must be { client } only`);
+    const entryInput = generate?.inputs?.find((input) => input.json === '{workspaceRoot}/openapi-clients.json');
+    if (!entryInput?.fields?.includes(`clients.${clientPath}`)) problems.push(`${node.name}: its openapi-clients.json entry must be a generate input`);
     if (!generate?.cache) problems.push(`${node.name}: generate must be cached`);
     if (!generate?.inputs?.includes(`{workspaceRoot}/${root}/${specs[0]}`)) problems.push(`${node.name}: spec must be a generate input`);
     if (!generate?.outputs?.every((output) => output.endsWith('/src/generated'))) problems.push(`${node.name}: outputs must be the src/generated folders`);
-    if (Boolean(entry.url) !== Boolean(node.data.targets?.['update-spec'])) problems.push(`${node.name}: update-spec exactly when the entry has a url`);
+    if (!node.data.targets?.['update-spec']) problems.push(`${node.name}: update-spec target missing`);
   }
   for (const { name, data } of parts) {
     const client = data.root.split('/').slice(0, -1).join('/');
@@ -387,6 +387,13 @@ function checkGeneratedClients(projectGraph) {
       if (!config.inputs?.some((input) => input.dependentTasksOutputFiles?.includes('src/generated') && input.transitive)) {
         problems.push(`${name}: ${target} must hash the generated code (dependentTasksOutputFiles, transitive)`);
       }
+    }
+  }
+  // the app bundles the libs from dist: generated code of any (transitive) dependency must reach its hash
+  for (const { name, data } of Object.values(projectGraph.nodes).filter(({ data }) => data.root.startsWith('apps/'))) {
+    const build = data.targets?.build;
+    if (build && !build.inputs?.some((input) => input.dependentTasksOutputFiles?.includes('src/generated') && input.transitive)) {
+      problems.push(`${name}: build must hash the generated code (dependentTasksOutputFiles, transitive)`);
     }
   }
   const committed = execFileSync('git', ['ls-files', 'libs'], { encoding: 'utf-8' }).split('\n').filter((file) => file.includes('/src/generated/'));

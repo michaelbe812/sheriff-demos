@@ -41,6 +41,29 @@ export const generatedHeader = (source, specFile) =>
     '',
   ].join('\n');
 
+/**
+ * ClientDefinition of `clientPath` (below libs/) from openapi-clients.json + the client folder — read at run
+ * time by the executors (their options are only `{ client }`, so the entry never enters the project config).
+ * @returns {import('./contract').ClientDefinition}
+ */
+export function resolveClient(workspaceRoot, clientPath) {
+  const config = JSON.parse(readFileSync(join(workspaceRoot, 'openapi-clients.json'), 'utf-8'));
+  const entry = config.clients?.[clientPath];
+  if (!entry) throw new Error(`openapi-clients.json has no entry "${clientPath}"`);
+  const segments = clientPath.split('/');
+  const placement = segments[0] === 'generated' ? 'shared' : { domain: segments[0] };
+  const specs = ['openapi.yaml', 'openapi.json'].filter((file) =>
+    existsSync(join(workspaceRoot, 'libs', clientPath, file)),
+  );
+  if (specs.length !== 1) throw new Error(`libs/${clientPath}: needs exactly one spec (openapi.yaml | openapi.json)`);
+  return {
+    name: segments.at(-1),
+    placement,
+    spec: { file: `libs/${clientPath}/${specs[0]}`, ...(entry.url ? { url: entry.url } : {}) },
+    generator: { adapter: entry.adapter ?? config.defaultAdapter ?? 'openapi-tools', options: entry.options ?? {} },
+  };
+}
+
 export async function loadAdapter(id) {
   const registration = registry[id];
   if (!registration || id.startsWith('$')) {

@@ -27,7 +27,7 @@
     },
     "openapi-generate-testing": {
       "implementation": "./src/executors/openapi/generate-testing.js",
-      "schema": "./src/executors/openapi/testing.schema.json",
+      "schema": "./src/executors/openapi/client.schema.json",
       "description": "Testing lib of a client from its spec: openapi-typescript (paths), orval msw mocks (faker), openapi-msw (<client>Http), default handlers (src/generated/**, gitignored)."
     }
   }
