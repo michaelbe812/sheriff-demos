@@ -1,7 +1,5 @@
 import nx from "@nx/eslint-plugin";
 import { createProjectGraphAsync, readCachedProjectGraph } from "@nx/devkit";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 
 /**
  * Blueprint architecture as pure Nx module boundaries — see
@@ -19,17 +17,14 @@ import { join } from "node:path";
  * sheriff's depRules, minus the need for transparent marker rules.
  */
 
-const workspaceRoot = import.meta.dirname;
-const projectDirs = ["apps", "libs", "packages"];
-
-/** Tags of all projects, read from project.json (no project graph needed). */
-function readAllProjectTags() {
-    return projectDirs.flatMap((dir) =>
-        readdirSync(join(workspaceRoot, dir), { recursive: true })
-            .filter((file) => file.endsWith("project.json") && !file.includes("node_modules"))
-            .flatMap((file) => JSON.parse(readFileSync(join(workspaceRoot, dir, file), "utf-8")).tags ?? []),
-    );
-}
+/**
+ * Lib projects (and their tags) come from the local plugin
+ * tools/nx-plugins/blueprint-libs.ts — there is no project.json to read, so
+ * the project graph is the single source of truth. Built on demand below.
+ */
+const projectGraph = await ensureProjectGraph();
+const projectNodes = Object.values(projectGraph?.nodes ?? {});
+const allProjectTags = () => projectNodes.flatMap((node) => node.data.tags ?? []);
 
 const tagsWithPrefix = (tags, prefix, ...excluded) =>
     [...new Set(tags)].filter((tag) => tag.startsWith(prefix) && !excluded.includes(tag)).sort();
@@ -71,8 +66,8 @@ const httpOnlyInApi = ["type:utils", "type:events", "type:data", "type:ui", "typ
 /**
  * sheriff `sameTag` has no Nx equivalent (no back-reference from source to
  * target tag) => one constraint per scope / feat, generated from the tags
- * that actually exist. A new slice/feat is covered as soon as its
- * project.json carries the tag.
+ * that actually exist. A new slice/feat is covered as soon as its first lib
+ * folder (with src/index.ts) exists — the plugin derives the tag.
  */
 function sameTagConstraints(tags) {
     const slices = tagsWithPrefix(tags, "scope:", "scope:shared");
@@ -90,14 +85,19 @@ function sameTagConstraints(tags) {
 /**
  * Nx resolves `@blueprint/<lib>/<deep/path>` to the lib and checks only the
  * tags — the deep import itself passes. Public API = index.ts only, so every
- * path below a lib alias is banned (TS would fail too, but later and vaguer).
+ * path below a lib alias is banned. tsconfig.base.json has a single wildcard
+ * `@blueprint/*` -> `libs/*\/src/index.ts`, so the aliases are derived from
+ * the lib roots (alias = `@blueprint/` + path below libs/).
  */
 function deepImportPatterns() {
-    const { paths } = JSON.parse(readFileSync(join(workspaceRoot, "tsconfig.base.json"), "utf-8")).compilerOptions;
-    return Object.keys(paths).map((alias) => ({
-        group: [`${alias}/**`],
-        message: `Deep import into ${alias} — only its public API (index.ts) is importable.`,
-    }));
+    return projectNodes
+        .filter((node) => node.data.root.startsWith("libs/"))
+        .map((node) => `@blueprint/${node.data.root.slice("libs/".length)}`)
+        .sort()
+        .map((alias) => ({
+            group: [`${alias}/**`],
+            message: `Deep import into ${alias} — only its public API (index.ts) is importable.`,
+        }));
 }
 
 /**
@@ -108,19 +108,17 @@ function deepImportPatterns() {
  */
 async function ensureProjectGraph() {
     try {
-        readCachedProjectGraph();
+        return readCachedProjectGraph();
     } catch {
-        await createProjectGraphAsync({ exitOnError: false });
+        return createProjectGraphAsync({ exitOnError: false }).catch(() => undefined);
     }
 }
-
-await ensureProjectGraph();
 
 export const blueprintDepConstraints = [
     ...layerConstraints,
     ...httpOnlyInApi,
     ...noTestPackagesInProduction,
-    ...sameTagConstraints(readAllProjectTags()),
+    ...sameTagConstraints(allProjectTags()),
     // tooling packages (packages/*) are outside the app architecture
     { sourceTag: "type:tooling", onlyDependOnLibsWithTags: ["type:tooling"] },
 ];

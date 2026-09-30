@@ -113,13 +113,25 @@ const cases = [
   allowedInSpec('testing: msw + vitest in spec', 'libs/booking/data', 'msw'),
 ];
 
-/** Conventions Nx cannot enforce: tag schema must match the folder layout. */
-function checkTagSchema() {
+/**
+ * Tag schema vs folder layout. The tags are inferred by
+ * tools/nx-plugins/blueprint-libs.ts, so this guards the plugin:
+ * every libs/<lib>/src/index.ts must be a project and carry exactly the expected tags.
+ */
+function checkTagSchema(projectGraph) {
   const problems = [];
-  const projectFiles = readdirSync('libs', { recursive: true }).filter((f) => f.endsWith('project.json'));
-  for (const file of projectFiles) {
-    const libPath = dirname(file);
-    const tags = JSON.parse(readFileSync(join('libs', file), 'utf-8')).tags ?? [];
+  const libs = Object.values(projectGraph.nodes).filter(
+    (node) => node.data.root.startsWith('libs/') && node.data.root !== UNTAGGED_LIB,
+  );
+  const markerRoots = readdirSync('libs', { recursive: true })
+    .filter((f) => f.endsWith('src/index.ts'))
+    .map((f) => join('libs', dirname(dirname(f))));
+  for (const root of markerRoots) {
+    if (!libs.some((node) => node.data.root === root)) problems.push(`${root}: has src/index.ts but is no project`);
+  }
+  for (const { data } of libs) {
+    const libPath = data.root.slice('libs/'.length);
+    const tags = data.tags ?? [];
     const [scope, ...rest] = libPath.split('/');
     const layer = rest.at(-1);
     const featFolder = rest.find((segment) => segment.startsWith('feat-'));
@@ -134,28 +146,33 @@ function checkTagSchema() {
     if (layer === 'shell') expectTag('entry');
     if (layer === 'api' && scope !== 'shared') expectTag(featFolder ? 'feat-port' : 'port');
   }
-  return { count: projectFiles.length, problems };
+  return { count: libs.length, problems };
 }
 
 /**
- * Test-only code never ships — the static layers besides the lint rules:
- * no build target for testing libs, specs excluded from lib builds and the
- * `production` inputs, the MSW worker nowhere near the app.
+ * Test-only code never ships — the static layers besides the lint rules,
+ * read from the project graph (targets are inferred by the plugin):
+ * no build target for testing libs, specs out of the lib build tsconfig and
+ * the build's `production` inputs, a `test` target exactly where specs exist,
+ * the MSW worker nowhere near the app.
  */
-function checkTestIsolation() {
+function checkTestIsolation(projectGraph) {
   const problems = [];
-  const projectFiles = readdirSync('libs', { recursive: true }).filter((f) => f.endsWith('project.json'));
-  for (const file of projectFiles) {
-    const libPath = join('libs', dirname(file));
-    const { tags = [], targets = {} } = JSON.parse(readFileSync(join('libs', file), 'utf-8'));
-    if (tags.includes('type:testing') && 'build' in targets) problems.push(`${libPath}: type:testing must not have a build target`);
-    if ('build' in targets) {
-      const { exclude = [] } = JSON.parse(readFileSync(join(libPath, 'tsconfig.lib.json'), 'utf-8'));
-      if (!exclude.includes('src/**/*.spec.ts')) problems.push(`${libPath}/tsconfig.lib.json: must exclude src/**/*.spec.ts`);
-    }
-  }
   const production = JSON.parse(readFileSync('nx.json', 'utf-8')).namedInputs.production;
   if (!production.includes('!{projectRoot}/**/*.spec.ts')) problems.push('nx.json: production input must exclude specs');
+  const libs = Object.values(projectGraph.nodes).filter(({ data }) => data.root.startsWith('libs/') && data.root !== UNTAGGED_LIB);
+  for (const { data } of libs) {
+    const { root, tags = [], targets = {} } = data;
+    if (tags.includes('type:testing') && targets.build) problems.push(`${root}: type:testing must not have a build target`);
+    if (targets.build) {
+      const tsConfig = targets.build.options?.tsConfig?.replace('{projectRoot}', root);
+      const { exclude = [] } = tsConfig ? JSON.parse(readFileSync(tsConfig, 'utf-8')) : {};
+      if (!exclude.some((pattern) => pattern.endsWith('*.spec.ts'))) problems.push(`${root}: build tsconfig ${tsConfig} must exclude *.spec.ts`);
+      if (!targets.build.inputs?.includes('production')) problems.push(`${root}: build inputs must be "production" (no specs)`);
+    }
+    const hasSpecs = readdirSync(join(root, 'src'), { recursive: true }).some((f) => f.endsWith('.spec.ts'));
+    if (hasSpecs !== Boolean(targets.test)) problems.push(`${root}: test target ${hasSpecs ? 'missing' : 'without specs'}`);
+  }
   const workerInApps = readdirSync('apps', { recursive: true }).filter((f) => f.endsWith('mockServiceWorker.js'));
   workerInApps.forEach((f) => problems.push(`apps/${f}: MSW worker must only live in libs/shared/testing/public`));
   const appProjects = readdirSync('apps', { recursive: true }).filter((f) => f.endsWith('project.json'));
@@ -163,7 +180,7 @@ function checkTestIsolation() {
     const text = readFileSync(join('apps', file), 'utf-8');
     if (/testing|msw/i.test(text)) problems.push(`apps/${file}: references testing/msw (assets?)`);
   }
-  return { problems };
+  return { count: libs.length, problems };
 }
 
 /** Builds the client and scans the bundle for any trace of MSW or Vitest. */
@@ -209,12 +226,12 @@ async function lintCase({ from, importPath, spec }, eslint) {
 }
 
 async function main() {
-  const schema = checkTagSchema();
-  const isolation = checkTestIsolation();
   createUntaggedLib();
   try {
     // the Nx rule silently skips without a cached graph — build it first
-    await createProjectGraphAsync({ exitOnError: true });
+    const projectGraph = await createProjectGraphAsync({ exitOnError: true });
+    const schema = checkTagSchema(projectGraph);
+    const isolation = checkTestIsolation(projectGraph);
     const eslint = new ESLint({ cwd: workspaceRoot });
     const eslintTagsOnly = await createTagsOnlyEslint();
 
@@ -249,7 +266,7 @@ function report(rows, schema, isolation, bundle) {
   console.log(`\n${passed}/${rows.length} Fälle ok`);
   console.log(`Tag-Schema: ${schema.count} Libs geprüft, ${schema.problems.length} Probleme`);
   schema.problems.forEach((p) => console.log(`  - ${p}`));
-  console.log(`Test-Isolation (kein build für testing, Specs aus Build/production, Worker nicht in apps): ${isolation.problems.length} Probleme`);
+  console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test nur mit Specs, Worker nicht in apps): ${isolation.problems.length} Probleme`);
   isolation.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`client-Bundle: ${bundle.files} Dateien auf msw/vitest geprüft, ${bundle.problems.length} Treffer`);
   bundle.problems.forEach((p) => console.log(`  - ${p}`));

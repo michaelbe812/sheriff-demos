@@ -1,12 +1,10 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
     "target": "es2022",
     "module": "preserve",
     "noEmit": true
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["**/src/**/*.ts"]
 }

@@ -37,63 +37,9 @@
         "{workspaceRoot}/tools/eslint-rules/**/*"
       ]
     },
-    "build": {
-      "executor": "@nx/angular:ng-packagr-lite",
-      "cache": true,
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "production",
-        "^production"
-      ],
-      "outputs": [
-        "{workspaceRoot}/dist/{projectRoot}"
-      ],
-      "defaultConfiguration": "production",
-      "options": {
-        "project": "{projectRoot}/ng-package.json",
-        "tsConfig": "{projectRoot}/tsconfig.lib.json"
-      },
-      "configurations": {
-        "production": {
-          "tsConfig": "{projectRoot}/tsconfig.lib.prod.json"
-        },
-        "development": {}
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
       "cache": true
-    },
-    "typecheck": {
-      "executor": "nx:run-commands",
-      "cache": true,
-      "inputs": [
-        "default",
-        "^default",
-        "{workspaceRoot}/tsconfig.base.json"
-      ],
-      "options": {
-        "command": "tsc -p {projectRoot}/tsconfig.json"
-      }
-    },
-    "test": {
-      "executor": "@nx/angular:unit-test",
-      "cache": true,
-      "inputs": [
-        "default",
-        "^production",
-        "{workspaceRoot}/vitest-base.config.mts"
-      ],
-      "options": {
-        "tsConfig": "{projectRoot}/tsconfig.spec.json",
-        "runnerConfig": "vitest-base.config.mts",
-        "browsers": [
-          "chromiumHeadless"
-        ],
-        "watch": false
-      }
     }
   },
   "generators": {
@@ -103,5 +49,8 @@
       "style": "css",
       "unitTestRunner": "none"
     }
-  }
+  },
+  "plugins": [
+    "./tools/nx-plugins/blueprint-libs.ts"
+  ]
 }
