@@ -1,23 +1,14 @@
-import { join } from 'node:path';
 import { defineConfig, type Plugin } from 'vitest/config';
 
 /**
  * Base config for the Angular unit-test builder (`runnerConfig`). Only test
  * runs load it — the app build never sees MSW or its service worker.
+ *
+ * `/mockServiceWorker.js` needs no publicDir and no committed copy: Vitest browser mode serves
+ * the worker of the installed msw package itself (plugin `vitest:browser:resolve-virtual` →
+ * `msw/mockServiceWorker.js`), so it always matches the msw version. Checked by
+ * `pnpm verify:nx-internals` (step "MSW worker").
  */
-const mswPublicDir = join(import.meta.dirname, 'libs/shared/testing/public');
-
-/**
- * Serves `libs/shared/testing/public/mockServiceWorker.js` as
- * `/mockServiceWorker.js`. Set via plugin because the Angular builder builds
- * the Vitest project config itself and only forwards plugins into it.
- */
-function mswPublicDirPlugin(): Plugin {
-  return {
-    name: 'blueprint:msw-public-dir',
-    config: () => ({ publicDir: mswPublicDir }),
-  };
-}
 
 /**
  * The Angular builder pre-bundles every external package the specs import
@@ -35,6 +26,23 @@ function mswNotPrebundledPlugin(): Plugin {
   };
 }
 
+/**
+ * The Angular builder merges its resolve conditions (`browser`, …) into Vitest's Node defaults, so
+ * the browser project resolves with `node` as well. msw 3 maps `msw/browser` to `null` under `node`
+ * ("No known conditions for "./browser" specifier in "msw" package") — the browser project must
+ * resolve like a browser: drop `node` from the client conditions.
+ */
+function browserConditionsPlugin(): Plugin {
+  return {
+    name: 'blueprint:browser-conditions',
+    configResolved(config) {
+      const client = config.environments?.['client']?.resolve;
+      if (!client?.conditions.includes('browser')) return;
+      client.conditions = client.conditions.filter((condition) => condition !== 'node');
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [mswPublicDirPlugin(), mswNotPrebundledPlugin()],
+  plugins: [mswNotPrebundledPlugin(), browserConditionsPlugin()],
 });

@@ -5,7 +5,7 @@ import { BookingApi } from './booking-api';
 
 describe('BookingApi without a matching MSW handler', () => {
   // no default handlers (no `beforeEach(() => worker.use(...))`): nothing is mocked for this spec
-  test('fails the request instead of hitting a real backend (onUnhandledRequest: error)', async () => {
+  test('fails the request instead of hitting a real backend (onUnhandledFrame: error)', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const api = TestBed.inject(BookingApi);
 

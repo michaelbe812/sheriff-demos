@@ -190,7 +190,7 @@ function checkScopeList(libs) {
  * read from the project graph (targets are inferred by the plugin):
  * no build target for testing libs, specs out of the lib build tsconfig and
  * the build's `production` inputs, a `test` target exactly where specs exist,
- * the MSW worker nowhere near the app.
+ * no committed MSW worker (Vitest serves it from the msw package).
  */
 function checkTestIsolation(projectGraph) {
   const problems = [];
@@ -209,8 +209,9 @@ function checkTestIsolation(projectGraph) {
     const hasSpecs = readdirSync(join(root, 'src'), { recursive: true }).some((f) => f.endsWith('.spec.ts'));
     if (hasSpecs !== Boolean(targets.test)) problems.push(`${root}: test target ${hasSpecs ? 'missing' : 'without specs'}`);
   }
-  const workerInApps = readdirSync('apps', { recursive: true }).filter((f) => f.endsWith('mockServiceWorker.js'));
-  workerInApps.forEach((f) => problems.push(`apps/${f}: MSW worker must only live in libs/shared/testing/public`));
+  // Vitest serves the worker of the msw package itself — no copy anywhere, least of all in an app
+  const committedWorkers = execFileSync('git', ['ls-files', '*mockServiceWorker.js'], { encoding: 'utf-8' }).split('\n').filter(Boolean);
+  committedWorkers.forEach((f) => problems.push(`${f}: no committed MSW worker (Vitest serves msw/mockServiceWorker.js)`));
   const appProjects = readdirSync('apps', { recursive: true }).filter((f) => f.endsWith('project.json'));
   for (const file of appProjects) {
     const text = readFileSync(join('apps', file), 'utf-8');
@@ -345,7 +346,7 @@ function report(rows, libConfigs, schema, isolation, newLib, bundle) {
   libConfigs.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Tag-Schema + Scope-Liste: ${schema.count} Libs geprüft, ${schema.problems.length} Probleme`);
   schema.problems.forEach((p) => console.log(`  - ${p}`));
-  console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test nur mit Specs, Worker nicht in apps): ${isolation.problems.length} Probleme`);
+  console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test nur mit Specs, kein committeter MSW-Worker): ${isolation.problems.length} Probleme`);
   isolation.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Neue Lib (nur ${NEW_LIB}/src/index.ts): ${newLib.problems.length ? 'NICHT ' : ''}automatisch Projekt ${JSON.stringify(newLib.actual ?? {})}`);
   newLib.problems.forEach((p) => console.log(`  - ${p}`));

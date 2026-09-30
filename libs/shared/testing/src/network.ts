@@ -13,7 +13,7 @@ let workerStarted: Promise<unknown> | undefined;
 /** Registers the service worker once; later calls reuse the running worker. */
 function startWorker(): Promise<unknown> {
   workerStarted ??= worker.start({
-    onUnhandledRequest: 'error',
+    onUnhandledFrame: 'error',
     quiet: true,
     serviceWorker: { url: '/mockServiceWorker.js' },
   });

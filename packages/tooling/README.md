@@ -93,4 +93,5 @@ Die Executoren hängen an Nx-Interna. Nach jedem `nx migrate` (und Angular-Updat
 2. dist-Äquivalenz: sha256 jeder Datei gegen `nx-internals/dist-hashes.json` (Stand vor dem Umzug nach `packages/tooling`, 346 Dateien). Alternativ `--reference <dir>` gegen eine Kopie von `dist/` vor dem Update. Ändert ein Update den Output bewusst: prüfen, dann `--update-snapshot`
 3. Marker: Text in `dist/libs/layout/ui/esm2022/nav-bar.js` ersetzt, `client:build --exclude-task-dependencies` → Marker muss im App-Bundle stehen (App baut gegen `dist`, nicht still aus Source). Danach wird `dist` wiederhergestellt
 4. MSW: `beforeEach(() => worker.use(...bookingHandlers))` aus `booking.store.spec.ts` entfernt → `booking-data:test` muss rot werden (`without a matching request handler`). Datei wird wiederhergestellt
-5. `tooling:verify`
+5. MSW-Worker: temporäre Spec in `booking/api` prüft, dass der Browser `/mockServiceWorker.js` des installierten msw-Pakets bekommt (Version + Checksumme). Vitest serviert ihn selbst (`vitest:browser:resolve-virtual`), es gibt weder `publicDir` noch eine committete Kopie. Das ist ein Vitest-Interna, deshalb hier geprüft
+6. `tooling:verify`

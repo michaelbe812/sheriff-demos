@@ -15,7 +15,10 @@
  *   3. marker: a text in dist/libs/layout/ui is replaced, client:build without task dependencies
  *      must bundle the marker → the app is built against dist, not silently from source
  *   4. MSW: without the default handlers (`beforeEach(() => worker.use(...))`) booking-data:test must fail
- *   5. tooling:verify (boundaries, tag schema, config guard, bundle scan)
+ *   5. MSW worker: the browser gets `/mockServiceWorker.js` of the installed msw package, served by
+ *      Vitest itself (`vitest:browser:resolve-virtual`, no publicDir, no committed copy) — a Vitest
+ *      internal, so checked here: version + integrity checksum of the served script
+ *   6. tooling:verify (boundaries, tag schema, config guard, bundle scan)
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -31,6 +34,7 @@ const MARKER_FILE = 'dist/libs/layout/ui/esm2022/nav-bar.js';
 const MARKER_TEXT = 'Bookings';
 const SPEC_FILE = 'libs/booking/data/src/booking.store.spec.ts';
 const DEFAULT_HANDLERS_LINE = '  beforeEach(() => worker.use(...bookingHandlers));\n';
+const WORKER_PROBE_SPEC = 'libs/booking/api/src/tmp-msw-worker.spec.ts';
 
 const args = process.argv.slice(2);
 const reference = args.includes('--reference') ? args[args.indexOf('--reference') + 1] : undefined;
@@ -127,6 +131,37 @@ function missingHandlerFailsTest() {
   }
 }
 
+/** Temporary spec: the served worker must be the one of node_modules/msw (version + checksum). */
+function mswWorkerServedByVitest() {
+  const installed = readFileSync('node_modules/msw/lib/mockServiceWorker.js', 'utf-8');
+  const version = JSON.parse(readFileSync('node_modules/msw/package.json', 'utf-8')).version;
+  const checksum = /INTEGRITY_CHECKSUM = '([^']+)'/.exec(installed)?.[1];
+  const screenshots = join(dirname(WORKER_PROBE_SPEC), '__screenshots__');
+  const hadScreenshots = existsSync(screenshots);
+  writeFileSync(
+    WORKER_PROBE_SPEC,
+    `import { test } from '@blueprint/shared/testing';
+import { bypass } from 'msw';
+import { expect } from 'vitest';
+
+test('serves the worker of the installed msw package', async () => {
+  const registration = await navigator.serviceWorker.getRegistration();
+  const text = await (await fetch(bypass('/mockServiceWorker.js'))).text();
+  expect(registration?.active?.scriptURL).toMatch(/\\/mockServiceWorker\\.js$/);
+  expect(/PACKAGE_VERSION = '([^']+)'/.exec(text)?.[1]).toBe('${version}');
+  expect(/INTEGRITY_CHECKSUM = '([^']+)'/.exec(text)?.[1]).toBe('${checksum}');
+});
+`,
+  );
+  try {
+    nx('run', 'booking-api:test', '--skip-nx-cache');
+    return `msw ${version} (checksum ${checksum}) served by Vitest`;
+  } finally {
+    rmSync(WORKER_PROBE_SPEC, { force: true });
+    if (!hadScreenshots) rmSync(screenshots, { recursive: true, force: true });
+  }
+}
+
 if (!args.includes('--skip-run-many')) {
   step('run-many build lint test typecheck --skip-nx-cache', () => {
     // fresh dist: leftovers of removed libs would fail the equivalence check
@@ -138,6 +173,7 @@ if (!args.includes('--skip-run-many')) {
 step('dist equivalence', compareDist);
 step('marker: app builds against dist', markerAppBuildsAgainstDist);
 step('MSW: missing handler turns the test red', missingHandlerFailsTest);
+step('MSW worker: served by Vitest from the msw package', mswWorkerServedByVitest);
 step('tooling:verify', () => {
   nx('run', 'tooling:verify', '--skip-nx-cache');
   return 'green';

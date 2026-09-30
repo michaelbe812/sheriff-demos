@@ -45,7 +45,7 @@
     "angular-eslint": "^22.0.0",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
-    "msw": "^2.15.0",
+    "msw": "^3.0.0",
     "ng-packagr": "~22.0.2",
     "nx": "23.1.0",
     "playwright": "^1.63.0",
@@ -56,9 +56,11 @@
     "vitest": "~4.1.11"
   },
   "packageManager": "pnpm@10.12.1+sha256.889bac470ec93ccc3764488a19d6ba8f9c648ad5e50a9a6e4be3768a5de387a3",
-  "msw": {
-    "workerDirectory": [
-      "libs/shared/testing/public"
-    ]
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "msw": "3"
+      }
+    }
   }
 }

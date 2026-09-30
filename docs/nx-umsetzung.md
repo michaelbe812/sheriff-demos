@@ -103,7 +103,7 @@ Alle drei delegieren an den Nx-Executor und ergänzen nur, was sonst aus Dateien
 1. **Build-Target:** Der Angular-Builder liest die Optionen des `buildTarget` (Default `<lib>:build:development`) und kennt nur `@angular/build:application` und `@angular/build:ng-packagr`. `@nx/angular:unit-test` mappt nur `ng-packagr-lite`/`package` auf `ng-packagr`, und dieser Pfad liest `<root>/ng-package.json` (nur `styleIncludePaths`, `assets`, `inlineStyleLanguage`). Für `@blueprint/tooling:ng-lib-build` käme „not supported“ plus Schema-Fehler. Lösung: Nx' Builder-Context (`createBuilderContext`) liest Executor und Optionen jedes Targets aus `context.projectGraph`. Der Wrapper gibt `@nx/angular:unit-test` eine Kopie des Kontexts, in der das Build-Target `@angular/build:ng-packagr` mit einer temporären `ng-package.json` (nur `lib.entryFile`) ist. Kein Monkeypatching, der Rest des Graphen bleibt unverändert. Das ist derselbe Pfad wie vorher mit echter `ng-package.json` pro Lib.
 2. **Spec-tsconfig:** Eine gemeinsame tsconfig mit `**/*.spec.ts` würde pro Lib alle 4 Spec-Dateien des Workspaces kompilieren. Der Wrapper schreibt eine tsconfig, die `libs/tsconfig.spec.json` erweitert und `include` auf `<root>/src/**/*.spec.ts` + `*.d.ts` setzt. Beleg: `tsc --listFilesOnly` zeigt für `booking-data` 1 Spec, für `libs/tsconfig.spec.json` allein 4.
 
-Browser Mode, MSW-Worker (`publicDir`) und die Workarounds in `vitest-base.config.mts` sind unberührt (`runnerConfig` wie bisher).
+Browser Mode, MSW-Worker und die Workarounds in `vitest-base.config.mts` sind unberührt (`runnerConfig` wie bisher).
 
 ### Cache-Inputs
 
@@ -132,7 +132,7 @@ Gemeinsame Dateien liegen außerhalb von `{projectRoot}` und stehen deshalb expl
 | Tasks `run-many -t build lint test typecheck` | 111 | 111 (dieselben), seit `packages/tooling` 114 (+ `tooling:lint/test/typecheck`) |
 | dist (32 Libs + App) | – | byte-identisch |
 
-`libs/shared/testing/public/mockServiceWorker.js` bleibt (generiert von `msw init`, kein Config-File).
+Seit msw 3 gibt es keinen committeten `mockServiceWorker.js` mehr: Vitest serviert den Worker aus dem msw-Paket (siehe [Testing & MSW](#testing--msw)).
 
 ### Kosten und Trade-offs
 
@@ -142,7 +142,7 @@ Gemeinsame Dateien liegen außerhalb von `{projectRoot}` und stehen deshalb expl
   - Verhalten von `nx/src/adapter/ngcli-adapter` `createBuilderContext`: liest Executor/Optionen aus `context.projectGraph` (Grundlage des `test`-Wrappers)
   - Verhalten von `@nx/angular:unit-test`: mappt nur `ng-packagr-lite`/`package`, Default-`buildTarget` `::development`
   - Verhalten von `@angular/build:unit-test`: akzeptiert nur `application`/`ng-packagr`, liest `ng-package.json` über `project`
-- **Nach jedem `nx migrate` (und Angular-Update) die Beweise neu laufen lassen:** `pnpm verify:nx-internals` (run-many mit `--skip-nx-cache`, dist-Äquivalenz gegen Snapshot oder `--reference`, Marker-Test App-gegen-dist, MSW-Probe fehlender Handler, `tooling:verify`), siehe [Tooling & Generatoren](#tooling--generatoren).
+- **Nach jedem `nx migrate` (und Angular-Update) die Beweise neu laufen lassen:** `pnpm verify:nx-internals` (run-many mit `--skip-nx-cache`, dist-Äquivalenz gegen Snapshot oder `--reference`, Marker-Test App-gegen-dist, MSW-Probe fehlender Handler, MSW-Worker aus dem msw-Paket, `tooling:verify`), siehe [Tooling & Generatoren](#tooling--generatoren).
 - **Eigene Generatoren nötig.** `@nx/angular:library` erzeugt genau die Dateien, die hier fehlen sollen, `@nx/angular:component`/`service` finden die inferierten Projekte nicht. Deshalb bringt `packages/tooling` eigene Generatoren mit.
 - **Weniger sichtbar.** Targets und Tags stehen in keiner Datei der Lib. Nachsehen per `nx show project <name>` oder Nx Console („inferred“ + Quelle `blueprint-libs.ts`).
 - **Plugin kostet pro Graph-Berechnung** einen Dateisystem-Scan pro Lib (Spec-Suche). Bei 35 Libs nicht messbar.
@@ -254,12 +254,11 @@ Unit- und Komponententests laufen **nur im Vitest Browser Mode** (Chromium headl
 
 ```
 libs/shared/testing/          scope:shared  type:testing  feat:none   kein build-Target
-  public/mockServiceWorker.js   per `msw init` (package.json → msw.workerDirectory hält ihn bei Updates aktuell)
   src/network.ts                `worker` (setupWorker aus msw/browser) + `test` mit Auto-Fixture `worker`
 libs/<domain>/testing/        scope:<domain> type:testing feat:none   kein build-Target
   src/fixtures/                 Builder: aBooking(), aCheckinDto()
   src/handlers/                 <domain>Handlers (Normalfall), <domain>Scenarios (empty, serverError, with…)
-vitest-base.config.mts        runnerConfig: publicDir = shared/testing/public, msw-Prebundle-Fix
+vitest-base.config.mts        runnerConfig: msw-Prebundle-Fix, Browser-Conditions (msw 3); Worker serviert Vitest selbst
 ```
 
 - Domain-Testing-Libs importieren nur `msw` (nicht `msw/browser`), `type:types` und `shared/testing`. Deshalb liegt `CheckinDto` jetzt in `checkin/types` statt in `checkin/api`.
@@ -291,7 +290,7 @@ describe('BookingStore', () => {
 });
 ```
 
-- **Fixture `worker`** (`auto: true`): startet den Worker einmal (`onUnhandledRequest: 'error'`, Promise-Guard), `use(worker)`, danach `worker.resetHandlers()`. Kein `stop`, wie im Rezept. Abweichungen vom Rezept: `start` nur beim ersten Test (Rezept: `await worker.start()` pro Test; hier teilen sich alle Specs einer Lib die Seite, `isolate: false`) und `setupWorker()` ohne Happy-Path-Handler, die Defaults setzt jede Spec selbst.
+- **Fixture `worker`** (`auto: true`): startet den Worker einmal (`onUnhandledFrame: 'error'`, msw 3; vorher `onUnhandledRequest`; Promise-Guard), `use(worker)`, danach `worker.resetHandlers()`. Kein `stop`, wie im Rezept. Abweichungen vom Rezept: `start` nur beim ersten Test (Rezept: `await worker.start()` pro Test; hier teilen sich alle Specs einer Lib die Seite, `isolate: false`) und `setupWorker()` ohne Happy-Path-Handler, die Defaults setzt jede Spec selbst.
 - **Default-Handler: explizit im Spec** per `beforeEach(() => worker.use(...))`, `worker` kommt dafür als Modul-Export. Kein globales Setup-File: Welche Handler gelten, steht in der Spec.
 - **Reihenfolge** (Vitest 4 löst Fixtures auch für `beforeEach` auf, Auto-Fixtures immer): Fixture-Setup (Worker läuft) → `beforeEach` (Defaults) → Test (`worker.use` wird vorangestellt, neuester Handler gewinnt) → Fixture-Teardown (`resetHandlers` entfernt Defaults und Overrides). Belegt per Probe-Spec (nicht eingecheckt): `fetch` im ersten `beforeEach` wird schon von MSW beantwortet; im Folgetest nach einem Override gilt wieder nur der Default (`listHandlers().length === 1`); ohne `resetHandlers` wird dieser Test rot (3 statt 1 Handler).
 - Ohne `beforeEach` gibt es keine Handler. Ein nicht gemockter Request wird von MSW geloggt und mit 500 beantwortet, der Test wird rot (`booking-api.spec.ts` prüft genau das).
@@ -307,7 +306,7 @@ describe('BookingStore', () => {
 | 2 | `bannedExternalImports` msw, vitest, @vitest, @testing-library, playwright in Produktions-Layern + App | `eslint.config.mjs` | verify |
 | 3 | Testing-Libs ohne `build`-Target (Plugin: Ordner `testing` → `type:testing`, kein `build`). Import aus Produktionscode scheitert zusätzlich an `enforceBuildableLibDependency`, im Spec-Override ist die Regel aus | Plugin, Spec-Override | verify (Test-Isolation aus dem Graph + Fälle) |
 | 4 | Die Build-tsconfig (`build.options.tsConfig` = `libs/tsconfig.lib.json`) schließt `**/*.spec.ts` aus, `build`-Inputs sind `production`, `production` schließt `**/*.spec.ts` aus, `peerDependencies` nur aus Produktionscode | `libs/tsconfig.lib.json`, Plugin, `nx.json`, `packages/tooling/src/executors/ng-lib/build.js` | verify (Test-Isolation liest Targets aus dem Graph) |
-| 5 | `mockServiceWorker.js` nur in `libs/shared/testing/public`, nur per `runnerConfig` bei Testläufen serviert. Kein App-Asset | `vitest-base.config.mts` | verify (keine Datei unter `apps/`, keine testing/msw-Referenz in App-`project.json`) |
+| 5 | Kein `mockServiceWorker.js` im Repo: Vitest serviert ihn nur bei Testläufen aus dem msw-Paket. Kein App-Asset | `vitest-base.config.mts` | verify (keine committete Worker-Datei, keine testing/msw-Referenz in App-`project.json`) |
 | 6 | `nx build client` + Scan des Bundles auf `msw`, `mockServiceWorker`, `setupWorker`, `vitest` | `packages/tooling/scripts/verify-boundaries.mjs` | verify: 14 Dateien, 0 Treffer |
 | 7 | Keine Zyklen, keine `ignoredCircularDependencies` (siehe unten) | Schnitt der Libs | `nx lint`, verify |
 
@@ -339,12 +338,13 @@ Mit `buildTarget: client:build:development` gleiche Warnung für `@nx/angular:ap
 | Limitierung | Umgang |
 |---|---|
 | Angular pre-bundelt `msw` (`optimizeDeps.include`), Vitest Browser schließt es aus → esbuild: „The entry point "msw" cannot be marked as external“ | Plugin `blueprint:msw-not-prebundled` in `vitest-base.config.mts` entfernt die Überschneidung aus `include` |
-| Der Builder baut die Vitest-Projekt-Config selbst und übernimmt nur Plugins, `publicDir` nicht | `publicDir` per Plugin-`config()`-Hook gesetzt. Probe: kaputter Worker in `public/` → alle Tests rot, also wird genau diese Datei serviert |
-| Vitest Browser serviert `/mockServiceWorker.js` intern ohnehin aus dem msw-Paket (`vitest:browser:resolve-virtual`) | eigener `publicDir` bleibt trotzdem, damit wir nicht von Vitest-Interna abhängen. Beide stammen aus derselben msw-Version |
+| Der Builder mischt seine Resolve-Conditions (`browser`, …) in die Node-Defaults von Vitest, das Browser-Projekt löst also auch mit `node` auf. msw 3 mappt `msw/browser` unter `node` auf `null` → „No known conditions for "./browser" specifier in "msw" package“ | Plugin `blueprint:browser-conditions` in `vitest-base.config.mts` entfernt `node` aus den Client-Conditions, wenn `browser` gesetzt ist |
+| Vitest Browser serviert `/mockServiceWorker.js` selbst aus dem msw-Paket (`vitest:browser:resolve-virtual` → `msw/mockServiceWorker.js`) | seit msw 3 genutzt: kein `publicDir`, keine committete Kopie, kein `msw init`/`msw.workerDirectory`. Beleg per Probe-Spec: ohne beides serviert der Dev-Server `/mockServiceWorker.js` mit `PACKAGE_VERSION 3.0.0`, Checksumme = `node_modules/msw/lib/mockServiceWorker.js` (12 754 Bytes + Inline-Sourcemap), alle Tests grün. Weil das ein Vitest-Interna ist, prüft `pnpm verify:nx-internals` es bei jedem Update (Schritt „MSW worker“). `msw/vite` (`mode: 'worker-only'`) ist damit nicht nötig |
 | Spec-Imports sind Graph-Kanten: `nx graph`/`affected` zeigen `booking-data → booking-testing`, `^production` von `booking-data:build` enthält die Testing-Lib | Build-Output unberührt (tsconfig.lib, Bundle-Check). Cache-Invalidierung etwas breiter als nötig |
 | Buildable Lib → Testing-Lib meldet zuerst `enforceBuildableLibDependency`, die Tag-Meldung erscheint erst danach | verify prüft die Tag-Constraints zusätzlich isoliert (`tags only`) |
 | `type:types`-Libs können keine Testing-Libs in Specs nutzen (Zyklus) | reine Interfaces, nichts zu testen |
-| `@angular/build` 22 verlangt `vitest ^4`, deshalb nicht Vitest 5. msw 3.0 ist erst 2 Tage alt, deshalb msw 2.15 | beim nächsten Update prüfen |
+| `@angular/build` 22 verlangt `vitest ^4`, deshalb nicht Vitest 5 | beim nächsten Update prüfen |
+| msw 3: `@vitest/mocker` (optionaler Peer) verlangt `msw ^2.4.9` | `package.json` → `pnpm.peerDependencyRules.allowedVersions.msw = "3"`; alle Browser-Tests grün |
 | Angular-Default `isolate: false`: alle Spec-Dateien einer Lib teilen sich die Seite | Worker startet einmal (Promise-Guard), `resetHandlers` nach jedem Test |
 | Parallele `test`-Tasks belegen je einen Vitest-Port | Vitest weicht automatisch aus („Port 63315 is in use, trying another one“) |
 
@@ -407,7 +407,7 @@ nx g @blueprint/tooling:component libs/booking/ui/src/booking-badge
 
 ### Nach `nx migrate`
 
-`pnpm verify:nx-internals` vor dem Commit der Migration (und nach Angular-Updates): run-many mit `--skip-nx-cache` in frisches `dist/`, dist-Äquivalenz gegen `packages/tooling/nx-internals/dist-hashes.json` (oder `--reference <kopie-von-dist-vorher>`), Marker-Test „App baut gegen dist“, MSW-Probe „fehlender Handler → Test rot“, `tooling:verify`. Ändert das Update den Output bewusst: Unterschiede prüfen, dann `--update-snapshot`.
+`pnpm verify:nx-internals` vor dem Commit der Migration (und nach Angular-Updates): run-many mit `--skip-nx-cache` in frisches `dist/`, dist-Äquivalenz gegen `packages/tooling/nx-internals/dist-hashes.json` (oder `--reference <kopie-von-dist-vorher>`), Marker-Test „App baut gegen dist“, MSW-Probe „fehlender Handler → Test rot“, MSW-Worker „von Vitest aus dem msw-Paket serviert“, `tooling:verify`. Ändert das Update den Output bewusst: Unterschiede prüfen, dann `--update-snapshot`.
 
 ## Verifikation
 
