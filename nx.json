@@ -20,7 +20,13 @@
         "^default",
         "{workspaceRoot}/.eslintrc.json",
         "{workspaceRoot}/.eslintignore",
-        "{workspaceRoot}/eslint.config.mjs"
+        "{workspaceRoot}/eslint.config.mjs",
+        "{workspaceRoot}/packages/tooling/conventions/src/lib-conventions.ts",
+        "{workspaceRoot}/packages/tooling/eslint-rules/src/**/*",
+        "!{workspaceRoot}/packages/tooling/eslint-rules/src/**/*.spec.ts",
+        {
+          "externalDependencies": ["eslint", "angular-eslint", "typescript-eslint"]
+        }
       ]
     },
     "lint": {
@@ -32,12 +38,15 @@
         "^default",
         "{workspaceRoot}/eslint.config.mjs",
         "{workspaceRoot}/tsconfig.base.json",
+        "{workspaceRoot}/packages/tooling/conventions/src/lib-conventions.ts",
+        "{workspaceRoot}/packages/tooling/eslint-rules/src/**/*",
+        "!{workspaceRoot}/packages/tooling/eslint-rules/src/**/*.spec.ts",
         {
           "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
           "transitive": true
         },
         {
-          "externalDependencies": ["eslint"]
+          "externalDependencies": ["eslint", "angular-eslint", "typescript-eslint"]
         }
       ],
       "options": {

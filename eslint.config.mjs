@@ -1,5 +1,6 @@
 import nx from "@nx/eslint-plugin";
 import { createProjectGraphAsync, readCachedProjectGraph } from "@nx/devkit";
+import angular from "angular-eslint";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -114,6 +115,7 @@ function deepImportPatterns() {
  *   workspace    generators — conventions, openapi (move/remove keep openapi-clients.json in step)
  *   ng-lib       test executor (Vitest UI flag) around an Nx internal — standalone, knows no conventions/openapi
  *   verify       proofs, read the project graph — standalone
+ *   eslint-rules naming rules (blueprint/*), loaded by this config — conventions only
  */
 const toolingConstraints = [
     { sourceTag: "tooling:conventions", onlyDependOnLibsWithTags: [] },
@@ -121,6 +123,7 @@ const toolingConstraints = [
     { sourceTag: "tooling:workspace", onlyDependOnLibsWithTags: ["tooling:conventions", "tooling:openapi"] },
     { sourceTag: "tooling:ng-lib", onlyDependOnLibsWithTags: [] },
     { sourceTag: "tooling:verify", onlyDependOnLibsWithTags: [] },
+    { sourceTag: "tooling:eslint-rules", onlyDependOnLibsWithTags: ["tooling:conventions"] },
 ];
 
 /**
@@ -168,6 +171,22 @@ export const specDepConstraints = blueprintDepConstraints
     );
 
 export const specFiles = ["**/*.spec.ts", "**/*.test.ts", "**/test-setup.ts"];
+
+/**
+ * Naming scheme (docs/nx-umsetzung.md → Namensschema): local rules in packages/tooling/eslint-rules,
+ * loaded from source (swc, no build) by Nx's loadWorkspaceRules. Layer, scope and feat come from
+ * @blueprint/tooling-conventions — the same path parser the generators derive the tags with.
+ * A load error surfaces as "Could not find 'blueprint/…'" — never as silently missing rules.
+ */
+const eslintRulesDir = join(import.meta.dirname, "packages/tooling/eslint-rules");
+const blueprint = {
+    meta: { name: "@blueprint/tooling-eslint-rules" },
+    rules: await nx.loadWorkspaceRules(join(eslintRulesDir, "src"), join(eslintRulesDir, "tsconfig.json")),
+};
+/** Component/directive selector prefix = `prefix` in apps/client/project.json and the generator templates. */
+export const selectorPrefix = "app";
+/** Generated OpenAPI code keeps the names of its spec. */
+const generatedCode = ["libs/**/src/generated/**"];
 
 export default [
     ...nx.configs["flat/base"],
@@ -218,6 +237,49 @@ export default [
                     depConstraints: specDepConstraints
                 }
             ]
+        }
+    },
+    {
+        files: ["libs/**/*.ts"],
+        ignores: generatedCode,
+        plugins: { blueprint },
+        rules: {
+            "blueprint/lib-file-naming": "error",
+            "blueprint/layer-symbol-naming": ["error", { selectorPrefix }],
+            "blueprint/no-internal-export": "error",
+            // general casing; the blueprint rules above check the names themselves
+            "@typescript-eslint/naming-convention": [
+                "error",
+                { selector: "default", format: ["camelCase"], leadingUnderscore: "allow" },
+                { selector: "import", format: null },
+                { selector: "typeLike", format: ["PascalCase"] },
+                { selector: "enumMember", format: ["PascalCase"] },
+                { selector: "variable", modifiers: ["const"], format: ["camelCase", "UPPER_CASE"] },
+                { selector: "objectLiteralProperty", format: null }
+            ]
+        }
+    },
+    {
+        // DTOs mirror the backend payload (`booking_id`)
+        files: ["libs/**/*.dto.ts"],
+        rules: {
+            "@typescript-eslint/naming-convention": [
+                "error",
+                { selector: "default", format: ["camelCase"], leadingUnderscore: "allow" },
+                { selector: "import", format: null },
+                { selector: "typeLike", format: ["PascalCase"] },
+                { selector: "typeProperty", format: null }
+            ]
+        }
+    },
+    {
+        // selector prefix + style: @angular-eslint (libs + app); selector ↔ file name: blueprint/layer-symbol-naming
+        files: ["libs/**/*.ts", "apps/**/*.ts"],
+        ignores: generatedCode,
+        plugins: { "@angular-eslint": angular.tsPlugin },
+        rules: {
+            "@angular-eslint/component-selector": ["error", { type: "element", prefix: selectorPrefix, style: "kebab-case" }],
+            "@angular-eslint/directive-selector": ["error", { type: "attribute", prefix: selectorPrefix, style: "camelCase" }]
         }
     },
     {
