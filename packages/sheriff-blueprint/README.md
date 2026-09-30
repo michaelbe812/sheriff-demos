@@ -39,7 +39,7 @@ Wichtig: Die Config wird von Sheriff transpiliert und ge-evalt — das Package m
 
 ## Generatoren
 
-> **Veraltet auf Branch `feat/nx-blueprint`:** Diese Generatoren erzeugen das Sheriff-Layout. Für Libs ohne Config-Dateien stattdessen `@blueprint/tooling` (`packages/tooling/README.md`) benutzen.
+> **Veraltet auf Branch `feat/nx-blueprint`:** Diese Generatoren erzeugen das Sheriff-Layout. Für Libs ohne Config-Dateien stattdessen `@blueprint/tooling-workspace` (`packages/tooling/README.md`) benutzen.
 
 ```sh
 nx g @berger-engineering/sheriff-blueprint:domain booking            # Lib unter libs/domains/ + Alias + project.json

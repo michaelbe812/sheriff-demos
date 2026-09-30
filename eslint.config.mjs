@@ -19,7 +19,7 @@ import { createProjectGraphAsync, readCachedProjectGraph } from "@nx/devkit";
 
 /**
  * Lib projects (and their tags) come from the local plugin
- * packages/tooling/src/plugin/blueprint-libs.ts — there is no project.json to read, so
+ * packages/tooling/workspace/src/plugin/blueprint-libs.ts — there is no project.json to read, so
  * the project graph is the single source of truth. Built on demand below.
  */
 const projectGraph = await ensureProjectGraph();
