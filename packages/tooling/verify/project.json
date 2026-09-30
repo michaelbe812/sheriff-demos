@@ -23,6 +23,7 @@
         "{workspaceRoot}/eslint.config.mjs",
         "{workspaceRoot}/nx.json",
         "{workspaceRoot}/openapi-clients.json",
+        "{workspaceRoot}/lib-scopes.json",
         "{workspaceRoot}/tsconfig.base.json",
         "{workspaceRoot}/package.json",
         "{workspaceRoot}/packages/tooling/**/*",

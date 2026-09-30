@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
- * Proof that the ng-lib executors still work after `nx migrate` / an Angular update.
- * They depend on Nx internals (docs/nx-umsetzung.md → "Kosten und Trade-offs"), so after
- * every update run:
+ * Proof that the build setup still works after `nx migrate` / an Angular update. With explicit config per
+ * lib the standard executors do the work (@nx/angular:ng-packagr-lite, :application, :unit-test); left are
+ * one Nx internal (the ng-lib test wrapper imports @nx/angular's unit-test impl, Nx loads its `hasher`) and
+ * behaviour the blueprint relies on (the app build maps lib aliases to dist via the lib package.json names,
+ * Vitest serves the MSW worker). After every update run:
  *
  *   pnpm verify:nx-internals                     full proof (≈ 2–3 min)
  *   pnpm verify:nx-internals --reference <dir>   dist compared with a copy made before the update
@@ -14,6 +16,7 @@
  *      (packages/tooling/verify/nx-internals/dist-hashes.json) or `diff -r` against --reference
  *   3. marker: a text in dist/libs/layout/ui is replaced, client:build without task dependencies
  *      must bundle the marker → the app is built against dist, not silently from source
+ *      (@nx/angular:application with buildLibsFromSource: false, alias from the lib's package.json)
  *   4. MSW: without the default handlers (`beforeEach(() => worker.use(...))`) booking-data:test must fail
  *   5. MSW worker: the browser gets `/mockServiceWorker.js` of the installed msw package, served by
  *      Vitest itself (`vitest:browser:resolve-virtual`, no publicDir, no committed copy) — a Vitest
