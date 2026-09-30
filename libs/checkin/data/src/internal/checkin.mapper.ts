@@ -1,5 +1,4 @@
-import { CheckinDto } from '@blueprint/checkin/api';
-import { CheckinRecord } from '@blueprint/checkin/types';
+import { CheckinDto, CheckinRecord } from '@blueprint/checkin/types';
 
 /**
  * MODULE-PRIVATE (sheriff `encapsulationPattern: 'internal'`, the default):
