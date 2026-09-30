@@ -44,6 +44,15 @@ describe('remove generator', () => {
     expect(tree.exists('libs/booking/data/src/index.ts')).toBe(false);
   });
 
+  it('ignores imports in comments', async () => {
+    tree.write('libs/layout/shell/src/example.ts', "// boundary-violation-example: import { X } from '@blueprint/booking/data';\nexport {};\n");
+    tree.write('libs/booking/feat-check-booking/feature/src/feat-check-booking.ts', 'export class FeatCheckBooking {}\n');
+
+    await removeGenerator(tree, { path: 'booking/data' });
+
+    expect(tree.exists('libs/booking/data/src/index.ts')).toBe(false);
+  });
+
   it('counts a static import of a shell as import, a lazy route not', async () => {
     tree.write('libs/layout/shell/src/uses.ts', "export { bookingRoutes } from '@blueprint/booking/shell';\n");
     await expect(removeGenerator(tree, { path: 'booking' })).rejects.toThrow('libs/layout/shell/src/uses.ts');

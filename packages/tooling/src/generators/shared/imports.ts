@@ -1,4 +1,5 @@
 import type { Tree } from '@nx/devkit';
+import * as ts from 'typescript';
 import { aliasFor } from '../../plugin/lib-conventions';
 import { forEachSourceFile } from './workspace';
 
@@ -24,5 +25,13 @@ export function rewriteAliases(tree: Tree, from: string, to: string): string[] {
   return changed;
 }
 
-/** true if the source references `@blueprint/<libPath>` or anything below it. */
-export const referencesAlias = (content: string, libPath: string): boolean => aliasPattern(libPath).test(content);
+/**
+ * true if the source imports `@blueprint/<libPath>` or anything below it — static, `export … from`
+ * or dynamic `import()`. Comments (e.g. `// boundary-violation-example: import …`) do not count.
+ */
+export function referencesAlias(content: string, libPath: string): boolean {
+  const alias = aliasFor(libPath);
+  return ts
+    .preProcessFile(content, true, true)
+    .importedFiles.some(({ fileName }) => fileName === alias || fileName.startsWith(`${alias}/`));
+}

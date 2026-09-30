@@ -159,7 +159,9 @@ export function mentionsOutsideSources(tree: Tree, text: string): string[] {
       const path = dir ? `${dir}/${child}` : child;
       if (['node_modules', 'dist', 'tmp', '.git', '.nx', '.angular', 'apps', LIBS_DIR].includes(path)) continue;
       if (tree.isFile(path)) {
-        if (/\.(ts|mts|js|mjs|cjs|json|md)$/.test(child) && (tree.read(path, 'utf-8') ?? '').includes(text)) hits.push(path);
+        // specs of this package use aliases as fixtures — not worth a hint
+        const relevant = /\.(ts|mts|js|mjs|cjs|json|md)$/.test(child) && !child.endsWith('.spec.ts');
+        if (relevant && (tree.read(path, 'utf-8') ?? '').includes(text)) hits.push(path);
       } else visit(path);
     }
   };
