@@ -305,6 +305,9 @@ function checkTestIsolation(projectGraph) {
     }
     const hasSpecs = readdirSync(join(root, 'src'), { recursive: true }).some((f) => f.endsWith('.spec.ts'));
     if (hasSpecs !== Boolean(targets.test)) problems.push(`${root}: test target ${hasSpecs ? 'missing' : 'without specs'}`);
+    // Vitest UI: interactive only — exactly next to `test`, never cached
+    if (Boolean(targets.test) !== Boolean(targets['test-ui'])) problems.push(`${root}: test-ui must exist exactly where test does`);
+    if (targets['test-ui'] && (targets['test-ui'].cache !== false || !targets['test-ui'].options?.ui)) problems.push(`${root}: test-ui must be ui + cache: false`);
   }
   // Vitest serves the worker of the msw package itself — no copy anywhere, least of all in an app
   const committedWorkers = execFileSync('git', ['ls-files', '*mockServiceWorker.js'], { encoding: 'utf-8' }).split('\n').filter(Boolean);
@@ -609,7 +612,7 @@ function report(rows, libConfigs, schema, isolation, newLib, tooling, affected, 
   libConfigs.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Tag-Schema + Scope-Liste: ${schema.count} Libs geprüft, ${schema.problems.length} Probleme`);
   schema.problems.forEach((p) => console.log(`  - ${p}`));
-  console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test nur mit Specs, kein committeter MSW-Worker): ${isolation.problems.length} Probleme`);
+  console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test (+ test-ui ungecacht) nur mit Specs, kein committeter MSW-Worker): ${isolation.problems.length} Probleme`);
   isolation.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Neue Lib (nur ${NEW_LIB}/src/index.ts): ${newLib.problems.length ? 'NICHT ' : ''}automatisch Projekt ${JSON.stringify(newLib.actual ?? {})}`);
   newLib.problems.forEach((p) => console.log(`  - ${p}`));

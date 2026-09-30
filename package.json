@@ -6,7 +6,8 @@
     "verify": "nx run tooling-verify:verify",
     "verify:boundaries": "node packages/tooling/verify/scripts/verify-boundaries.mjs",
     "verify:nx-internals": "node packages/tooling/verify/scripts/verify-nx-internals.mjs",
-    "openapi:generate": "nx run-many -t generate"
+    "openapi:generate": "nx run-many -t generate",
+    "test:ui": "nx test-ui"
   },
   "private": true,
   "dependencies": {
@@ -51,6 +52,7 @@
     "@types/node": "^22.20.4",
     "@typescript-eslint/utils": "^8.58.0",
     "@vitest/browser-playwright": "~4.1.11",
+    "@vitest/ui": "~4.1.11",
     "angular-eslint": "^22.0.0",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",

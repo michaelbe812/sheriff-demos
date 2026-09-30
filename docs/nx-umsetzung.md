@@ -87,6 +87,7 @@ Inferierte Targets:
 | `typecheck` | `nx:run-commands` → `node packages/tooling/ng-lib/scripts/typecheck-lib.mjs <root>` | immer |
 | `build` | `@blueprint/tooling-ng-lib:build` | nicht für `testing` |
 | `test` | `@blueprint/tooling-ng-lib:test` | nur wenn `src/` eine `*.spec.ts` enthält |
+| `test-ui` | `@blueprint/tooling-ng-lib:test` mit `ui: true`, `watch: true`, `browsers: [chromium]` (headed): Vitest UI | wie `test`; `cache: false`, `continuous`, nie in CI (`run-many -t test` nimmt es nicht mit) |
 
 Eine `project.json` in einer Lib würde Nx zwar über die inferierten Werte legen, `tooling-verify:verify` meldet sie aber rot (Wächter gegen Config-Dateien). `typecheck-lib.mjs` nimmt technisch weiter eine lib-eigene `tsconfig.json`, auch die ist vom Wächter verboten.
 
@@ -745,9 +746,10 @@ pnpm exec nx graph --focus=tooling-workspace     # Tooling-Libs: workspace → c
 pnpm exec nx run-many -t lint test typecheck -p 'tooling-*'   # Specs der Tooling-Libs
 pnpm exec nx show projects --affected --files packages/tooling/ng-lib/src/build.js   # alle Libs mit build/test + App
 
-# 5. Tests im Browser sehen (headed, bleibt offen bis Strg+C)
-pnpm exec nx run booking-api:test --browsers=chromium --watch
-#   Vitest-UI geht zusätzlich mit: pnpm add -D @vitest/ui@~4.1.11 && pnpm exec nx run booking-api:test --ui --watch (nicht vorinstalliert)
+# 5. Tests interaktiv: Vitest UI (watch, headed Chromium mit Browser-Vorschau, MSW läuft wie im Test), bis Strg+C
+pnpm test:ui booking-api                        # = nx test-ui booking-api → http://localhost:51204/__vitest__/
+pnpm exec nx run booking-api:test-ui --headless # UI ohne Browserfenster (Tests laufen headless, Ergebnis in der UI)
+pnpm exec nx run booking-api:test --browsers=chromium --watch   # nur headed, ohne UI
 
 # 6. neuen Client anlegen (Datei oder URL), nutzen, wieder entfernen
 cat > /tmp/demo.yaml <<'YAML'
