@@ -573,7 +573,7 @@ worker.use(bookingClientHttp.get('/bookings', ({ response }) => response('defaul
 
 ### Verify
 
-`tooling-verify:verify`: 134 Fälle, davon 46 für generierte Clients:
+`tooling-verify:verify`: 150 Fälle, davon 46 für generierte Clients:
 
 | Fälle | erwartet |
 |---|---|
@@ -602,9 +602,63 @@ Dazu der Check „Generierte Clients“: Eintrag ↔ Ordner ↔ eine Spec ↔ vi
 | `type:testing` → `scope:shared` erlaubt auch shared Client-api in Testing-Libs | bestehende Regel (für `shared/testing`), nicht verschärft |
 | `data`/`feature` dürfen generierte Services laut Matrix nutzen | Konvention „über den Port“, bewusst so gelassen |
 
+## Namensschema
+
+Die Namen der Libs, Dateien und Symbole sind keine Kosmetik: Tags, Aliase, Projektnamen und die Routen-Registrierung hängen daran, die Generatoren erzeugen sie. Erzwungen wird jede Regelart dort, wo sie am billigsten und präzisesten prüfbar ist. Die Regeln lesen Layer, Scope und Feat aus derselben Quelle wie das Crystal-Plugin (`parseLibPath` in `@blueprint/tooling-conventions`), keine doppelte Logik.
+
+### Inventar (aus Code, Generatoren und Plugin abgeleitet)
+
+| Regelart | Schema | Beispiel | Mechanismus | Status |
+|---|---|---|---|---|
+| Lib-Ordner | `libs/<scope>/<layer>`, `libs/<scope>/feat-<feat>/<layer>`, `libs/[<d>/]generated/<client>/{types,api,core,testing}`; Layer aus `KNOWN_LAYERS`, Scope aus `nx.json`, alles kebab-case | `libs/booking/feat-check-booking/data` | Crystal-Plugin (`libPathError`): Graph-Fehler. Neu: kebab-case auch für Feat- und Client-Ordner (`feat-CheckIn` rutschte vorher durch) | umgesetzt |
+| Nx-Projektname | Pfad unter `libs/` mit `-` | `booking-feat-check-booking-data` | Plugin (`projectNameFor`), per Konstruktion | besteht |
+| Import-Alias | `@blueprint/<pfad>` | `@blueprint/booking/api` | Plugin (`aliasFor`) + ein Wildcard in `tsconfig.base.json` | besteht |
+| Public API | nur `src/index.ts`, `internal/` wird nicht exportiert | `checkin/data/src/internal/checkin.mapper.ts` | Deep-Import: `no-restricted-imports` (besteht). `internal/` in `index.ts`: `blueprint/no-internal-export` | umgesetzt |
+| Ordner unter `src/` | kebab-case | `fixtures/`, `internal/` | `blueprint/lib-file-naming` | umgesetzt |
+| Dateinamen je Layer | `<name>.ts` (Komponente, Service, Port) oder `<name>.<kind>.ts`; Kind nur im Layer: model/dto → types, utils → utils, events → events, mapper/store → data, store → ui/feature, routes/providers/shell → shell, fixture/handlers → testing (in `fixtures/`/`handlers/`); Slice-`types`/`utils`/`events` nur mit Kind; Specs wie die Datei + `.spec` | `booking.store.ts`, `booking-card.ts`, `layout.shell.ts` | `blueprint/lib-file-naming` (Tabelle `FILE_KINDS` in den Konventionen) | umgesetzt |
+| Store | `<n>.store.ts` → `<N>Store`, `*Store` nur in `.store.ts` | `CheckinDeskStore` | `blueprint/layer-symbol-naming` | umgesetzt |
+| Port-Klasse | `<n>-api.ts` → `<N>Api`, `*Api`-Klasse nur in `-api.ts` | `BookingApi` | `blueprint/layer-symbol-naming` | umgesetzt |
+| Feat-Container | feature-Lib: `feat-<feat>.ts` → `Feat<Feat>` des Feats der Lib | `FeatCheckBooking` | `blueprint/layer-symbol-naming` | umgesetzt |
+| Komponente | Klasse `<N>` (oder `<Prefix><N>`), Selektor `<prefix>-<n>`, Präfix `app` | `booking-card.ts` → `BookingCard`, `app-booking-card` | Präfix + Stil: `@angular-eslint/component-selector`/`directive-selector` (Libs + App). Klasse/Selektor ↔ Datei: `blueprint/layer-symbol-naming` | umgesetzt |
+| Shell | `<scope>.routes.ts` → `<scope>Routes`, `<scope>.providers.ts` → `provide<X>()` | `bookingRoutes`, `provideAuth` | `blueprint/layer-symbol-naming` | umgesetzt |
+| Testing | Fixture `a<X>()`/`an<X>()`, `<n>.handlers.ts` → `<n>Handlers`/`<n>Scenarios` | `aBooking`, `checkinHandlers` | `blueprint/layer-symbol-naming` | umgesetzt |
+| Testing generierter Clients | `<client>Http`, `<client>Handlers` | `petClientHttp` | Generator (openapi), Code in `src/generated/**` ausgenommen | besteht |
+| Schreibweise | Typen PascalCase, Funktionen/Variablen camelCase, Konstanten auch UPPER_CASE; DTO-Properties frei (`booking_id`) | `AUTH_API`, `FAKER_SEED` | `@typescript-eslint/naming-convention` | umgesetzt |
+
+Ausnahmen, bewusst: Shared-Buckets dürfen in `types`/`utils` Einzeldateien ohne Kind haben (`format-date.ts`, `entity-id.ts`: ein Helfer pro Datei). Komponenten dürfen den Selektor-Präfix im Klassennamen tragen (`AppButton` in `button.ts`), wenn der Name allein zu generisch ist. Daten-Services ohne `Store` bleiben erlaubt (`service`-Generator in `data`). Generierter Code (Client-Libs, `src/generated/**`) ist ausgenommen.
+
+### Mechanismen: Bewertung
+
+| Mechanismus | Präzision | IDE | Autofix | Laufzeit / Cache | Bewertung |
+|---|---|---|---|---|---|
+| Eigene ESLint-Regeln (`packages/tooling/eslint-rules`, `RuleCreator`, ohne Typinfo) | hoch: kennt Layer/Scope/Feat aus den Konventionen | ja | für Namen exportierter Symbole nicht sinnvoll (Importeure), Dateien kann ESLint nicht umbenennen; Vorschläge für Komponentenklasse/Selektor | +~45 ms pro Lint-Prozess, `nx lint`-Cache (Regelquellen sind Input) | **umgesetzt** für Datei- und Symbolnamen, Public API |
+| `nx g @nx/eslint:workspace-rule` | gleich | ja | – | – | **verworfen**: fester Ordner `tools/eslint-rules`, `project.json` + Jest, Präfix `@nx/workspace-`. Die Lademechanik dahinter (`loadWorkspaceRules`, swc, kein Build) wird genutzt |
+| `@angular-eslint` (`component-selector`, `directive-selector`) | Präfix + Stil | ja | nein | +~65 ms pro Lint-Prozess (Plugin-Import) | **umgesetzt**: Standard-Regeln, auch für `apps/`. `component-class-suffix` **verworfen** (Style Guide ohne Suffix) |
+| `@typescript-eslint/naming-convention` | Schreibweise, kennt keine Layer | ja | nein | vernachlässigbar | **umgesetzt** als Grundnetz |
+| `eslint-plugin-check-file` | Globs, kein Layer-Wissen | ja | nein | neue Abhängigkeit | **verworfen**: Layer-Liste müsste als Glob-Tabelle dupliziert werden |
+| `ls-lint` | Datei-/Ordnernamen per Pfad-Glob, sehr schnell | nein (eigenes CLI) | nein | eigenes Target | **verworfen**: kein Editor-Feedback, dupliziert Layer-Liste, Ordner deckt das Plugin ab |
+| `eslint-plugin-boundaries` | Element-Typen per Pfad | ja | nein | – | **verworfen**: redundant zu Tags + `depConstraints` |
+| Crystal-Plugin (`libPathError`) | Lib-Ordner, Scope, Layer, kebab-case | Nx Console / jeder Nx-Befehl | nein | bei jeder Graph-Berechnung | **umgesetzt** (erweitert) |
+| Sync-Generator (`nx sync`) | – | – | ja | – | **verworfen** für Namen: Umbenennen ist keine idempotente Reparatur. Bleibt für Routen |
+| `verify` | Verdrahtung | nein | nein | gecacht | **umgesetzt**: 14 Fälle `naming: …` beweisen, dass die Regeln in der echten Config greifen (Loader, `files`/`ignores`, Präfix, Ausnahme generierter Code). Die Regellogik testen die RuleTester-Specs |
+| Nx Conformance (`@nx/conformance`) | Workspace-weite Regeln gegen den Graph | nein | nein | eigenes Kommando | **verworfen**: Nx Powerpack/Enterprise (Lizenz), kein Editor-Feedback, Graph-Regeln deckt das Plugin ab |
+| Generatoren | erzeugen korrekte Namen | – | – | – | **Quelle**, erzwingen nichts nachträglich. Beweis: `domain payment` + `feat payment checkout --api --data --ui` + `layer events/utils` + `component`/`store`/`service` → `nx lint` grün (auch `car-rental`/`quick-book`), danach `remove` |
+| TypeScript (Template-Literal-Typen) | – | ja | – | – | **verworfen**: Dateinamen unerreichbar, Symbolnamen nur mit Typ-Gymnastik pro Datei |
+
+### Laufzeit
+
+`nx run-many -t lint --skip-nx-cache` (55 statt 54 Projekte, neu: `tooling-eslint-rules`), je dreimal abwechselnd: vorher 20,4–20,7 s, nachher 22,9–23,1 s (**+2,5 s, ~12 %**). Pro Lint-Prozess (`eslint .` in `booking-utils`, Median aus 6): 669 ms → 714 ms mit den eigenen Regeln → 778 ms mit `@angular-eslint`. Gecachte Läufe: unverändert.
+
+### Limitierungen
+
+- Der Selektor-Präfix `app` steht in `eslint.config.mjs` (`selectorPrefix`), in `apps/client/project.json` und in den Generator-Templates. Ein Präfix pro Scope wäre per `files`-Block pro Scope möglich, hieße aber alle Selektoren und Templates umzubenennen; nicht umgesetzt.
+- Dateien ohne Kind (`<name>.ts`) sind in den meisten Layern erlaubt, die Regel prüft dort nur kebab-case. Ob `booking-notifications.ts` wirklich ein Port ist, weiß sie nicht.
+- `blueprint/layer-symbol-naming` sieht nur `export class|function|const` direkt am Symbol, nicht `export { X }` am Dateiende.
+- Die Regeln laufen per `loadWorkspaceRules` (öffentlicher Export von `@nx/eslint-plugin`, intern swc). Ändert Nx das, meldet ESLint *Could not find "blueprint/…"* (laut, nicht still).
+
 ## Tooling & Generatoren
 
-Das Werkzeug liegt in **`packages/tooling`**, aufgeteilt in fünf Nx-Libs (je eigenes Projekt und Workspace-Paket, `type:tooling` + `tooling:<lib>`). Details, Optionen und Begründungen: [`packages/tooling/README.md`](../packages/tooling/README.md) und die README jeder Lib.
+Das Werkzeug liegt in **`packages/tooling`**, aufgeteilt in sechs Nx-Libs (je eigenes Projekt und Workspace-Paket, `type:tooling` + `tooling:<lib>`). Details, Optionen und Begründungen: [`packages/tooling/README.md`](../packages/tooling/README.md) und die README jeder Lib.
 
 | Lib (Paket) | Inhalt |
 |---|---|
@@ -613,8 +667,9 @@ Das Werkzeug liegt in **`packages/tooling`**, aufgeteilt in fünf Nx-Libs (je ei
 | `openapi` (`@blueprint/tooling-openapi`) | Plugin für `openapi-clients.json` (eigenes `createNodesV2`), Facade, Adapter, Testing-Pipeline, Executoren `generate`/`generate-testing`/`update-spec`, Generator `client` |
 | `ng-lib` (`@blueprint/tooling-ng-lib`) | Executoren `build`, `application`, `test`, Skript `typecheck-lib` |
 | `verify` (`@blueprint/tooling-verify`) | `verify` (Nx-Target `tooling-verify:verify`, gecacht), `verify:nx-internals`, dist-Snapshot |
+| `eslint-rules` (`@blueprint/tooling-eslint-rules`) | ESLint-Regeln des [Namensschemas](#namensschema), geladen von `eslint.config.mjs` |
 
-Abhängigkeiten (Paket-Imports, `depConstraints` + 17 Verify-Fälle, zyklenfrei): `openapi` → `conventions`; `workspace` → `conventions`, `openapi` (move/remove pflegen `openapi-clients.json`), `ng-lib` (Executoren der Targets); `conventions`, `ng-lib`, `verify` → nichts.
+Abhängigkeiten (Paket-Imports, `depConstraints` + 19 Verify-Fälle, zyklenfrei): `openapi` → `conventions`; `eslint-rules` → `conventions`; `workspace` → `conventions`, `openapi` (move/remove pflegen `openapi-clients.json`), `ng-lib` (Executoren der Targets); `conventions`, `ng-lib`, `verify` → nichts.
 
 **Kein Build-Schritt:** Nx lädt Plugins und Generatoren als TypeScript (eigener swc-Transpiler), aufgelöst über die Workspace-Links in der Root-`package.json` (`@blueprint/tooling-workspace`, `-openapi`, `-ng-lib`) und in den `package.json` der Libs. Weil der swc-Transpiler die `paths` der `tsconfig.base.json` anwendet und der Lib-Wildcard `@blueprint/*` sonst `@blueprint/tooling-…` nach `libs/` umbiegen würde, hat jeder importierte Tooling-Export dort einen exakten Eintrag (`verify` prüft `exports` ↔ `paths`). Kein veraltetes `dist/`, keine Henne-Ei-Frage beim Graph. Preis: in den Plugins nur `import type` aus `@nx/devkit`.
 
@@ -645,6 +700,7 @@ nx g @blueprint/tooling-workspace:component libs/booking/ui/src/booking-badge
 
 ### Wächter
 
+- **Namen:** Lib-Ordner (Layer, Scope, kebab-case) → Graph-Fehler; Datei-, Ordner- und Symbolnamen in den Libs → `nx lint` (`blueprint/*`, `@angular-eslint/*-selector`, `@typescript-eslint/naming-convention`), siehe [Namensschema](#namensschema).
 - **Scope-Liste:** unbekannter Scope-Ordner → Graph-Fehler mit Vorschlag. `domain`, `move`/`rename`, `remove` pflegen die Liste, `verify` meldet Einträge ohne Lib.
 - **Config-Dateien:** `tooling-verify:verify` meldet jede `project.json`, `package.json`, `tsconfig*.json`, `ng-package.json`, `eslint.config.*` unter `libs/**` außerhalb von `src/` (Ausnahme `libs/tsconfig*.json`).
 - **Routen:** `nx sync:check` (globaler Sync-Generator `@blueprint/tooling-workspace:app-routes`): jede Slice-Shell mit `Routes` ist in `app.routes.ts` registriert, keine Lazy-Route zeigt auf eine fehlende Lib. `nx sync` repariert.
@@ -660,8 +716,8 @@ nx g @blueprint/tooling-workspace:component libs/booking/ui/src/booking-badge
 ## Verifikation
 
 ```sh
-pnpm exec nx run-many -t build lint test typecheck   # inkl. tooling-openapi:test (Unit + Integration, Java, Coverage ≥ 95 %); 54 Projekte, 157 Tasks + 6 generate grün (build 43, lint 54, typecheck 50, test 10)
-pnpm verify                                           # nx run tooling-verify:verify: 134/134 Fälle + Config-Wächter + Tag-Schema/Scope-Liste + Test-Isolation + neue Lib + generierte Clients + client-Bundle
+pnpm exec nx run-many -t build lint test typecheck   # inkl. tooling-openapi:test (Unit + Integration, Java, Coverage ≥ 95 %); 55 Projekte, 160 Tasks + 6 generate grün (build 43, lint 55, typecheck 51, test 11)
+pnpm verify                                           # nx run tooling-verify:verify: 150/150 Fälle (inkl. 14 Namensregeln) + Config-Wächter + Tag-Schema/Scope-Liste + Test-Isolation + neue Lib + generierte Clients + client-Bundle
 pnpm exec nx sync:check                               # app.routes.ts ↔ Slice-Shells
 pnpm verify:nx-internals                              # nach nx migrate, siehe Tooling & Generatoren
 ```
@@ -718,6 +774,20 @@ Die 4 Lint-Warnungen in `sheriff-blueprint` (`no-non-null-assertion` in Tests) g
 
 Zusätzlich wurden echte Verstöße in Quelldateien eingebaut, per `nx lint <projekt>` geprüft und danach zurückgebaut: `booking-ui`, `checkin-feat-history-feature`, `client` und `checkin-feat-checkin-data` schlugen jeweils mit `@nx/enforce-module-boundaries` fehl. Die Kommentare `// boundary-violation-example: …` in den Quellen markieren weitere Verstöße zum Einkommentieren.
 
+Negativproben Namensschema (je `nx lint <projekt>` rot, danach zurückgebaut; plain `eslint <datei>` mit leerem `NX_WORKSPACE_DATA_DIRECTORY` und aus dem Lib-Ordner meldet dasselbe):
+
+| Verstoß | Projekt | Meldung |
+|---|---|---|
+| `booking.store.ts` in `booking/utils` | `booking-utils` | `blueprint/lib-file-naming`: belongs into a data/ui/feature lib |
+| `booking-extra.ts` in `booking/types` | `booking-types` | `blueprint/lib-file-naming`: files of a types lib carry their kind — booking-extra.model.ts \| booking-extra.dto.ts |
+| `BookingStore` → `Bookings` | `booking-data` | `blueprint/layer-symbol-naming`: must be named "BookingStore" |
+| `FeatHistory` → `HistoryPage` | `checkin-feat-history-feature` | `blueprint/layer-symbol-naming`: must be named "FeatHistory" |
+| Selektor `bk-booking-card` | `booking-ui` | `@angular-eslint/component-selector`: should start with … "app" |
+| Selektor `app-card` | `booking-ui` | `blueprint/layer-symbol-naming`: must be "app-booking-card" |
+| `export * from './internal/checkin.mapper'` in `index.ts` | `checkin-data` | `blueprint/no-internal-export` |
+| Ordner `src/Cards/` | `booking-ui` | `blueprint/lib-file-naming`: Folder "Cards" must be kebab-case |
+| Lib-Ordner `booking/feat-CheckIn/ui`, `booking/widgets` | jedes | Graph-Fehler des Plugins: must be kebab-case / not a blueprint lib path |
+
 ## Selbst ausprobieren
 
 Voraussetzungen: Node 22 (≥ 22.16), pnpm 10, Java 11+ (`java -version`, für den Adapter openapi-tools), Netz beim ersten Lauf (Jar-Download, Petstore-URL).
@@ -736,7 +806,7 @@ ls libs/booking/generated/booking-client/*/src/generated
 
 # 3. bauen, testen, prüfen
 pnpm exec nx run-many -t build lint test typecheck
-pnpm verify                                     # nx run tooling-verify:verify, 134 Fälle + Checks
+pnpm verify                                     # nx run tooling-verify:verify, 150 Fälle + Checks
 pnpm exec nx sync:check
 
 # 4. ansehen

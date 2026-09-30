@@ -8,7 +8,7 @@ Crystal-Plugin der Libs und alle Generatoren außer `client`. Projekt `tooling-w
 | Generatoren | `src/generators/*`, `generators.json` | domain, layer, feat, testing, move, rename, remove, component, service, store |
 | Sync-Generator | `src/sync/app-routes` | `nx sync` / `nx sync:check`: Slice-Shells ↔ `app.routes.ts` |
 
-Die Targets der Libs nutzen `@blueprint/tooling-ng-lib:build`/`:test` und `node packages/tooling/ng-lib/scripts/typecheck-lib.mjs`. Inputs: `lint` hasht beide Plugins + `conventions/src/lib-conventions.ts` (Tags/Kanten bestimmen die Constraints), `build`/`test` `packages/tooling/ng-lib/src/**`.
+Die Targets der Libs nutzen `@blueprint/tooling-ng-lib:build`/`:test` und `node packages/tooling/ng-lib/scripts/typecheck-lib.mjs`. Inputs: `lint` hasht beide Plugins + `conventions/src/lib-conventions.ts` (Tags/Kanten bestimmen die Constraints) + `eslint-rules/src/**` (Namensregeln), `build`/`test` `packages/tooling/ng-lib/src/**`.
 
 ## Generatoren
 

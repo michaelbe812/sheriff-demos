@@ -1,6 +1,6 @@
 # packages/tooling
 
-Werkzeug des Blueprints (Branch `feat/nx-blueprint`), aufgeteilt in fünf Nx-Libs. `packages/tooling` selbst ist nur ein Gruppierungsordner, kein Projekt und kein Paket.
+Werkzeug des Blueprints (Branch `feat/nx-blueprint`), aufgeteilt in sechs Nx-Libs. `packages/tooling` selbst ist nur ein Gruppierungsordner, kein Projekt und kein Paket.
 
 | Lib | Paket / Projekt | Tag | Inhalt | Details |
 |---|---|---|---|---|
@@ -8,7 +8,8 @@ Werkzeug des Blueprints (Branch `feat/nx-blueprint`), aufgeteilt in fünf Nx-Lib
 | `openapi` | `@blueprint/tooling-openapi` / `tooling-openapi` | `tooling:openapi` | Crystal-Plugin für `openapi-clients.json`, Facade (Vertrag, Registry, Adapter, Split, Barrel), Testing-Generierung, Executoren `generate`/`update-spec`/`generate-testing`, Generator `client` | [README](openapi/README.md) |
 | `workspace` | `@blueprint/tooling-workspace` / `tooling-workspace` | `tooling:workspace` | Crystal-Plugin der Libs (ohne Config-Dateien), Generatoren domain/layer/feat/testing/move/rename/remove/component/service/store, Sync-Generator `app-routes` | [README](workspace/README.md) |
 | `ng-lib` | `@blueprint/tooling-ng-lib` / `tooling-ng-lib` | `tooling:ng-lib` | Executoren `build`/`application`/`test` (Nx-Interna an einer Stelle), `typecheck-lib` | [README](ng-lib/README.md) |
-| `verify` | `@blueprint/tooling-verify` / `tooling-verify` | `tooling:verify` | `verify` (Boundaries, Tag-Schema, Clients, Tooling-Libs, affected, Bundle-Scan), `verify:nx-internals`, dist-Snapshot | [README](verify/README.md) |
+| `verify` | `@blueprint/tooling-verify` / `tooling-verify` | `tooling:verify` | `verify` (Boundaries, Namensregeln, Tag-Schema, Clients, Tooling-Libs, affected, Bundle-Scan), `verify:nx-internals`, dist-Snapshot | [README](verify/README.md) |
+| `eslint-rules` | `@blueprint/tooling-eslint-rules` / `tooling-eslint-rules` | `tooling:eslint-rules` | ESLint-Regeln des Namensschemas (`blueprint/lib-file-naming`, `layer-symbol-naming`, `no-internal-export`), geladen von `eslint.config.mjs` | [README](eslint-rules/README.md) |
 
 Alle tragen zusätzlich `type:tooling` (darf nur `type:tooling` importieren, Libs in `libs/` dürfen kein Tooling importieren).
 
@@ -16,8 +17,9 @@ Alle tragen zusätzlich `type:tooling` (darf nur `type:tooling` importieren, Lib
 
 ```
 conventions  ◀── openapi  ◀── workspace ──▶ ng-lib        verify (liest nur den Graphen)
-     ▲                            │
-     └────────────────────────────┘
+     ▲  ▲                         │
+     │  └─────────────────────────┘
+     └── eslint-rules (von eslint.config.mjs geladen)
 ```
 
 | Lib | darf importieren | Grund |
@@ -27,8 +29,9 @@ conventions  ◀── openapi  ◀── workspace ──▶ ng-lib        veri
 | `workspace` | `conventions`, `openapi`, `ng-lib` | `move`/`rename`/`remove` halten `openapi-clients.json` nach (`@blueprint/tooling-openapi/clients`); die inferierten Targets nutzen die ng-lib-Executoren (nur `package.json`-Abhängigkeit, kein Import) |
 | `ng-lib` | nichts | kapselt Nx-/Angular-Interna, weiß nichts von Konventionen oder OpenAPI |
 | `verify` | nichts | prüft von außen (Projekt-Graph, ESLint, git) |
+| `eslint-rules` | `conventions` | Layer/Scope/Feat und Datei-Kinds aus denselben Konventionen wie das Plugin, keine doppelte Logik |
 
-Durchgesetzt über `depConstraints` (`eslint.config.mjs`, `toolingConstraints`) und 17 Verify-Fälle (`tooling: …`), zyklenfrei (Zyklen meldet die Regel zusätzlich). Imports über Lib-Grenzen nur per Paketname, relative Pfade blockiert die Regel.
+Durchgesetzt über `depConstraints` (`eslint.config.mjs`, `toolingConstraints`) und 19 Verify-Fälle (`tooling: …`), zyklenfrei (Zyklen meldet die Regel zusätzlich). Imports über Lib-Grenzen nur per Paketname, relative Pfade blockiert die Regel.
 
 ## Laden ohne Build
 
