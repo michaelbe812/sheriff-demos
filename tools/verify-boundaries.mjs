@@ -55,13 +55,13 @@ const cases = [
   ['shell -> foreign shell', 'libs/checkin/shell', "import '@blueprint/booking/shell';", 'red'],
   // feat isolation
   ['sibling feat internals', 'libs/booking/feat-manage-booking/feature', "import '@blueprint/booking/feat-check-booking/data';", 'red'],
-  ['sibling feat root', 'libs/booking/feat-manage-booking/feature', "import '@blueprint/booking/feat-check-booking';", 'red'],
+  ['sibling feat root', 'libs/booking/feat-manage-booking/feature', "import '@blueprint/booking/feat-check-booking/feature';", 'red'],
   ['feat -> own feat-local lib', 'libs/booking/feat-check-booking/feature', "import '@blueprint/booking/feat-check-booking/data';", 'green'],
   ['feat-port -> own feat data', 'libs/booking/feat-check-booking/api', "import '@blueprint/booking/feat-check-booking/data';", 'red'],
   ['sibling feat via feat-port', 'libs/booking/feat-manage-booking/feature', "import '@blueprint/booking/feat-check-booking/api';", 'green'],
   ['foreign feat-port', 'libs/checkin/feat-history/feature', "import '@blueprint/booking/feat-check-booking/api';", 'red'],
   ['slice-shared -> feat lib', 'libs/booking/data', "import '@blueprint/booking/feat-check-booking/data';", 'red'],
-  ['shell -> feat (lazy)', 'libs/booking/shell', "export const load = () => import('@blueprint/booking/feat-check-booking');", 'green'],
+  ['shell -> feat (lazy)', 'libs/booking/shell', "export const load = () => import('@blueprint/booking/feat-check-booking/feature');", 'green'],
   // shared
   ['shared -> slice port', 'libs/shared/utils', "import '@blueprint/booking/api';", 'red'],
   ['shared utils -> shared api', 'libs/shared/utils', "import '@blueprint/shared/api';", 'red'],

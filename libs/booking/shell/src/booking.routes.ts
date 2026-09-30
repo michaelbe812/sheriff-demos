@@ -8,11 +8,11 @@ export const bookingRoutes: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('@blueprint/booking/feat-check-booking').then((m) => m.FeatCheckBooking),
+      import('@blueprint/booking/feat-check-booking/feature').then((m) => m.FeatCheckBooking),
   },
   {
     path: 'manage',
     loadComponent: () =>
-      import('@blueprint/booking/feat-manage-booking').then((m) => m.FeatManageBooking),
+      import('@blueprint/booking/feat-manage-booking/feature').then((m) => m.FeatManageBooking),
   },
 ];
