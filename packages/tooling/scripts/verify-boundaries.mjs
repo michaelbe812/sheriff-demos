@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Reproducible negative + positive tests for the blueprint's Nx boundaries.
+ * Reproducible negative + positive tests for the blueprint's Nx boundaries,
+ * plus a guard against config files in libs/ (libs have none).
  *
  * Every case lints ONE virtual file (ESLint `lintText` with a filePath inside
  * a real lib) through the real eslint.config.mjs and asserts whether a
@@ -212,11 +213,32 @@ function checkTestIsolation(projectGraph) {
   return { count: libs.length, problems };
 }
 
-/** Builds the client and scans the bundle for any trace of MSW or Vitest. */
+/**
+ * Libs have no config files: project, tags, targets and build files come from the plugin and the
+ * ng-lib executors. Any of these below libs/ outside a src/ folder is an error — except the shared
+ * libs/tsconfig*.json. Runs before the temporary libs of this script exist.
+ */
+const LIB_CONFIG_FILE = /^(project\.json|package\.json|ng-package\.json|tsconfig.*\.json|eslint\.config\.[cm]?[jt]s)$/;
+const SHARED_LIB_CONFIG = /^libs\/tsconfig[^/]*\.json$/;
+
+function checkLibConfigFiles() {
+  const files = readdirSync('libs', { recursive: true }).map((file) => join('libs', String(file)));
+  const problems = files
+    .filter((file) => LIB_CONFIG_FILE.test(file.split('/').at(-1)))
+    .filter((file) => !SHARED_LIB_CONFIG.test(file) && !file.split('/').includes('src'))
+    .map((file) => `${file}: config file in a lib — libs have none (plugin + ng-lib executors derive them), remove it`);
+  return { count: files.length, problems };
+}
+
+/**
+ * Scans the client bundle for any trace of MSW or Vitest. As Nx target (`tooling:verify`) the
+ * build is a dependsOn task; run directly, the script builds the client itself.
+ */
 function checkClientBundle() {
   const problems = [];
+  const runsAsNxVerifyTarget = process.env.NX_TASK_TARGET_TARGET === 'verify';
   try {
-    execFileSync('pnpm', ['exec', 'nx', 'run', 'client:build', '--skip-nx-cache'], { stdio: 'pipe' });
+    if (!runsAsNxVerifyTarget) execFileSync('pnpm', ['exec', 'nx', 'run', 'client:build', '--skip-nx-cache'], { stdio: 'pipe' });
   } catch (error) {
     return { problems: [`client:build failed: ${error.stderr?.toString().slice(0, 300) ?? error.message}`], files: 0 };
   }
@@ -269,6 +291,7 @@ async function lintCase({ from, importPath, spec }, eslint) {
 }
 
 async function main() {
+  const libConfigs = checkLibConfigFiles();
   createUntaggedLib();
   createNewLib();
   try {
@@ -290,8 +313,8 @@ async function main() {
       rows.push({ ...testCase, pass, text });
     }
     const bundle = checkClientBundle();
-    report(rows, schema, isolation, newLib, bundle);
-    const problems = [schema, isolation, newLib, bundle].flatMap((check) => check.problems);
+    report(rows, libConfigs, schema, isolation, newLib, bundle);
+    const problems = [libConfigs, schema, isolation, newLib, bundle].flatMap((check) => check.problems);
     process.exitCode = rows.every((r) => r.pass) && problems.length === 0 ? 0 : 1;
   } finally {
     rmSync(UNTAGGED_LIB, { recursive: true, force: true });
@@ -299,7 +322,7 @@ async function main() {
   }
 }
 
-function report(rows, schema, isolation, newLib, bundle) {
+function report(rows, libConfigs, schema, isolation, newLib, bundle) {
   console.log('| Regel | von | Import | erwartet | Ergebnis |');
   console.log('|---|---|---|---|---|');
   for (const r of rows) {
@@ -310,6 +333,8 @@ function report(rows, schema, isolation, newLib, bundle) {
   }
   const passed = rows.filter((r) => r.pass).length;
   console.log(`\n${passed}/${rows.length} Fälle ok`);
+  console.log(`Config-Dateien in libs/ (außer libs/tsconfig*.json): ${libConfigs.count} Dateien geprüft, ${libConfigs.problems.length} Treffer`);
+  libConfigs.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Tag-Schema + Scope-Liste: ${schema.count} Libs geprüft, ${schema.problems.length} Probleme`);
   schema.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test nur mit Specs, Worker nicht in apps): ${isolation.problems.length} Probleme`);

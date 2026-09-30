@@ -3,7 +3,9 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "sourceRoot": "packages/tooling/src",
-  "tags": ["type:tooling"],
+  "tags": [
+    "type:tooling"
+  ],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"
@@ -11,14 +13,69 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "cache": true,
-      "inputs": ["default", { "externalDependencies": ["typescript", "@nx/devkit"] }],
-      "options": { "command": "tsc -p packages/tooling/tsconfig.json" }
+      "inputs": [
+        "default",
+        {
+          "externalDependencies": [
+            "typescript",
+            "@nx/devkit"
+          ]
+        }
+      ],
+      "options": {
+        "command": "tsc -p packages/tooling/tsconfig.json"
+      }
     },
     "test": {
       "executor": "nx:run-commands",
       "cache": true,
-      "inputs": ["default", { "externalDependencies": ["vitest", "@nx/devkit", "typescript"] }],
-      "options": { "command": "vitest run --config packages/tooling/vitest.config.mts" }
+      "inputs": [
+        "default",
+        {
+          "externalDependencies": [
+            "vitest",
+            "@nx/devkit",
+            "typescript"
+          ]
+        }
+      ],
+      "options": {
+        "command": "vitest run --config packages/tooling/vitest.config.mts"
+      }
+    },
+    "verify": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": [
+        {
+          "projects": [
+            "client"
+          ],
+          "target": "build"
+        }
+      ],
+      "inputs": [
+        "{workspaceRoot}/libs/**/*",
+        "{workspaceRoot}/apps/**/*",
+        "{workspaceRoot}/eslint.config.mjs",
+        "{workspaceRoot}/nx.json",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{projectRoot}/scripts/verify-boundaries.mjs",
+        "{projectRoot}/src/plugin/**/*",
+        {
+          "dependentTasksOutputFiles": "**/*"
+        },
+        {
+          "externalDependencies": [
+            "eslint",
+            "@nx/eslint-plugin",
+            "nx"
+          ]
+        }
+      ],
+      "options": {
+        "command": "node packages/tooling/scripts/verify-boundaries.mjs"
+      }
     }
   }
 }
