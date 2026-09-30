@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintRemove",
+  "title": "Lib, Feat oder Domain löschen",
+  "description": "Löscht libs/<path>, trägt Lazy-Routes und (bei Domains) den Scope aus. Bricht ab, wenn noch Importe darauf zeigen (außer --force).",
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Pfad unter libs/: Lib (booking/utils), Feat (booking/feat-rebook) oder Domain (booking).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Was löschen (Pfad unter libs/)?"
+    },
+    "force": { "type": "boolean", "description": "Auch löschen, wenn noch Importe darauf zeigen.", "default": false },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["path"]
+}

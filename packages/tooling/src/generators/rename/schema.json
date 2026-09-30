@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintRename",
+  "title": "Lib, Feat oder Domain umbenennen",
+  "description": "Umbenennen am selben Ort (Domain payment → billing, Feat booking/feat-a → feat-b). Wie move: Importe, Routes, Scope-Liste.",
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Pfad unter libs/: Domain (payment), Feat (booking/feat-rebook) oder Lib (booking/utils).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Was umbenennen (Pfad unter libs/)?"
+    },
+    "name": {
+      "type": "string",
+      "description": "Neuer Name (letztes Pfadsegment; bei Feats mit oder ohne feat-).",
+      "$default": { "$source": "argv", "index": 1 },
+      "x-prompt": "Neuer Name?"
+    },
+    "appRoutesFile": { "type": "string", "default": "apps/client/src/app/app.routes.ts" },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["path", "name"]
+}

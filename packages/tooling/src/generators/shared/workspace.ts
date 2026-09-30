@@ -135,3 +135,34 @@ export function forEachSourceFile(tree: Tree, callback: (path: string, content: 
   visit('apps');
   visit(LIBS_DIR);
 }
+
+/** Every file below `dir` (recursive, tree paths). */
+export function filesBelow(tree: Tree, dir: string): string[] {
+  if (!tree.exists(dir)) return [];
+  if (tree.isFile(dir)) return [dir];
+  return tree.children(dir).flatMap((child) => filesBelow(tree, `${dir}/${child}`));
+}
+
+/** `libs/booking/` → `booking`, `booking` → `booking`. */
+export const normalizeLibsPath = (path: string): string =>
+  path
+    .trim()
+    .replace(/^\.?\/?/, '')
+    .replace(new RegExp(`^${LIBS_DIR}/`), '')
+    .replace(/\/+$/, '');
+
+/** Files outside apps/ and libs/ that mention `text` (docs, scripts) — worth a manual look after a move. */
+export function mentionsOutsideSources(tree: Tree, text: string): string[] {
+  const hits: string[] = [];
+  const visit = (dir: string): void => {
+    for (const child of tree.children(dir)) {
+      const path = dir ? `${dir}/${child}` : child;
+      if (['node_modules', 'dist', 'tmp', '.git', '.nx', '.angular', 'apps', LIBS_DIR].includes(path)) continue;
+      if (tree.isFile(path)) {
+        if (/\.(ts|mts|js|mjs|cjs|json|md)$/.test(child) && (tree.read(path, 'utf-8') ?? '').includes(text)) hits.push(path);
+      } else visit(path);
+    }
+  };
+  visit('');
+  return hits;
+}

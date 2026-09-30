@@ -1,0 +1,52 @@
+import type { Tree } from '@nx/devkit';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { APP_ROUTES, createBlueprintTree, read, scopesOf } from '../../testing/blueprint-tree';
+import { domainGenerator } from '../domain/generator';
+import { featGenerator } from '../feat/generator';
+import { findLazyRoutes } from '../shared/routes';
+import { listLibPaths } from '../shared/workspace';
+import { removeGenerator } from './generator';
+
+describe('remove generator', () => {
+  let tree: Tree;
+  beforeEach(() => {
+    tree = createBlueprintTree();
+  });
+
+  it('removes a domain with its app route and scope; app routes are exactly as before', async () => {
+    const before = read(tree, APP_ROUTES);
+    // skipFormat: prettier would use its defaults in the virtual tree (no .prettierrc)
+    await domainGenerator(tree, { name: 'payment', skipFormat: true });
+    await featGenerator(tree, { domain: 'payment', name: 'checkout', data: true, skipFormat: true });
+
+    await removeGenerator(tree, { path: 'payment', skipFormat: true });
+
+    expect(listLibPaths(tree, 'payment')).toEqual([]);
+    expect(tree.exists('libs/payment')).toBe(false);
+    expect(read(tree, APP_ROUTES)).toBe(before);
+    expect(scopesOf(tree)).toEqual(['booking', 'layout', 'shared']);
+  });
+
+  it('removes a feat and its shell route, keeps the scope', async () => {
+    await removeGenerator(tree, { path: 'booking/feat-check-booking' });
+
+    expect(findLazyRoutes(read(tree, 'libs/booking/shell/src/booking.routes.ts'))).toEqual([]);
+    expect(scopesOf(tree)).toContain('booking');
+  });
+
+  it('refuses while other code imports it, unless --force', async () => {
+    await expect(removeGenerator(tree, { path: 'booking/data' })).rejects.toThrow(
+      /still imported by:\n {2}libs\/booking\/feat-check-booking\/feature\/src\/feat-check-booking.ts/,
+    );
+    expect(tree.exists('libs/booking/data/src/index.ts')).toBe(true);
+
+    await removeGenerator(tree, { path: 'booking/data', force: true });
+    expect(tree.exists('libs/booking/data/src/index.ts')).toBe(false);
+  });
+
+  it('counts a static import of a shell as import, a lazy route not', async () => {
+    tree.write('libs/layout/shell/src/uses.ts', "export { bookingRoutes } from '@blueprint/booking/shell';\n");
+    await expect(removeGenerator(tree, { path: 'booking' })).rejects.toThrow('libs/layout/shell/src/uses.ts');
+    expect(read(tree, APP_ROUTES)).toContain('@blueprint/booking/shell');
+  });
+});

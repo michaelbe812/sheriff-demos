@@ -1,0 +1,51 @@
+import { formatFiles, logger, type Tree } from '@nx/devkit';
+import { aliasFor, LIBS_DIR } from '../../plugin/lib-conventions';
+import { referencesAlias } from '../shared/imports';
+import { removeRoutes } from '../shared/routes';
+import {
+  filesBelow,
+  forEachSourceFile,
+  libsAt,
+  mentionsOutsideSources,
+  normalizeLibsPath,
+  scopeOf,
+  syncScopesWithLibs,
+} from '../shared/workspace';
+
+export interface RemoveGeneratorSchema {
+  /** lib, feat or domain below libs/ */
+  path: string;
+  /** delete even if other code still imports it */
+  force?: boolean;
+  skipFormat?: boolean;
+}
+
+/** Deletes a lib, feat or domain; takes its lazy routes and (for a domain) its scope out. */
+export async function removeGenerator(tree: Tree, options: RemoveGeneratorSchema): Promise<void> {
+  const path = normalizeLibsPath(options.path);
+  if (libsAt(tree, path).length === 0) throw new Error(`Nothing to remove: no lib at or below ${LIBS_DIR}/${path}`);
+  const ownDir = `${LIBS_DIR}/${path}/`;
+  const alias = aliasFor(path);
+  const pointsHere = (specifier: string): boolean => specifier === alias || specifier.startsWith(`${alias}/`);
+
+  // lazy routes to it are not imports that block the removal — they go with it
+  const withoutRoutes = new Map<string, string>();
+  forEachSourceFile(tree, (file, content) => {
+    if (!file.startsWith(ownDir) && content.includes(alias)) withoutRoutes.set(file, removeRoutes(content, pointsHere, file).content);
+  });
+  const references = [...withoutRoutes].filter(([, content]) => referencesAlias(content, path)).map(([file]) => file);
+  if (references.length && !options.force) {
+    throw new Error(`${alias} is still imported by:\n  ${references.join('\n  ')}\nRemove these imports first or pass --force.`);
+  }
+  if (references.length) logger.warn(`--force: these files keep broken imports of ${alias}: ${references.join(', ')}`);
+
+  for (const [file, content] of withoutRoutes) tree.write(file, content);
+  for (const file of filesBelow(tree, `${LIBS_DIR}/${path}`)) tree.delete(file);
+  syncScopesWithLibs(tree, [scopeOf(path)]);
+
+  const leftovers = mentionsOutsideSources(tree, alias);
+  if (leftovers.length) logger.warn(`Still mention ${alias} (outside apps/libs): ${leftovers.join(', ')}`);
+  if (!options.skipFormat) await formatFiles(tree);
+}
+
+export default removeGenerator;

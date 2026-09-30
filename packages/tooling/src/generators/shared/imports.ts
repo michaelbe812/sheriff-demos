@@ -1,5 +1,5 @@
 import type { Tree } from '@nx/devkit';
-import { aliasFor, LIBS_DIR } from '../../plugin/lib-conventions';
+import { aliasFor } from '../../plugin/lib-conventions';
 import { forEachSourceFile } from './workspace';
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -24,14 +24,5 @@ export function rewriteAliases(tree: Tree, from: string, to: string): string[] {
   return changed;
 }
 
-/** Files in apps/ and libs/ (outside libs/<path>) that still reference `@blueprint/<path>…`. */
-export function findReferences(tree: Tree, libPath: string): string[] {
-  const pattern = aliasPattern(libPath);
-  const ownDir = `${LIBS_DIR}/${libPath}/`;
-  const files: string[] = [];
-  forEachSourceFile(tree, (file, content) => {
-    if (!file.startsWith(ownDir) && pattern.test(content)) files.push(file);
-    pattern.lastIndex = 0;
-  });
-  return files;
-}
+/** true if the source references `@blueprint/<libPath>` or anything below it. */
+export const referencesAlias = (content: string, libPath: string): boolean => aliasPattern(libPath).test(content);

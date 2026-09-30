@@ -95,7 +95,18 @@ function findTargetArray(source: ts.SourceFile): ts.ArrayLiteralExpression | und
 const isRedirectFallback = (element: ts.Expression): boolean =>
   ts.isObjectLiteralExpression(element) && Boolean(propertyNamed(element, 'redirectTo'));
 
-/** Inserts `routeSource` (an object literal) into the routes array. Returns the new content. */
+/** Whitespace in front of the element starting at `position` on its line. */
+function indentAt(content: string, position: number): string {
+  const lineStart = content.lastIndexOf('\n', position - 1) + 1;
+  return /^[ \t]*/.exec(content.slice(lineStart, position))?.[0] ?? '';
+}
+
+const indentLines = (source: string, indent: string): string => source.replaceAll('\n', `\n${indent}`);
+
+/**
+ * Inserts `routeSource` (an object literal) into the routes array. Returns the new content.
+ * The inserted text is exactly what removeRoutes() takes out again (remove after add = no diff).
+ */
 export function insertRoute(content: string, routeSource: string, fileName = 'routes.ts'): string {
   const source = parse(fileName, content);
   const array = findTargetArray(source);
@@ -103,18 +114,21 @@ export function insertRoute(content: string, routeSource: string, fileName = 'ro
   const elements = array.elements;
   const fallback = elements.find(isRedirectFallback);
   if (fallback) {
-    const at = fallback.getStart(source);
-    return `${content.slice(0, at)}${routeSource},\n${content.slice(at)}`;
+    const indent = indentAt(content, fallback.getStart(source));
+    const at = fallback.getFullStart();
+    return `${content.slice(0, at)}\n${indent}${indentLines(routeSource, indent)},${content.slice(at)}`;
   }
   if (elements.length === 0) {
     const at = array.getEnd() - 1;
     return `${content.slice(0, at)}${routeSource}${content.slice(at)}`;
   }
-  const at = elements[elements.length - 1].getEnd();
-  if (!elements.hasTrailingComma) return `${content.slice(0, at)},\n${routeSource}${content.slice(at)}`;
+  const last = elements[elements.length - 1];
+  const indent = indentAt(content, last.getStart(source));
+  const route = `\n${indent}${indentLines(routeSource, indent)}`;
+  if (!elements.hasTrailingComma) return `${content.slice(0, last.getEnd())},${route}${content.slice(last.getEnd())}`;
   // the trailing comma after the last element stays in place, the new route gets its own
-  const afterComma = content.indexOf(',', at) + 1;
-  return `${content.slice(0, afterComma)}\n${routeSource},${content.slice(afterComma)}`;
+  const afterComma = content.indexOf(',', last.getEnd()) + 1;
+  return `${content.slice(0, afterComma)}${route},${content.slice(afterComma)}`;
 }
 
 /** Removes every lazy route whose import specifier matches. Returns the new content and what was removed. */

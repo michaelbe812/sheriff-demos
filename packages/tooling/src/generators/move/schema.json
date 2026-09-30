@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintMove",
+  "title": "Lib, Feat oder Domain verschieben",
+  "description": "Verschiebt libs/<from> nach libs/<to> und schreibt alle @blueprint/...-Importe in apps/ und libs/ um (auch dynamische import() in Routes). Scope-Liste und Route-Pfade werden nachgezogen.",
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "string",
+      "description": "Pfad unter libs/: Lib (booking/ui), Feat (booking/feat-rebook) oder Domain (booking).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Was verschieben (Pfad unter libs/)?"
+    },
+    "to": {
+      "type": "string",
+      "description": "Neuer Pfad unter libs/.",
+      "$default": { "$source": "argv", "index": 1 },
+      "x-prompt": "Wohin (Pfad unter libs/)?"
+    },
+    "appRoutesFile": { "type": "string", "default": "apps/client/src/app/app.routes.ts" },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["from", "to"]
+}

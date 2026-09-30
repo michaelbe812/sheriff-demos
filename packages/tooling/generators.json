@@ -19,6 +19,21 @@
       "factory": "./src/generators/feat/generator",
       "schema": "./src/generators/feat/schema.json",
       "description": "Feat: libs/<d>/feat-<x>/feature (+ api/data/ui), Lazy-Route in den Shell-Routes."
+    },
+    "move": {
+      "factory": "./src/generators/move/generator",
+      "schema": "./src/generators/move/schema.json",
+      "description": "Lib, Feat oder Domain verschieben, @blueprint/...-Importe (auch import()) umschreiben."
+    },
+    "rename": {
+      "factory": "./src/generators/rename/generator",
+      "schema": "./src/generators/rename/schema.json",
+      "description": "Lib, Feat oder Domain umbenennen (move an denselben Ort)."
+    },
+    "remove": {
+      "factory": "./src/generators/remove/generator",
+      "schema": "./src/generators/remove/schema.json",
+      "description": "Lib, Feat oder Domain löschen, Routes + Scope austragen; bricht bei Importen ab (außer --force)."
     }
   }
 }
