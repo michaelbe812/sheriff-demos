@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main, feat/nx-blueprint]
+    branches: [main, feat/nx-blueprint, feat/nx-blueprint-explicit-config]
   pull_request:
 
 concurrency:
@@ -50,9 +50,9 @@ jobs:
       - uses: nrwl/nx-set-shas@v4
         if: github.event_name == 'pull_request'
       # PRs: only what the change affects. Tooling changes need no fallback: every tooling file a lib
-      # task depends on is a {workspaceRoot} input of that task (ng-lib executors + typecheck-lib →
-      # build/test/typecheck, plugins + conventions → lint, facade/testing pipeline → generate,
-      # openapi-clients.json → update-spec), and `affected` follows inputs. Generators or verify only
+      # task depends on is a {workspaceRoot} input of that task (ng-lib test wrapper → test, facade/testing
+      # pipeline → generate, openapi-clients.json → update-spec), and `affected` follows inputs. Every lib
+      # carries its own config (project.json, tsconfig*.json): conventions, generators and verify only
       # affect their own tooling lib.
       - name: build lint test typecheck (affected)
         if: github.event_name == 'pull_request'
@@ -61,5 +61,5 @@ jobs:
         if: github.event_name != 'pull_request'
         run: pnpm exec nx run-many -t build lint test typecheck
 
-      # boundaries (depConstraints cases), tag schema + scope list, no config files in libs/, bundle scan
+      # boundaries (depConstraints cases), explicit config per lib, tag schema + scope list, bundle scan
       - run: pnpm exec nx run tooling-verify:verify
