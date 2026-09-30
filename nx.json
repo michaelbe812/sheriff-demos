@@ -33,7 +33,11 @@
         "production",
         "^production",
         "{workspaceRoot}/tsconfig.base.json",
-        "{workspaceRoot}/packages/tooling/src/executors/ng-lib/**/*"
+        "{workspaceRoot}/packages/tooling/src/executors/ng-lib/**/*",
+        {
+          "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
+          "transitive": true
+        }
       ]
     }
   },
