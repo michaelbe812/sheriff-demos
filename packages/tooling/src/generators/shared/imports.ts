@@ -1,6 +1,6 @@
 import type { Tree } from '@nx/devkit';
 import * as ts from 'typescript';
-import { aliasFor } from '../../plugin/lib-conventions';
+import { aliasFor } from '@blueprint/tooling-conventions';
 import { forEachSourceFile } from './workspace';
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

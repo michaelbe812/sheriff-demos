@@ -1,6 +1,6 @@
 import type { Tree } from '@nx/devkit';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createBlueprintTree, read, scopesOf } from '../../testing/blueprint-tree';
+import { createBlueprintTree, read, scopesOf } from '@blueprint/tooling-conventions/testing';
 import { moveGenerator } from '../move/generator';
 import { removeGenerator } from '../remove/generator';
 import { renameGenerator } from '../rename/generator';

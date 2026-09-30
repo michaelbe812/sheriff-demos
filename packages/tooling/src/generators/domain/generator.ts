@@ -1,5 +1,5 @@
 import { formatFiles, type GeneratorCallback, logger, type Tree } from '@nx/devkit';
-import { FEAT_PREFIX, GENERATED_FOLDER, SHARED_SCOPE, SLICE_LAYERS, TESTING_LAYER } from '../../plugin/lib-conventions';
+import { FEAT_PREFIX, GENERATED_FOLDER, SHARED_SCOPE, SLICE_LAYERS, TESTING_LAYER } from '@blueprint/tooling-conventions';
 import { assertLayerDependencies, generateSliceLayer, generateTestingLib, registerSliceRoute } from '../shared/slice';
 import { dataStoreSpec, SLICE_LAYER_ORDER, sliceNames } from '../shared/slice-templates';
 import { addScope, APP_ROUTES_FILE, assertKebabCase, libExists, writeIfMissing } from '../shared/workspace';

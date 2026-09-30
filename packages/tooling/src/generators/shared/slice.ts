@@ -1,5 +1,5 @@
 import { logger, type Tree } from '@nx/devkit';
-import { aliasFor, LIBS_DIR } from '../../plugin/lib-conventions';
+import { aliasFor, LIBS_DIR } from '@blueprint/tooling-conventions';
 import { findExportedRoutes, findLazyRoutes, insertRoute, lazyRouteSource, updateFile } from './routes';
 import { type LibFiles, SLICE_LAYER_REQUIRES, SLICE_LAYER_TEMPLATES, type SliceNames } from './slice-templates';
 import { testingFiles } from './testing-templates';

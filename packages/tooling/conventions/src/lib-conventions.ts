@@ -1,7 +1,8 @@
 /**
  * Folder convention of the blueprint libs — the single source of truth for
- * the crystal plugin (blueprint-libs.ts), the generators and the sync generator.
- * No runtime imports: the plugin loads it in every graph computation.
+ * the crystal plugins (@blueprint/tooling-workspace: libs, @blueprint/tooling-openapi: clients),
+ * the generators and the sync generator.
+ * No runtime imports: the plugins load it in every graph computation.
  *
  *   libs/<scope>/<layer>                  scope:<scope> type:<layer> feat:none
  *   libs/<scope>/feat-<feat>/<layer>      scope:<scope> type:<layer> feat:<feat>
@@ -10,8 +11,11 @@
  *   libs/generated/<client>/<part>          scope:shared   ┐ type:types | type:api (api, core) | type:testing,
  *   libs/<domain>/generated/<client>/<part> scope:<domain> ┘ feat:none, marker `generated` (never port/entry)
  *   The client folder itself holds the committed spec (openapi.yaml|json); its options live in
- *   openapi-clients.json (workspace root), see packages/tooling/src/openapi.
+ *   openapi-clients.json (workspace root), see packages/tooling/openapi.
  */
+
+/** nx.json → plugins entry that owns the scope list (options.scopes); its generators create slices. */
+export const WORKSPACE_PLUGIN = '@blueprint/tooling';
 
 export const LIBS_DIR = 'libs';
 export const ALIAS_PREFIX = '@blueprint/';
@@ -46,7 +50,7 @@ export const CLIENT_PARTS: Record<string, string> = { types: 'types', api: 'api'
 /** Parts written by the code generator adapter (the facade); `testing` has its own generate target. */
 export const CLIENT_CODE_PARTS = ['types', 'api', 'core'];
 
-/** Options of the plugin entry in nx.json (`plugins[] → { plugin: '@blueprint/tooling', options }`). */
+/** Options of the plugin entry in nx.json (`plugins[] → { plugin: WORKSPACE_PLUGIN, options }`). */
 export interface BlueprintLibsOptions {
   /** Allowed `libs/<scope>` folders. Unknown scope = graph error (folder typo guard). */
   scopes?: string[];
@@ -116,11 +120,19 @@ export function libPathError(libPath: string, options: BlueprintLibsOptions = {}
     const suggestion = closestScope(parsed.scope, scopes);
     return (
       `${LIBS_DIR}/${libPath}: unknown scope "${parsed.scope}"${suggestion ? ` (did you mean "${suggestion}"?)` : ''}. ` +
-      `Allowed scopes (nx.json → plugins → @blueprint/tooling → options.scopes): ${scopes.join(', ')}. ` +
-      `New slice: nx g @blueprint/tooling:domain ${parsed.scope}`
+      `Allowed scopes (nx.json → plugins → ${WORKSPACE_PLUGIN} → options.scopes): ${scopes.join(', ')}. ` +
+      `New slice: nx g ${WORKSPACE_PLUGIN}:domain ${parsed.scope}`
     );
   }
   return undefined;
+}
+
+/** Scope list of an nx.json (options of the WORKSPACE_PLUGIN entry); undefined without list. */
+export function scopesOfNxJson(nxJson: { plugins?: unknown[] } | undefined): string[] | undefined {
+  const entry = nxJson?.plugins?.find(
+    (plugin) => (typeof plugin === 'string' ? plugin : (plugin as { plugin?: string }).plugin) === WORKSPACE_PLUGIN,
+  );
+  return typeof entry === 'object' ? (entry as { options?: BlueprintLibsOptions }).options?.scopes : undefined;
 }
 
 /** Tags of a lib, derived purely from its path below `libs/` (e.g. `booking/feat-check-booking/api`). */

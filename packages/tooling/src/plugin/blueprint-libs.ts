@@ -33,7 +33,7 @@ import {
   parseLibPath,
   projectNameFor,
   TESTING_LAYER,
-} from './lib-conventions';
+} from '@blueprint/tooling-conventions';
 import {
   clientPartEdges,
   type ClientsConfig,
@@ -42,7 +42,7 @@ import {
   readClientsConfig,
 } from './openapi-clients';
 
-export { deriveTags } from './lib-conventions';
+export { deriveTags } from '@blueprint/tooling-conventions';
 
 /** libs (committed src/index.ts) + the client list — one plugin, one pass */
 const MARKER = `{${LIBS_DIR}/**/src/index.ts,${CLIENTS_CONFIG_FILE}}`;
@@ -84,6 +84,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '^default',
         '{workspaceRoot}/eslint.config.mjs',
         '{workspaceRoot}/packages/tooling/src/plugin/**/*',
+        '{workspaceRoot}/packages/tooling/conventions/src/lib-conventions.ts',
         GENERATED_CODE_INPUT,
         { externalDependencies: ['eslint'] },
       ],

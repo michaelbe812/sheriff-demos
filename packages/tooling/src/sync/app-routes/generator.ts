@@ -5,7 +5,7 @@
  */
 import { formatFiles, type Tree } from '@nx/devkit';
 import type { SyncGeneratorResult } from 'nx/src/utils/sync-generators';
-import { LIBS_DIR } from '../../plugin/lib-conventions';
+import { LIBS_DIR } from '@blueprint/tooling-conventions';
 import { findExportedRoutes, findLazyRoutes, libPathOfSpecifier, removeRoutes, updateFile } from '../../generators/shared/routes';
 import { registerSliceRoute } from '../../generators/shared/slice';
 import { APP_ROUTES_FILE, libExists, listLibPaths } from '../../generators/shared/workspace';

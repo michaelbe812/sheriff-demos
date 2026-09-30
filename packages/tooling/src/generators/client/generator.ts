@@ -9,7 +9,7 @@ import {
   parseClientPath,
   projectNameFor,
   SHARED_SCOPE,
-} from '../../plugin/lib-conventions';
+} from '@blueprint/tooling-conventions';
 import { adapterRegistry, type ClientEntry, DEFAULT_ADAPTER } from '../../plugin/openapi-clients';
 import { addClientEntry, clientExportPrefix, readClientsJson } from '../shared/clients';
 import { assertKebabCase, assertSliceExists } from '../shared/workspace';

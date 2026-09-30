@@ -4,7 +4,7 @@
  * them (tested: "does not exist under any project root" / 'project' is not found).
  */
 import { formatFiles, names, type Tree } from '@nx/devkit';
-import { LIBS_DIR, parseLibPath } from '../../plugin/lib-conventions';
+import { LIBS_DIR, parseLibPath } from '@blueprint/tooling-conventions';
 import { addExport, assertKebabCase, libExists, normalizeLibsPath, writeIfMissing } from './workspace';
 
 export interface ArtifactSchema {

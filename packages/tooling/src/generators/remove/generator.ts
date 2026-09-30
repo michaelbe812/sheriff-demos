@@ -1,5 +1,5 @@
 import { formatFiles, logger, type Tree } from '@nx/devkit';
-import { aliasFor, LIBS_DIR } from '../../plugin/lib-conventions';
+import { aliasFor, LIBS_DIR } from '@blueprint/tooling-conventions';
 import { updateClientEntries } from '../shared/clients';
 import { referencesAlias } from '../shared/imports';
 import { removeRoutes } from '../shared/routes';

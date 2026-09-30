@@ -1,5 +1,5 @@
 import { formatFiles, logger, type Tree } from '@nx/devkit';
-import { aliasFor, FEAT_PREFIX, LIBS_DIR, libPathError } from '../../plugin/lib-conventions';
+import { aliasFor, FEAT_PREFIX, LIBS_DIR, libPathError } from '@blueprint/tooling-conventions';
 import { registerFeatRoute } from '../feat/generator';
 import { renameClientExports, updateClientEntries } from '../shared/clients';
 import { rewriteAliases } from '../shared/imports';

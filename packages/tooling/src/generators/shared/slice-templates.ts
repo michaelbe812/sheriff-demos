@@ -4,7 +4,7 @@
  * providers + smart page. Each layer only imports what the depConstraints allow.
  */
 import { names } from '@nx/devkit';
-import { aliasFor } from '../../plugin/lib-conventions';
+import { aliasFor } from '@blueprint/tooling-conventions';
 
 export interface LibFiles {
   /** path below `libs/<lib>/src/` → content */

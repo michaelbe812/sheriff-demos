@@ -1,5 +1,5 @@
 import type { Tree } from '@nx/devkit';
-import { CLIENTS_CONFIG_FILE, parseClientPath } from '../../plugin/lib-conventions';
+import { CLIENTS_CONFIG_FILE, parseClientPath } from '@blueprint/tooling-conventions';
 import type { ClientEntry, ClientsConfig } from '../../plugin/openapi-clients';
 import { forEachSourceFile } from './workspace';
 

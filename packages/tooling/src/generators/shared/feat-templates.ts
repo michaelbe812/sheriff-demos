@@ -3,7 +3,7 @@
  * the slice shell), api = feat-port for sibling feats, data = feat store, ui = dumb view.
  */
 import { names } from '@nx/devkit';
-import { aliasFor } from '../../plugin/lib-conventions';
+import { aliasFor } from '@blueprint/tooling-conventions';
 import type { LibFiles } from './slice-templates';
 
 export interface FeatNames {

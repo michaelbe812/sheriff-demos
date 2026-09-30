@@ -5,5 +5,8 @@
   "description": "Lokales Nx-Plugin des Blueprints: Crystal-Plugin (Libs ohne Config-Dateien), ng-lib-Executoren, Generatoren, Sync-Generator, Verify-Skripte.",
   "main": "./src/plugin/blueprint-libs.ts",
   "executors": "./executors.json",
-  "generators": "./generators.json"
+  "generators": "./generators.json",
+  "dependencies": {
+    "@blueprint/tooling-conventions": "workspace:*"
+  }
 }

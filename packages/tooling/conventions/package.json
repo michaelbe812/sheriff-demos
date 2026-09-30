@@ -1,0 +1,13 @@
+{
+  "name": "@blueprint/tooling-conventions",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Konventionen des Blueprints: Pfad → Projekt/Tags/Alias, reservierter Ordner generated, Client-Pfade, Scope-Liste (nx.json), Tree-Helfer und Fixture-Workspace für Generator-Specs.",
+  "main": "./src/lib-conventions.ts",
+  "exports": {
+    ".": "./src/lib-conventions.ts",
+    "./tree": "./src/tree.ts",
+    "./testing": "./src/testing/blueprint-tree.ts",
+    "./package.json": "./package.json"
+  }
+}

@@ -1,6 +1,6 @@
 import type { Tree } from '@nx/devkit';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createBlueprintTree, read } from '../../testing/blueprint-tree';
+import { createBlueprintTree, read } from '@blueprint/tooling-conventions/testing';
 import { componentGenerator } from '../component/generator';
 import { serviceGenerator } from '../service/generator';
 import { storeGenerator } from '../store/generator';

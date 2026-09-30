@@ -5,7 +5,7 @@
  */
 import type { Tree } from '@nx/devkit';
 import * as ts from 'typescript';
-import { ALIAS_PREFIX, LIBS_DIR } from '../../plugin/lib-conventions';
+import { ALIAS_PREFIX, LIBS_DIR } from '@blueprint/tooling-conventions';
 
 export interface LazyRoute {
   /** the route object literal `{ path: …, loadChildren: … }` */

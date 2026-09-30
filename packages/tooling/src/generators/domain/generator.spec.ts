@@ -1,7 +1,7 @@
 import type { Tree } from '@nx/devkit';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { deriveTags } from '../../plugin/lib-conventions';
-import { APP_ROUTES, createBlueprintTree, read, scopesOf } from '../../testing/blueprint-tree';
+import { deriveTags } from '@blueprint/tooling-conventions';
+import { APP_ROUTES, createBlueprintTree, read, scopesOf } from '@blueprint/tooling-conventions/testing';
 import { findLazyRoutes } from '../shared/routes';
 import { listLibPaths } from '../shared/workspace';
 import { domainGenerator } from './generator';

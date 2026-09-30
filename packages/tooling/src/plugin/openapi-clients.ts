@@ -28,7 +28,7 @@ import {
   LIBS_DIR,
   parseClientPath,
   projectNameFor,
-} from './lib-conventions';
+} from '@blueprint/tooling-conventions';
 
 export interface ClientEntry {
   /** adapter id (adapters/registry.json), default: `defaultAdapter` */

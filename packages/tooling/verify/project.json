@@ -31,6 +31,7 @@
         "{workspaceRoot}/tsconfig.base.json",
         "{projectRoot}/scripts/verify-boundaries.mjs",
         "{workspaceRoot}/packages/tooling/src/plugin/**/*",
+        "{workspaceRoot}/packages/tooling/conventions/src/lib-conventions.ts",
         {
           "dependentTasksOutputFiles": "**/*"
         },

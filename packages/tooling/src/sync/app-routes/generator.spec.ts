@@ -1,6 +1,6 @@
 import type { Tree } from '@nx/devkit';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { APP_ROUTES, createBlueprintTree, read } from '../../testing/blueprint-tree';
+import { APP_ROUTES, createBlueprintTree, read } from '@blueprint/tooling-conventions/testing';
 import { domainGenerator } from '../../generators/domain/generator';
 import { findLazyRoutes } from '../../generators/shared/routes';
 import { appRoutesSyncGenerator } from './generator';

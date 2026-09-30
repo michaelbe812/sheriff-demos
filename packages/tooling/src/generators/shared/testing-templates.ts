@@ -2,7 +2,7 @@
  * Testing lib (libs/<slice>/testing): fixtures (builders) + MSW handlers (defaults) + scenarios
  * (deviations per test). Imports only msw, the slice's types and shared/testing.
  */
-import { aliasFor } from '../../plugin/lib-conventions';
+import { aliasFor } from '@blueprint/tooling-conventions';
 import type { LibFiles, SliceNames } from './slice-templates';
 
 /**

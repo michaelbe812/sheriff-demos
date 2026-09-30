@@ -1,5 +1,5 @@
 import { formatFiles, logger, type Tree } from '@nx/devkit';
-import { aliasFor, FEAT_PREFIX } from '../../plugin/lib-conventions';
+import { aliasFor, FEAT_PREFIX } from '@blueprint/tooling-conventions';
 import { featApi, featData, featFeature, featNames, type FeatParts, featUi } from '../shared/feat-templates';
 import { findExportedRoutes, findLazyRoutes, insertRoute, lazyRouteSource, updateFile } from '../shared/routes';
 import { writeLib } from '../shared/slice';

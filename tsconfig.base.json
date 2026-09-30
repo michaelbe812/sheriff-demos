@@ -18,6 +18,15 @@
     "skipDefaultLibCheck": true,
     "strict": false,
     "paths": {
+      "@blueprint/tooling-conventions": [
+        "./packages/tooling/conventions/src/lib-conventions.ts"
+      ],
+      "@blueprint/tooling-conventions/tree": [
+        "./packages/tooling/conventions/src/tree.ts"
+      ],
+      "@blueprint/tooling-conventions/testing": [
+        "./packages/tooling/conventions/src/testing/blueprint-tree.ts"
+      ],
       "@blueprint/*": [
         "./libs/*/src/index.ts"
       ]

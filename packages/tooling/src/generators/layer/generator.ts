@@ -1,5 +1,5 @@
 import { formatFiles, type Tree } from '@nx/devkit';
-import { SLICE_LAYERS } from '../../plugin/lib-conventions';
+import { SLICE_LAYERS } from '@blueprint/tooling-conventions';
 import { assertLayerDependencies, generateSliceLayer, registerSliceRoute } from '../shared/slice';
 import { sliceNames } from '../shared/slice-templates';
 import { APP_ROUTES_FILE, assertSliceExists } from '../shared/workspace';

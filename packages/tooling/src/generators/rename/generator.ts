@@ -1,5 +1,5 @@
 import type { Tree } from '@nx/devkit';
-import { FEAT_PREFIX } from '../../plugin/lib-conventions';
+import { FEAT_PREFIX } from '@blueprint/tooling-conventions';
 import { moveGenerator } from '../move/generator';
 import { assertKebabCase, normalizeLibsPath } from '../shared/workspace';
 
