@@ -12,9 +12,8 @@
  *              every target depends on `^generate`: generated client code (gitignored) exists before
  *              a consumer is built/linted/typechecked/tested
  *   generated  libs/generated/<client>/<part>, libs/<domain>/generated/<client>/<part> (part types|api|core):
- *              tags scope:<shared|domain> type:<types|api> feat:none generated (no port), a `generate`
- *              target that runs the client's generate, and implicit edges api → core → types
- *              (the generated imports do not exist yet when the graph is computed) — see generated-clients.ts
+ *              tags scope:<shared|domain> type:<types|api> feat:none generated (no port), implicit edges
+ *              part → client project (its generate) and api → core → types — see generated-clients.ts
  *
  * The tag derivation is the single source of truth: eslint.config.mjs and
  * tools/verify-boundaries.mjs read the tags from the project graph.
@@ -65,6 +64,14 @@ export function deriveTags(libPath: string): string[] {
 /** Shared tsconfigs every lib compiles with — they live outside the lib, so they are explicit inputs. */
 const SHARED_TS_INPUTS = ['{workspaceRoot}/tsconfig.base.json', '{workspaceRoot}/libs/tsconfig.json'];
 
+/**
+ * Generated client code is gitignored — Nx neither hashes nor analyzes gitignored files, so
+ * `default`/`^production` do not see it. Without this input a changed spec regenerates the client
+ * but consumers hit a stale cache (proven: renamed property, booking-api:typecheck came from cache).
+ * The outputs of the (transitive) generate tasks the target depends on are hashed instead.
+ */
+const GENERATED_CODE_INPUT = { dependentTasksOutputFiles: '**/src/generated/**/*.ts', transitive: true };
+
 const hasSpecFiles = (dir: string): boolean =>
   existsSync(dir) &&
   readdirSync(dir, { recursive: true }).some((file) => String(file).endsWith('.spec.ts'));
@@ -81,6 +88,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '^default',
         '{workspaceRoot}/eslint.config.mjs',
         '{workspaceRoot}/tools/nx-plugins/**/*',
+        GENERATED_CODE_INPUT,
         { externalDependencies: ['eslint'] },
       ],
       options: { command: 'eslint .', cwd: '{projectRoot}' },
@@ -95,6 +103,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '^default',
         ...SHARED_TS_INPUTS,
         '{workspaceRoot}/tools/typecheck-lib.mjs',
+        GENERATED_CODE_INPUT,
         { externalDependencies: ['typescript'] },
       ],
       options: { command: 'node tools/typecheck-lib.mjs {projectRoot}' },
@@ -112,6 +121,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         ...SHARED_TS_INPUTS,
         '{workspaceRoot}/libs/tsconfig.lib.json',
         '{workspaceRoot}/tools/ng-lib/**/*',
+        GENERATED_CODE_INPUT,
         { externalDependencies: ['ng-packagr', '@angular/compiler-cli', 'typescript'] },
       ],
       outputs: ['{workspaceRoot}/dist/{projectRoot}'],
@@ -138,6 +148,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '{workspaceRoot}/libs/tsconfig.spec.json',
         '{workspaceRoot}/tools/ng-lib/**/*',
         '{workspaceRoot}/vitest-base.config.mts',
+        GENERATED_CODE_INPUT,
         { externalDependencies: ['vitest', '@vitest/browser-playwright', 'msw', '@angular/build'] },
       ],
       options: {
@@ -153,44 +164,30 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
 }
 
 /**
- * A generated client part: its own `generate` (noop → the client's generate, so `^generate` of a
- * consumer reaches it) in front of every target, plus the edges between the parts. The generated
- * code is gitignored, so on a fresh clone the graph cannot see api → types/core imports yet.
+ * Graph edges of a generated client part. Nx neither analyzes nor hashes gitignored files, so the
+ * generated imports never show up in the graph — declared here instead:
+ *   part → client project   `^generate` (every lib target) reaches the client's generate, and a
+ *                           changed openapi.yaml marks parts + consumers as affected
+ *   api → core → types      build order (^build) and dist paths between the parts
  */
-function withGeneratedClient(
-  libPath: string,
-  workspaceRoot: string,
-  targets: Record<string, TargetConfiguration>,
-): { targets: Record<string, TargetConfiguration>; implicitDependencies: string[] } {
+function generatedClientEdges(libPath: string, workspaceRoot: string): string[] {
   const generated = parseGeneratedLibPath(libPath);
-  if (!generated) return { targets, implicitDependencies: [] };
-  const clientProject = projectNameFor(generated.clientPath);
+  if (!generated) return [];
   if (!existsSync(join(workspaceRoot, 'libs', generated.clientPath, 'openapi.yaml'))) {
     throw new Error(`libs/${libPath}: libs/${generated.clientPath}/openapi.yaml fehlt (Spec des Clients)`);
   }
-  for (const target of Object.values(targets)) target.dependsOn = [...(target.dependsOn ?? []), 'generate'];
   const siblingsBelow = { types: [], core: ['types'], api: ['types', 'core'] }[generated.part];
-  const implicitDependencies = siblingsBelow
+  const siblings = siblingsBelow
     .filter((part) => existsSync(join(workspaceRoot, 'libs', generated.clientPath, part, 'src/index.ts')))
     .map((part) => projectNameFor(`${generated.clientPath}/${part}`));
-  return {
-    targets: {
-      ...targets,
-      generate: { executor: 'nx:noop', dependsOn: [{ projects: [clientProject], target: 'generate' }] },
-    },
-    implicitDependencies,
-  };
+  return [projectNameFor(generated.clientPath), ...siblings];
 }
 
 function createLibNode(indexFile: string, workspaceRoot: string): CreateNodesResult {
   const projectRoot = dirname(dirname(indexFile));
   const libPath = projectRoot.slice('libs/'.length);
   const tags = deriveTags(libPath);
-  const { targets, implicitDependencies } = withGeneratedClient(
-    libPath,
-    workspaceRoot,
-    libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`)),
-  );
+  const implicitDependencies = generatedClientEdges(libPath, workspaceRoot);
   return {
     projects: {
       [projectRoot]: {
@@ -200,7 +197,7 @@ function createLibNode(indexFile: string, workspaceRoot: string): CreateNodesRes
         projectType: 'library',
         tags,
         metadata: { js: { packageName: `${ALIAS_PREFIX}${libPath}` } },
-        targets,
+        targets: libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`)),
         ...(implicitDependencies.length ? { implicitDependencies } : {}),
       },
     },

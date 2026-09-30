@@ -257,8 +257,8 @@ function checkTestIsolation(projectGraph) {
 }
 
 /**
- * Generated OpenAPI clients, read from the project graph: every client part lib runs its client's
- * `generate` before lint/typecheck/build, every lib target waits for `^generate` (consumers), the
+ * Generated OpenAPI clients, read from the project graph: every client part lib has an edge to its
+ * client project, every lib target waits for `^generate` and hashes the generated code, the
  * client's `generate` is cached with the spec as input and the src/generated folders as outputs.
  * Committed: only openapi.yaml + src/index.ts per part — nothing below src/generated/ (gitignored).
  */
@@ -277,15 +277,16 @@ function checkGeneratedClients(projectGraph) {
     const client = data.root.split('/').slice(0, -1).join('/');
     const clientNode = clients.find((node) => node.data.root === client);
     if (!clientNode) problems.push(`${name}: no client project at ${client} (openapi.yaml missing?)`);
-    const pointsToClient = data.targets?.generate?.dependsOn?.some((dep) => dep.projects?.includes(clientNode?.name) && dep.target === 'generate');
-    if (!pointsToClient) problems.push(`${name}: generate must depend on ${clientNode?.name}:generate`);
-    for (const target of ['lint', 'typecheck', 'build']) {
-      if (!data.targets?.[target]?.dependsOn?.includes('generate')) problems.push(`${name}: ${target} must depend on generate`);
-    }
+    // edge part → client: `^generate` reaches the client's generate, `affected` follows a spec change
+    if (!data.implicitDependencies?.includes(clientNode?.name)) problems.push(`${name}: needs implicit dependency on ${clientNode?.name}`);
   }
   for (const { name, data } of nodes.filter(({ data }) => data.metadata?.js?.packageName)) {
     for (const [target, config] of Object.entries(data.targets ?? {})) {
-      if (target !== 'generate' && !config.dependsOn?.includes('^generate')) problems.push(`${name}: ${target} must depend on ^generate`);
+      if (!config.dependsOn?.includes('^generate')) problems.push(`${name}: ${target} must depend on ^generate`);
+      // gitignored generated code is invisible to Nx hashing — the generate outputs must be an input
+      if (!config.inputs?.some((input) => input.dependentTasksOutputFiles?.includes('src/generated') && input.transitive)) {
+        problems.push(`${name}: ${target} must hash the generated code (dependentTasksOutputFiles, transitive)`);
+      }
     }
   }
   const committedGenerated = execFileSync('git', ['ls-files', 'libs'], { encoding: 'utf-8' })
