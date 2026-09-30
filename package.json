@@ -28,6 +28,7 @@
     "@berger-engineering/sheriff-blueprint": "workspace:*",
     "@blueprint/tooling": "workspace:*",
     "@blueprint/tooling-ng-lib": "workspace:*",
+    "@blueprint/tooling-openapi": "workspace:*",
     "@eslint/js": "^9.8.0",
     "@faker-js/faker": "10.6.0",
     "@hey-api/openapi-ts": "0.83.1",

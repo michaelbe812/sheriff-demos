@@ -12,13 +12,13 @@
  *              instead of silently creating a new scope (folder typo guard)
  *   targets    lint, typecheck, build (not for testing libs), test (only if src/ has *.spec.ts);
  *              every target depends on `^generate` and hashes the generated code of those tasks
- *   clients    openapi-clients.json (second marker): one client project per entry with `generate`
- *              (+ `update-spec`), see openapi-clients.ts. Client libs libs/[<domain>/]generated/<client>/<part>
- *              get their tags from the path and implicit edges part → client (→ sibling parts)
+ *   clients    client libs libs/[<domain>/]generated/<client>/<part> are libs like any other (tags from
+ *              the path); @blueprint/tooling-openapi (second plugin in nx.json) adds the client projects,
+ *              the edges part → client and the testing lib's `generate` to the same roots
  *
- * Conventions (layers, tags, scope check) live in lib-conventions.ts and are shared
+ * Conventions (layers, tags, scope check) live in @blueprint/tooling-conventions and are shared
  * with the generators. The tag derivation is the single source of truth: eslint.config.mjs and
- * packages/tooling/scripts/verify-boundaries.mjs read the tags from the project graph.
+ * packages/tooling/verify/scripts/verify-boundaries.mjs read the tags from the project graph.
  */
 // type-only: importing @nx/devkit at runtime costs ~0.5 s per graph computation in the isolated plugin worker
 import type { CreateNodesResult, CreateNodesV2, TargetConfiguration } from '@nx/devkit';
@@ -27,25 +27,16 @@ import { dirname, join } from 'node:path';
 import {
   aliasFor,
   type BlueprintLibsOptions,
-  CLIENTS_CONFIG_FILE,
   deriveTags,
   LIBS_DIR,
-  parseLibPath,
   projectNameFor,
   TESTING_LAYER,
 } from '@blueprint/tooling-conventions';
-import {
-  clientPartEdges,
-  type ClientsConfig,
-  createClientProjects,
-  generateTestingTarget,
-  readClientsConfig,
-} from './openapi-clients';
 
 export { deriveTags } from '@blueprint/tooling-conventions';
 
-/** libs (committed src/index.ts) + the client list — one plugin, one pass */
-const MARKER = `{${LIBS_DIR}/**/src/index.ts,${CLIENTS_CONFIG_FILE}}`;
+/** every lib: committed src/index.ts */
+const MARKER = `${LIBS_DIR}/**/src/index.ts`;
 
 /** Executors of @blueprint/tooling-ng-lib (packages/tooling/ng-lib). */
 export const NG_LIB_EXECUTORS = {
@@ -84,6 +75,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '^default',
         '{workspaceRoot}/eslint.config.mjs',
         '{workspaceRoot}/packages/tooling/src/plugin/**/*',
+        '{workspaceRoot}/packages/tooling/openapi/src/plugin/**/*',
         '{workspaceRoot}/packages/tooling/conventions/src/lib-conventions.ts',
         GENERATED_CODE_INPUT,
         { externalDependencies: ['eslint'] },
@@ -169,31 +161,10 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
   return targets;
 }
 
-function createLibNode(
-  indexFile: string,
-  workspaceRoot: string,
-  options: BlueprintLibsOptions,
-  clients: ClientsConfig,
-): CreateNodesResult {
+function createLibNode(indexFile: string, workspaceRoot: string, options: BlueprintLibsOptions): CreateNodesResult {
   const projectRoot = dirname(dirname(indexFile));
   const libPath = projectRoot.slice(`${LIBS_DIR}/`.length);
   const tags = deriveTags(libPath, options);
-  const client = parseLibPath(libPath)?.client;
-  if (client && !clients.clients?.[client.path]) {
-    throw new Error(
-      `${projectRoot}: part of client "${client.path}", but ${CLIENTS_CONFIG_FILE} has no entry for it ` +
-        `(nx g @blueprint/tooling:client ${client.name} …, or remove ${LIBS_DIR}/${client.path})`,
-    );
-  }
-  // gitignored generated code is invisible to the graph: part → client (generate, affected), api → core → types
-  const implicitDependencies = client ? clientPartEdges(workspaceRoot, client) : [];
-  const targets = libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`));
-  if (client?.part === TESTING_LAYER) {
-    // the client's testing lib generates its own code (from the spec only) before lint/typecheck
-    targets['generate'] = generateTestingTarget(workspaceRoot, client.path);
-    for (const name of ['lint', 'typecheck'])
-      targets[name].dependsOn = ['generate', ...(targets[name].dependsOn ?? [])];
-  }
   return {
     projects: {
       [projectRoot]: {
@@ -203,8 +174,7 @@ function createLibNode(
         projectType: 'library',
         tags,
         metadata: { js: { packageName: aliasFor(libPath) } },
-        targets,
-        ...(implicitDependencies.length ? { implicitDependencies } : {}),
+        targets: libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`)),
       },
     },
   };
@@ -212,12 +182,6 @@ function createLibNode(
 
 export const createNodesV2: CreateNodesV2<BlueprintLibsOptions> = [
   MARKER,
-  (files, options = {}, context) => {
-    const clients = readClientsConfig(context.workspaceRoot);
-    return files.map((file) =>
-      file === CLIENTS_CONFIG_FILE
-        ? ([file, { projects: createClientProjects(context.workspaceRoot, clients, options.scopes) }] as const)
-        : ([file, createLibNode(file, context.workspaceRoot, options, clients)] as const),
-    );
-  },
+  (files, options = {}, context) =>
+    files.map((file) => [file, createLibNode(file, context.workspaceRoot, options)] as const),
 ];

@@ -1,0 +1,48 @@
+{
+  "name": "tooling-openapi",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/tooling/openapi/src",
+  "tags": [
+    "type:tooling",
+    "tooling:openapi"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        {
+          "externalDependencies": [
+            "typescript",
+            "@nx/devkit"
+          ]
+        }
+      ],
+      "options": {
+        "command": "tsc -p packages/tooling/openapi/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        {
+          "externalDependencies": [
+            "vitest",
+            "@nx/devkit",
+            "typescript"
+          ]
+        }
+      ],
+      "options": {
+        "command": "vitest run --config packages/tooling/openapi/vitest.config.mts"
+      }
+    }
+  }
+}

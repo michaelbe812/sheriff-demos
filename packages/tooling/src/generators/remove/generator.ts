@@ -1,6 +1,6 @@
 import { formatFiles, logger, type Tree } from '@nx/devkit';
 import { aliasFor, LIBS_DIR } from '@blueprint/tooling-conventions';
-import { updateClientEntries } from '../shared/clients';
+import { updateClientEntries } from '@blueprint/tooling-openapi/clients';
 import { referencesAlias } from '../shared/imports';
 import { removeRoutes } from '../shared/routes';
 import {

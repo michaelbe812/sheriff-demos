@@ -1,5 +1,5 @@
 {
-  "$schema": "./packages/tooling/src/openapi/openapi-clients.schema.json",
+  "$schema": "./packages/tooling/openapi/openapi-clients.schema.json",
   "defaultAdapter": "openapi-tools",
   "clients": {
     "generated/pet-client": {

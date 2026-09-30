@@ -27,6 +27,12 @@
       "@blueprint/tooling-conventions/testing": [
         "./packages/tooling/conventions/src/testing/blueprint-tree.ts"
       ],
+      "@blueprint/tooling-openapi": [
+        "./packages/tooling/openapi/src/plugin/openapi-clients.ts"
+      ],
+      "@blueprint/tooling-openapi/clients": [
+        "./packages/tooling/openapi/src/clients.ts"
+      ],
       "@blueprint/*": [
         "./libs/*/src/index.ts"
       ]

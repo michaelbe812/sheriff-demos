@@ -1,13 +1,19 @@
+/**
+ * openapi-clients.json on the Nx Tree: read/write entries, keep them in step with moved/removed libs
+ * (used by the client generator and by move/rename/remove of @blueprint/tooling-workspace).
+ */
 import type { Tree } from '@nx/devkit';
 import { CLIENTS_CONFIG_FILE, parseClientPath } from '@blueprint/tooling-conventions';
-import type { ClientEntry, ClientsConfig } from '../../plugin/openapi-clients';
-import { forEachSourceFile } from './workspace';
+import type { ClientEntry, ClientsConfig } from './plugin/openapi-clients';
+import { forEachSourceFile } from '@blueprint/tooling-conventions/tree';
+
+export type { ClientEntry, ClientsConfig } from './plugin/openapi-clients';
 
 /** openapi-clients.json in the tree (defaults if missing). */
 export function readClientsJson(tree: Tree): ClientsConfig & { $schema?: string } {
   if (!tree.exists(CLIENTS_CONFIG_FILE)) {
     return {
-      $schema: './packages/tooling/src/openapi/openapi-clients.schema.json',
+      $schema: './packages/tooling/openapi/openapi-clients.schema.json',
       defaultAdapter: 'openapi-tools',
       clients: {},
     };

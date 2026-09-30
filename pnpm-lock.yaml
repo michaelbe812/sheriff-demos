@@ -57,6 +57,9 @@ importers:
       '@blueprint/tooling-ng-lib':
         specifier: workspace:*
         version: link:packages/tooling/ng-lib
+      '@blueprint/tooling-openapi':
+        specifier: workspace:*
+        version: link:packages/tooling/openapi
       '@eslint/js':
         specifier: ^9.8.0
         version: 9.39.5
@@ -186,10 +189,19 @@ importers:
       '@blueprint/tooling-conventions':
         specifier: workspace:*
         version: link:conventions
+      '@blueprint/tooling-openapi':
+        specifier: workspace:*
+        version: link:openapi
 
   packages/tooling/conventions: {}
 
   packages/tooling/ng-lib: {}
+
+  packages/tooling/openapi:
+    dependencies:
+      '@blueprint/tooling-conventions':
+        specifier: workspace:*
+        version: link:../conventions
 
   packages/tooling/verify: {}
 

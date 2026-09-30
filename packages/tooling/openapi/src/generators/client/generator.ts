@@ -11,8 +11,8 @@ import {
   SHARED_SCOPE,
 } from '@blueprint/tooling-conventions';
 import { adapterRegistry, type ClientEntry, DEFAULT_ADAPTER } from '../../plugin/openapi-clients';
-import { addClientEntry, clientExportPrefix, readClientsJson } from '../shared/clients';
-import { assertKebabCase, assertSliceExists } from '../shared/workspace';
+import { addClientEntry, clientExportPrefix, readClientsJson } from '../../clients';
+import { assertKebabCase, assertSliceExists } from '@blueprint/tooling-conventions/tree';
 
 export interface ClientGeneratorSchema {
   /** folder name, e.g. `pet-client` */
@@ -23,7 +23,7 @@ export interface ClientGeneratorSchema {
   spec: string;
   /** source for update-spec; default: `spec` when it is a URL */
   url?: string;
-  /** adapter id (packages/tooling/src/openapi/adapters/registry.json); default: defaultAdapter */
+  /** adapter id (packages/tooling/openapi/src/facade/adapters/registry.json); default: defaultAdapter */
   adapter?: string;
   skipFormat?: boolean;
 }

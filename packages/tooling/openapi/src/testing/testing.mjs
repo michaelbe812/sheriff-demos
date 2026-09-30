@@ -15,12 +15,12 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statS
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import YAML from 'yaml';
-import { clientRoot, GENERATED_DIR, generatedHeader } from '../facade.mjs';
+import { clientRoot, GENERATED_DIR, generatedHeader } from '../facade/facade.mjs';
 
 /** `pet-client` → `petClient` */
 export const camelCase = (name) => name.replace(/-([a-z0-9])/g, (_, char) => char.toUpperCase());
 
-/** @param {Pick<import('../contract').ClientDefinition, 'name' | 'placement' | 'spec'>} client */
+/** @param {Pick<import('../facade/contract').ClientDefinition, 'name' | 'placement' | 'spec'>} client */
 export async function generateTestingLib(client, workspaceRoot) {
   const specFile = join(workspaceRoot, client.spec.file);
   if (!existsSync(specFile)) throw new Error(`${client.spec.file} missing`);

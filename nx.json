@@ -55,6 +55,9 @@
       "options": {
         "scopes": ["auth", "booking", "checkin", "layout", "shared"]
       }
+    },
+    {
+      "plugin": "@blueprint/tooling-openapi"
     }
   ],
   "sync": {

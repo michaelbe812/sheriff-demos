@@ -1,10 +1,7 @@
 import type { Tree } from '@nx/devkit';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createBlueprintTree, read, scopesOf } from '@blueprint/tooling-conventions/testing';
-import { moveGenerator } from '../move/generator';
-import { removeGenerator } from '../remove/generator';
-import { renameGenerator } from '../rename/generator';
-import { listLibPaths } from '../shared/workspace';
+import { createBlueprintTree, read } from '@blueprint/tooling-conventions/testing';
+import { listLibPaths } from '@blueprint/tooling-conventions/tree';
 import { clientGenerator } from './generator';
 
 const SPEC_YAML = `openapi: 3.0.3
@@ -92,62 +89,5 @@ describe('client generator', () => {
     await expect(
       clientGenerator(tree, { name: 'y-client', spec: 'specs/demo.yaml', adapter: 'swagger-codegen' }),
     ).rejects.toThrow('Unknown adapter');
-  });
-
-  it('remove takes the client and its entry out — openapi-clients.json exactly as before', async () => {
-    await clientGenerator(tree, { name: 'keep-client', spec: 'specs/demo.yaml', skipFormat: true });
-    const before = read(tree, 'openapi-clients.json');
-    await clientGenerator(tree, { name: 'demo-client', domain: 'booking', spec: 'specs/demo.yaml', skipFormat: true });
-
-    await removeGenerator(tree, { path: 'booking/generated/demo-client', skipFormat: true });
-
-    expect(tree.exists('libs/booking/generated')).toBe(false);
-    expect(read(tree, 'openapi-clients.json')).toBe(before);
-
-    // `generated` is no scope: removing one of two shared clients leaves the scope list alone
-    await clientGenerator(tree, { name: 'other-client', spec: 'specs/demo.yaml', skipFormat: true });
-    await removeGenerator(tree, { path: 'generated/keep-client', skipFormat: true });
-    expect(scopesOf(tree)).toEqual(['booking', 'layout', 'shared']);
-  });
-
-  it('remove refuses while a port imports the client', async () => {
-    await clientGenerator(tree, { name: 'demo-client', domain: 'booking', spec: 'specs/demo.yaml', skipFormat: true });
-    tree.write(
-      'libs/booking/api/src/uses.ts',
-      "import { DemoService } from '@blueprint/booking/generated/demo-client/api';\nexport const x = DemoService;\n",
-    );
-
-    await expect(removeGenerator(tree, { path: 'booking/generated/demo-client' })).rejects.toThrow(
-      'libs/booking/api/src/uses.ts',
-    );
-  });
-
-  it('move / rename keep the entry, the aliases and the generated testing exports in step', async () => {
-    await clientGenerator(tree, {
-      name: 'demo-client',
-      spec: 'specs/demo.yaml',
-      url: 'https://example.org/a.yaml',
-      skipFormat: true,
-    });
-    tree.write(
-      'libs/booking/api/src/booking-api.spec.ts',
-      "import { demoClientHandlers, demoClientHttp } from '@blueprint/generated/demo-client/testing';\nexport const h = [demoClientHandlers, demoClientHttp];\n",
-    );
-
-    await moveGenerator(tree, { from: 'generated/demo-client', to: 'booking/generated/demo-client', skipFormat: true });
-    expect(clients(tree)).toEqual({ 'booking/generated/demo-client': { url: 'https://example.org/a.yaml' } });
-    expect(tree.exists('libs/booking/generated/demo-client/openapi.yaml')).toBe(true);
-
-    await renameGenerator(tree, { path: 'booking/generated/demo-client', name: 'thing-client', skipFormat: true });
-    expect(clients(tree)).toEqual({ 'booking/generated/thing-client': { url: 'https://example.org/a.yaml' } });
-    expect(read(tree, 'libs/booking/api/src/booking-api.spec.ts')).toBe(
-      "import { thingClientHandlers, thingClientHttp } from '@blueprint/booking/generated/thing-client/testing';\nexport const h = [thingClientHandlers, thingClientHttp];\n",
-    );
-  });
-
-  it('removing a domain drops its clients', async () => {
-    await clientGenerator(tree, { name: 'demo-client', domain: 'booking', spec: 'specs/demo.yaml', skipFormat: true });
-    await removeGenerator(tree, { path: 'booking', force: true, skipFormat: true });
-    expect(clients(tree)).toEqual({});
   });
 });

@@ -1,7 +1,7 @@
 import { formatFiles, logger, type Tree } from '@nx/devkit';
 import { aliasFor, FEAT_PREFIX, LIBS_DIR, libPathError } from '@blueprint/tooling-conventions';
 import { registerFeatRoute } from '../feat/generator';
-import { renameClientExports, updateClientEntries } from '../shared/clients';
+import { renameClientExports, updateClientEntries } from '@blueprint/tooling-openapi/clients';
 import { rewriteAliases } from '../shared/imports';
 import { findExportedRoutes, removeRoutes, renameRoutePath, updateFile } from '../shared/routes';
 import {

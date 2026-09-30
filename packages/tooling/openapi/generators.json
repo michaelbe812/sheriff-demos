@@ -1,0 +1,9 @@
+{
+  "generators": {
+    "client": {
+      "factory": "./src/generators/client/generator",
+      "schema": "./src/generators/client/schema.json",
+      "description": "Generierter OpenAPI-Client: Spec, Libs types/api/core/testing (nur index.ts), Eintrag in openapi-clients.json."
+    }
+  }
+}
