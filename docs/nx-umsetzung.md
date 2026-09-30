@@ -19,35 +19,132 @@ libs/
   <domain>/testing, shared/testing          scope:<d>|shared type:testing feat:none   nur für Specs, siehe Testing & MSW
 ```
 
-- Jede Lib: `project.json` (Tags, `build` + `lint` + `typecheck`), `tsconfig.json`, `src/index.ts` als **einzige** öffentliche API. Build-Dateien pro Lib gibt es nicht (siehe [Buildable Libs](#buildable-libs)).
-- Alias: `@blueprint/<pfad-unter-libs>`, z.B. `@blueprint/booking/api` oder `@blueprint/checkin/feat-checkin/api`. Er zeigt direkt auf `index.ts`. Einen Wildcard-Alias gibt es nicht mehr.
+- Jede Lib = Ordner + `src/index.ts` als **einzige** öffentliche API. Außerhalb von `src/` gibt es pro Lib **keine Datei**: kein `project.json`, `package.json`, `ng-package.json`, `tsconfig*.json`. Projekt, Tags und Targets leitet ein lokales Nx-Plugin aus dem Pfad ab (siehe [Libs ohne Config-Dateien](#libs-ohne-config-dateien)).
+- Alias: `@blueprint/<pfad-unter-libs>`, z.B. `@blueprint/booking/api` oder `@blueprint/checkin/feat-checkin/api`. Ein einziger Wildcard-Eintrag in `tsconfig.base.json` deckt alle Libs ab: `@blueprint/*` → `./libs/*/src/index.ts`.
 - Projektname = Pfad mit `-` (`booking-feat-check-booking-data`).
 - `booking.routes.ts`/`checkin.routes.ts` exportieren jetzt benannt (`bookingRoutes`), weil `export *` keinen Default re-exportiert.
 - Ein lib-privater Ordner `internal/` (z.B. `checkin/data/src/internal/checkin.mapper.ts`) ist bloße Konvention. Privat ist die Datei, weil `index.ts` sie nicht exportiert.
 
-**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2. Das sind 96 Boilerplate-Dateien (3 pro Lib: `project.json`, `tsconfig.json`, `index.ts`) und 32 `paths`-Einträge. Build-Config ist gemeinsam (`libs/tsconfig.lib.json`, `tools/ng-lib`). Ein neuer Bucket bedeutet eine neue Lib, nicht einen neuen Ordner.
+**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2, dazu 3 Testing-Libs. Pro Lib nur noch `src/index.ts` als Pflichtdatei. Ein neuer Bucket bedeutet einen neuen Lib-Ordner mit `src/index.ts`. Die Konfiguration ist zentral (Plugin, `tools/ng-lib`, `libs/tsconfig*.json`), Dateizählung siehe [Libs ohne Config-Dateien](#libs-ohne-config-dateien).
 
 ## Buildable Libs
 
-Jede Lib hat ein `build`-Target mit dem lokalen Executor `./tools/ng-lib:build` (incremental buildable). Er delegiert unverändert an `@nx/angular:ng-packagr-lite` (`ng-packagr` ~22.0). Die komplette Target-Config steht in `nx.json` → `targetDefaults.build` (`dependsOn: ["^build"]`, cache, Output `dist/{projectRoot}`). In der `project.json` steht nur `"build": {}`.
+Jede Lib hat ein `build`-Target mit dem lokalen Executor `./tools/ng-lib:build` (incremental buildable). Er delegiert unverändert an `@nx/angular:ng-packagr-lite` (`ng-packagr` ~22.0). Die Target-Config inferiert das Plugin `tools/nx-plugins/blueprint-libs.ts` (`dependsOn: ["^build"]`, cache, Output `dist/{projectRoot}`, Inputs siehe unten). Testing-Libs bekommen kein `build`.
 
 **Keine Build-Dateien pro Lib.** Der Executor erzeugt pro Lauf in `tmp/ng-lib/<projectRoot>/<target>/`:
 
 | Datei | Inhalt | warum nötig |
 |---|---|---|
 | `ng-package.json` | `dest` = `dist/<projectRoot>`, `entryFile` = `<projectRoot>/src/index.ts` (absolut) | ng-packagr (`forProject`) liest die Config nur aus einer Datei |
-| `package.json` | `name` = Alias aus `tsconfig.base.json`, `private`, `sideEffects: false`, `peerDependencies` aus dem Projekt-Graph | ng-packagr verlangt sie neben der ng-package.json (`Cannot discover package sources … 'package.json' was not found`) |
+| `package.json` | `name` = Alias (`metadata.js.packageName` vom Plugin), `private`, `sideEffects: false`, `peerDependencies` = npm-Pakete, die der Produktionscode importiert (Graph-Kanten ∩ Imports ohne Specs) | ng-packagr verlangt sie neben der ng-package.json (`Cannot discover package sources … 'package.json' was not found`) |
 | `tsconfig.json` | `extends` gemeinsame `libs/tsconfig.lib.json`, `paths` der Abhängigkeiten auf `dist/` | siehe unten |
 
 - **Gemeinsame tsconfig** `libs/tsconfig.lib.json`. ng-packagr kompiliert nur `entryFile` (rootNames), `include` muss nur irgendeine Datei treffen (sonst TS18003). `production` = Option `compilerOptions: { declarationMap: false }`, statt einer eigenen prod-tsconfig.
 - **Warum die Paths selbst umgeschrieben werden:** Nx (`@nx/js` `calculateProjectBuildableDependencies`) nimmt den Import-Namen einer Abhängigkeit aus deren lib-`package.json`, sonst den Projektnamen (`booking-data`). Ohne lib-`package.json` bliebe `@blueprint/booking/data` auf den Quellen. Beim Lib-Build scheitert das laut, die **App baut aber still aus Source**. Deshalb gibt es auch `./tools/ng-lib:application` (Wrapper um `@nx/angular:application`), der dieselben dist-Paths setzt. Alias-Quelle: `metadata.js.packageName` des Projekts, sonst exakter oder Wildcard-`paths`-Eintrag.
-- **Inputs:** `libs/tsconfig.lib.json`, `tsconfig.base.json` und `tools/ng-lib/**` sind explizite Build-Inputs, weil sie außerhalb der Libs liegen.
-- **dist ist byte-identisch** zum Setup mit Dateien pro Lib (alle 32 Libs + App, `diff -r`).
+- **Inputs:** `libs/tsconfig.lib.json`, `libs/tsconfig.json`, `tsconfig.base.json` und `tools/ng-lib/**` sind explizite Build-Inputs, weil sie außerhalb der Libs liegen.
+- **peerDependencies nur aus Produktionscode:** Die Graph-Kanten enthalten auch Imports aus Specs. Ohne Filter stand nach dem MSW-Umbau `vitest` in der dist-`package.json` von 4 Libs (und der Build-Output hing an Spec-Dateien, die nicht in den `production`-Inputs sind).
+- **dist ist byte-identisch** zum Setup mit Dateien pro Lib (alle 32 Libs + App, 346 Dateien, `diff -r`).
 - **Incremental:** Beim Lib-Build schreibt Nx die Pfade abhängiger Libs auf `dist/` um. Ohne gebaute Abhängigkeit schlägt der Build fehl (`TS2307`), `dependsOn: ^build` sorgt für die Reihenfolge.
 - **App:** `client:build` nutzt `./tools/ng-lib:application` (→ `@nx/angular:application`) mit `buildLibsFromSource: false`, bündelt also die gebauten Libs aus `dist/`. Die Chunks sind identisch zum Source-Build (main ~217 kB, 8 Lazy-Chunks, `bookingRoutes`/`checkinRoutes` lazy). `serve` (`@angular/build:dev-server`) baut weiterhin aus den Sources. Für `serve` gegen `dist/` bräuchte es `@nx/angular:dev-server` und damit `@angular-devkit/build-angular`, deshalb bewusst nicht umgesetzt.
 - **Source-Aliase bleiben:** `tsconfig.base.json` zeigt weiter auf `src/index.ts` (IDE, `typecheck`, Lint).
 - **Output:** `ng-packagr-lite` erzeugt `esm2022/` (eine Datei pro Quelldatei) + `.d.ts`, in *full compilation mode*, ohne FESM-Bundle. Das reicht für das App-Bundling, ist aber nicht publizierbar (deshalb `private: true`). Publizierbar wäre `@nx/angular:package` (FESM2022 + partial compilation).
-- **`enforceBuildableLibDependency`** bleibt an. Da alle Libs buildable sind, greift es nur bei neuen Libs ohne `build`.
+- **`enforceBuildableLibDependency`** bleibt an. Jede Lib außer den Testing-Libs bekommt `build` automatisch, die Regel greift also bei Imports von Testing-Libs in Produktionscode.
+
+## Libs ohne Config-Dateien
+
+Pro Lib gibt es außerhalb von `src/` **keine Datei**. Eine neue Lib ist ein Ordner mit `src/index.ts`:
+
+```sh
+mkdir -p libs/booking/feat-rebook/data/src && echo 'export {};' > libs/booking/feat-rebook/data/src/index.ts
+# → Projekt booking-feat-rebook-data, Tags scope:booking type:data feat:rebook,
+#   Targets build/lint/typecheck, Alias @blueprint/booking/feat-rebook/data, alle Constraints aktiv
+```
+
+Specs dazulegen (`src/**/*.spec.ts`) erzeugt das `test`-Target. Ein Ordner `testing` statt eines Layers ergibt eine Testing-Lib (`type:testing`, kein `build`). `pnpm verify:boundaries` beweist das bei jedem Lauf mit einer temporären Lib `libs/tmpverify/utils` (nur `src/index.ts`): Projekt, Tags und Targets stimmen, 5 Lint-Fälle gegen und von ihr greifen, danach wird sie entfernt.
+
+### Bausteine
+
+| Baustein | Aufgabe |
+|---|---|
+| `tools/nx-plugins/blueprint-libs.ts` | lokales Crystal-Plugin (`createNodesV2`, in `nx.json` → `plugins`). Marker `libs/**/src/index.ts`. Liefert `name` (Pfad mit `-`), `root`, `sourceRoot`, `projectType`, Tags aus dem Pfad, `metadata.js.packageName` = Alias und die Targets. Ein Pfad, der nicht `libs/<scope>/<layer>` bzw. `libs/<scope>/feat-<f>/<layer>` mit bekanntem Layer ist, bricht den Graph ab, statt still eine Lib ohne Regeln zu erzeugen |
+| `tsconfig.base.json` | ein Wildcard-Pfad `@blueprint/*` → `./libs/*/src/index.ts` statt 35 Einträgen |
+| `libs/tsconfig.json` | gemeinsame Compiler-Optionen (strict, es2022, `module: preserve`), IDE + `typecheck` |
+| `libs/tsconfig.lib.json` | Build (erweitert `libs/tsconfig.json`, Declarations, ohne Specs) |
+| `libs/tsconfig.spec.json` | Tests (erweitert `libs/tsconfig.json`, nur Specs) |
+| `tools/typecheck-lib.mjs` | `typecheck`: `libs/tsconfig.json`, `include` per TS-API im Speicher auf `<lib>/src` verengt (`tsc -p` kann `include` nicht per CLI setzen) |
+| `tools/ng-lib/` | lokale Executoren `build`, `application`, `test` (unten) |
+| `eslint.config.mjs`, `tools/verify-boundaries.mjs` | lesen Tags, Lib-Roots (Deep-Import-Aliase) und Targets aus dem Projekt-Graph statt aus `project.json`/`paths` |
+
+Inferierte Targets:
+
+| Target | Executor | Wann |
+|---|---|---|
+| `lint` | `nx:run-commands` → `eslint .` im Lib-Ordner | immer |
+| `typecheck` | `nx:run-commands` → `node tools/typecheck-lib.mjs <root>` | immer |
+| `build` | `./tools/ng-lib:build` | nicht für `testing` |
+| `test` | `./tools/ng-lib:test` | nur wenn `src/` eine `*.spec.ts` enthält |
+
+Eine `project.json` in einer Lib bleibt möglich (Nx legt sie über die inferierten Werte), z.B. für ein Sonder-Target. `typecheck` nimmt eine lib-eigene `tsconfig.json`, falls vorhanden. Heute nutzt keine Lib das.
+
+### Executor-Wrapper (`tools/ng-lib`)
+
+Alle drei delegieren an den Nx-Executor und ergänzen nur, was sonst aus Dateien pro Lib käme. Temporäre Dateien liegen in `tmp/ng-lib/<root>/<target>/` (gitignored).
+
+| Wrapper | delegiert an | ergänzt |
+|---|---|---|
+| `build` | `@nx/angular:ng-packagr-lite` | `ng-package.json`, `package.json`, tsconfig mit dist-Paths (siehe [Buildable Libs](#buildable-libs)) |
+| `application` | `@nx/angular:application` | tsconfig mit dist-Paths der Libs. Ohne ihn baut die App **still aus Source**, weil Nx den Alias nur aus einer lib-`package.json` kennt |
+| `test` | `@nx/angular:unit-test` | Build-Target als `@angular/build:ng-packagr` + spec-tsconfig pro Lib (unten) |
+
+**`test` im Detail.** `@angular/build:unit-test` braucht keine Datei pro Lib (`tsConfig`, `runnerConfig`, `setupFiles`, `providersFile` sind Workspace-Pfade). Zwei Probleme blieben:
+
+1. **Build-Target:** Der Angular-Builder liest die Optionen des `buildTarget` (Default `<lib>:build:development`) und kennt nur `@angular/build:application` und `@angular/build:ng-packagr`. `@nx/angular:unit-test` mappt nur `ng-packagr-lite`/`package` auf `ng-packagr`, und dieser Pfad liest `<root>/ng-package.json` (nur `styleIncludePaths`, `assets`, `inlineStyleLanguage`). Für `./tools/ng-lib:build` käme „not supported“ plus Schema-Fehler. Lösung: Nx' Builder-Context (`createBuilderContext`) liest Executor und Optionen jedes Targets aus `context.projectGraph`. Der Wrapper gibt `@nx/angular:unit-test` eine Kopie des Kontexts, in der das Build-Target `@angular/build:ng-packagr` mit einer temporären `ng-package.json` (nur `lib.entryFile`) ist. Kein Monkeypatching, der Rest des Graphen bleibt unverändert. Das ist derselbe Pfad wie vorher mit echter `ng-package.json` pro Lib.
+2. **Spec-tsconfig:** Eine gemeinsame tsconfig mit `**/*.spec.ts` würde pro Lib alle 4 Spec-Dateien des Workspaces kompilieren. Der Wrapper schreibt eine tsconfig, die `libs/tsconfig.spec.json` erweitert und `include` auf `<root>/src/**/*.spec.ts` + `*.d.ts` setzt. Beleg: `tsc --listFilesOnly` zeigt für `booking-data` 1 Spec, für `libs/tsconfig.spec.json` allein 4.
+
+Browser Mode, MSW-Worker (`publicDir`) und die Workarounds in `vitest-base.config.mts` sind unberührt (`runnerConfig` wie bisher).
+
+### Cache-Inputs
+
+Gemeinsame Dateien liegen außerhalb von `{projectRoot}` und stehen deshalb explizit in den Inputs:
+
+| Target | zusätzliche Inputs |
+|---|---|
+| `lint` | `eslint.config.mjs`, `tools/nx-plugins/**` (die Tags im Graph bestimmen die Constraints), `eslint` |
+| `typecheck` | `tsconfig.base.json`, `libs/tsconfig.json`, `tools/typecheck-lib.mjs`, `typescript` |
+| `build` | `production`, `^production`, `tsconfig.base.json`, `libs/tsconfig.json`, `libs/tsconfig.lib.json`, `tools/ng-lib/**`, `ng-packagr`, `@angular/compiler-cli`, `typescript` |
+| `test` | `default`, `^production`, `tsconfig.base.json`, `libs/tsconfig.json`, `libs/tsconfig.spec.json`, `tools/ng-lib/**`, `vitest-base.config.mts`, `vitest`, `@vitest/browser-playwright`, `msw`, `@angular/build` |
+| `client:build` (`targetDefaults`) | `production`, `^production`, `tsconfig.base.json`, `tools/ng-lib/**` |
+
+- `tools/nx-plugins/**` ist nur bei `lint` ein Input. Die Target-Config selbst hasht Nx ohnehin mit (Hash-Instruktion `ProjectConfiguration`). Beleg: Option im Plugin geändert → `lint` aller Libs, alle `test` und die betroffenen `build`/`typecheck` laufen neu.
+- Beleg: Leerzeile in `libs/tsconfig.spec.json` → genau die 4 `test`-Tasks laufen neu, alles andere aus dem Cache.
+- `nx show target booking-data:test --inputs` zeigt die aufgelösten Inputs.
+
+### Dateizählung
+
+| | vorher (`2857237`) | nachher |
+|---|---|---|
+| Dateien pro Lib außerhalb `src/` (35 Libs) | 202: 35 `project.json`, 35 `tsconfig.json`, 32 `package.json`, 32 `ng-package.json`, 32 `tsconfig.lib.json`, 32 `tsconfig.lib.prod.json`, 4 `tsconfig.spec.json` | **0** |
+| `paths` in `tsconfig.base.json` | 35 | 1 (Wildcard) |
+| gemeinsame Dateien | – | 3 unter `libs/` (`tsconfig.json`, `tsconfig.lib.json`, `tsconfig.spec.json`), `tools/nx-plugins/blueprint-libs.ts`, `tools/typecheck-lib.mjs`, 7 unter `tools/ng-lib/` |
+| Tasks `run-many -t build lint test typecheck` | 111 | 111 (dieselben) |
+| dist (32 Libs + App) | – | byte-identisch |
+
+`libs/shared/testing/public/mockServiceWorker.js` bleibt (generiert von `msw init`, kein Config-File).
+
+### Kosten und Trade-offs
+
+- **Abhängigkeit von Nx-Interna.** Keine öffentliche API, kann sich mit jedem Minor ändern:
+  - `@nx/angular/src/executors/{ng-packagr-lite,application,unit-test}/*.impl` (direkt importiert)
+  - `@nx/js/internal` → `calculateProjectBuildableDependencies` (dist-Paths)
+  - Verhalten von `nx/src/adapter/ngcli-adapter` `createBuilderContext`: liest Executor/Optionen aus `context.projectGraph` (Grundlage des `test`-Wrappers)
+  - Verhalten von `@nx/angular:unit-test`: mappt nur `ng-packagr-lite`/`package`, Default-`buildTarget` `::development`
+  - Verhalten von `@angular/build:unit-test`: akzeptiert nur `application`/`ng-packagr`, liest `ng-package.json` über `project`
+- **Nach jedem `nx migrate` (und Angular-Update) die Beweise neu laufen lassen:** `nx run-many -t build lint test typecheck --skip-nx-cache` (111 Tasks, 10 Browser-Tests), `pnpm verify:boundaries`, `diff -r` von `dist` gegen einen Stand vor dem Update, Marker-Test App-gegen-dist (unten).
+- **Eigene Generatoren nötig.** `@nx/angular:library` erzeugt genau die Dateien, die hier fehlen sollen. Heute reicht „Ordner + `src/index.ts`“, ein Generator wäre Komfort (Layer-Auswahl, erster Export).
+- **Weniger sichtbar.** Targets und Tags stehen in keiner Datei der Lib. Nachsehen per `nx show project <name>` oder Nx Console („inferred“ + Quelle `blueprint-libs.ts`).
+- **Plugin kostet pro Graph-Berechnung** einen Dateisystem-Scan pro Lib (Spec-Suche). Bei 35 Libs nicht messbar.
+- **Tippfehler im Ordnernamen** eines Scopes (`libs/bookng/…`) erzeugt einen neuen Scope. Ein unbekannter Layer-Ordner dagegen bricht den Graph ab.
+- `typecheck` prüft Specs mit (wie vorher mit `include: src/**/*.ts`).
 
 ## Tag-Schema
 
@@ -83,7 +180,7 @@ Produktions-Layer + app:      bannedExternalImports [msw, msw/*, vitest, vitest/
 // Override für *.spec.ts, *.test.ts, test-setup.ts: dieselben Constraints + type:testing (siehe Testing & MSW)
 ```
 
-**Wie wird `sameTag` ausgedrückt?** Gar nicht direkt: Nx kann aus einem Ziel-Tag nicht auf das Quell-Tag zurückverweisen. Deshalb gibt es eine Constraint pro Scope und eine pro Feat. `sameTagConstraints()` in `eslint.config.mjs` liest dazu alle `project.json` unter `apps/ libs/ packages/` und erzeugt die Constraints aus den vorhandenen `scope:*`- und `feat:*`-Tags. Ein neuer Slice ist abgedeckt, sobald seine Lib das Tag trägt. Eine Liste muss niemand pflegen.
+**Wie wird `sameTag` ausgedrückt?** Gar nicht direkt: Nx kann aus einem Ziel-Tag nicht auf das Quell-Tag zurückverweisen. Deshalb gibt es eine Constraint pro Scope und eine pro Feat. `sameTagConstraints()` in `eslint.config.mjs` liest dazu die Tags aller Projekte aus dem Projekt-Graph (die Lib-Tags liefert das Plugin) und erzeugt die Constraints aus den vorhandenen `scope:*`- und `feat:*`-Tags. Ein neuer Slice ist abgedeckt, sobald sein erster Lib-Ordner mit `src/index.ts` existiert. Eine Liste muss niemand pflegen.
 
 Zusätzlich verbietet `no-restricted-imports` Deep-Imports: generiert aus den `tsconfig.base.json`-Paths, Muster `<alias>/**`.
 
@@ -130,15 +227,15 @@ Alternative, falls die Lib-Anzahl stört: eine Lib pro Feat, dazu Sheriff nur mi
 
 | Limitierung | Lösung |
 |---|---|
-| Kein `sameTag`, keine Rückreferenz Quelle→Ziel | Constraints je Scope/Feat aus `project.json`-Tags generiert (Workaround) |
+| Kein `sameTag`, keine Rückreferenz Quelle→Ziel | Constraints je Scope/Feat aus den Graph-Tags generiert (Workaround) |
 | Keine Negation („kein `feat-*`“); `notDependOnLibsWithTags` ist **transitiv** (prüft alle erreichbaren Libs) und taugt deshalb nicht für „nur direkt verboten“ | Positiver Marker `feat:none` auf allen Nicht-Feat-Libs (Konvention, im Verify-Skript geprüft) |
-| Tag-Tippfehler (`scope:bookng`) würde still einen neuen Scope erzeugen; Nx prüft Tags nicht gegen Ordner | `tools/verify-boundaries.mjs` prüft das Tag-Schema gegen den Pfad (Scope, Type, Feat, `entry`/`port`/`feat-port`) |
-| Die Regel erkennt Deep-Imports über einen Alias nicht (`@blueprint/checkin/data/src/…` passiert die Tag-Prüfung) | `no-restricted-imports` generiert aus den Paths; TS löst den Import ohnehin nicht auf |
+| Tag-Tippfehler (`scope:bookng`) würde still einen neuen Scope erzeugen; Nx prüft Tags nicht gegen Ordner | Tags gibt es nicht mehr von Hand: das Plugin leitet sie aus dem Pfad ab, ein unbekannter Layer-Ordner bricht den Graph ab. `tools/verify-boundaries.mjs` prüft die Plugin-Ausgabe unabhängig gegen den Pfad (Scope, Type, Feat, `entry`/`port`/`feat-port`) und dass jede `src/index.ts` ein Projekt ist. Ein Tippfehler im **Ordner**namen (`libs/bookng/…`) erzeugt weiterhin still einen neuen Scope |
+| Die Regel erkennt Deep-Imports über einen Alias nicht (`@blueprint/checkin/data/src/…` passiert die Tag-Prüfung) | `no-restricted-imports` generiert aus den Lib-Roots im Graph (`@blueprint/<root>/**`); TS löst den Import ohnehin nicht auf |
 | Zyklen werden **vor** Tags geprüft: ein Aufwärts-Import im Slice (api→data) meldet sich oft als „Circular dependency“ statt als Layer-Verstoß | geblockt ist er trotzdem, nur mit anderer Meldung. Das Verify-Skript testet beide Varianten |
 | Ohne gecachten Projekt-Graph **überspringt** die Nx-Regel still (nur eine Warnung), z.B. bei `eslint` direkt oder in der IDE nach frischem Clone/`nx reset` | `nx lint` baut den Graph selbst. Für alle anderen Aufrufer baut `eslint.config.mjs` ihn per `ensureProjectGraph()` (top-level `await`), falls er fehlt. Geprüft: echter Verstoß in `booking-ui`, leeres `workspace-data`, `eslint <datei>` → Fehler statt Skip |
 | App-interne Slices (Phase 1 des Sheriff-Blueprints) sind nicht prüfbar: eine App ist ein Projekt | alles, was Regeln braucht, lebt in Libs, die App ist dünne Shell (Konvention) |
 | Domain-shared → Feat-Lib (z.B. `booking/data` → `feat-check-booking/data`) ist erlaubt, wie bei Sheriff | bewusst 1:1 übernommen. Härtung wäre möglich per `allSourceTags: ['feat:none', 'type:data']` → `feat:none` |
-| Die Generatoren des `sheriff-blueprint`-Packages erzeugen das Sheriff-Layout (Ordner statt Libs) | offen: ein Nx-Generator für „Slice/Feat als Lib-Set“ ist nötig |
+| Die Generatoren des `sheriff-blueprint`-Packages erzeugen das Sheriff-Layout (Ordner statt Libs). `@nx/angular:library` erzeugt `project.json`, `tsconfig*.json`, `ng-package.json` usw., passt also nicht zum Plugin | offen: eigene Generatoren nötig. Minimal reicht Ordner + `src/index.ts`, ein Generator bräuchte nur Layer-Auswahl und Schema-Check |
 
 ## Paket `packages/sheriff-blueprint`
 
@@ -161,8 +258,7 @@ vitest-base.config.mts        runnerConfig: publicDir = shared/testing/public, m
 ```
 
 - Domain-Testing-Libs importieren nur `msw` (nicht `msw/browser`), `type:types` und `shared/testing`. Deshalb liegt `CheckinDto` jetzt in `checkin/types` statt in `checkin/api`.
-- `test`-Target pro Lib mit Specs (`booking-api`, `booking-data`, `checkin-data`, `checkin-feat-checkin-feature`). In der `project.json` steht nur `"test": {}`, die Konfiguration kommt aus `nx.json` → `targetDefaults.test` (Executor, `browsers: ["chromiumHeadless"]`, `runnerConfig`, `tsConfig: {projectRoot}/tsconfig.spec.json`, `watch: false`, Inputs `default`, `^production`, `vitest-base.config.mts`).
-- Pro getesteter Lib zusätzlich `tsconfig.spec.json` (nur `src/**/*.spec.ts`).
+- `test`-Target inferiert das Plugin für jede Lib, deren `src/` eine `*.spec.ts` enthält (heute `booking-api`, `booking-data`, `checkin-data`, `checkin-feat-checkin-feature`). Executor `./tools/ng-lib:test` (Wrapper um `@nx/angular:unit-test`), `browsers: ["chromiumHeadless"]`, `runnerConfig: vitest-base.config.mts`, `tsConfig: libs/tsconfig.spec.json`, `watch: false`. Keine Datei pro Lib, siehe [Libs ohne Config-Dateien](#libs-ohne-config-dateien).
 - Einmalig: `pnpm exec playwright install chromium`.
 
 ### So sieht ein Test aus
@@ -204,8 +300,8 @@ describe('BookingStore', () => {
 | 1 | depConstraints: Produktions-Layer kennen `type:testing` nicht, `type:feature`/`type:app` ohne Glob; `type:testing` → nur types, testing, shared | `eslint.config.mjs` | `nx lint`, verify-Fälle `testing: …` |
 | 1b | Spec-Override (`*.spec.ts`, `*.test.ts`, `test-setup.ts`): dieselben Constraints + `type:testing`, auch fremde Domain. `scope:shared` und `type:types` bleiben unverändert | `eslint.config.mjs` → `specDepConstraints` | verify (`allowedInSpec`/`blockedInSpec`) |
 | 2 | `bannedExternalImports` msw, vitest, @vitest, @testing-library, playwright in Produktions-Layern + App | `eslint.config.mjs` | verify |
-| 3 | Testing-Libs ohne `build`-Target. Import aus Produktionscode scheitert zusätzlich an `enforceBuildableLibDependency`, im Spec-Override ist die Regel aus | `project.json`, Spec-Override | verify (Test-Isolation + Fälle) |
-| 4 | `tsconfig.lib.json` schließt Specs aus, `production`-Input schließt `**/*.spec.ts` + `tsconfig.spec.json` aus | Lib-Configs, `nx.json` | verify (Test-Isolation) |
+| 3 | Testing-Libs ohne `build`-Target (Plugin: Ordner `testing` → `type:testing`, kein `build`). Import aus Produktionscode scheitert zusätzlich an `enforceBuildableLibDependency`, im Spec-Override ist die Regel aus | Plugin, Spec-Override | verify (Test-Isolation aus dem Graph + Fälle) |
+| 4 | Die Build-tsconfig (`build.options.tsConfig` = `libs/tsconfig.lib.json`) schließt `**/*.spec.ts` aus, `build`-Inputs sind `production`, `production` schließt `**/*.spec.ts` aus, `peerDependencies` nur aus Produktionscode | `libs/tsconfig.lib.json`, Plugin, `nx.json`, `tools/ng-lib/build.js` | verify (Test-Isolation liest Targets aus dem Graph) |
 | 5 | `mockServiceWorker.js` nur in `libs/shared/testing/public`, nur per `runnerConfig` bei Testläufen serviert. Kein App-Asset | `vitest-base.config.mts` | verify (keine Datei unter `apps/`, keine testing/msw-Referenz in App-`project.json`) |
 | 6 | `nx build client` + Scan des Bundles auf `msw`, `mockServiceWorker`, `setupWorker`, `vitest` | `tools/verify-boundaries.mjs` | verify: 14 Dateien, 0 Treffer |
 | 7 | Keine Zyklen, keine `ignoredCircularDependencies` (siehe unten) | Schnitt der Libs | `nx lint`, verify |
@@ -231,7 +327,7 @@ Could not load build target options for "booking-data:build:development". … no
 
 Mit `buildTarget: client:build:development` gleiche Warnung für `@nx/angular:application`, dazu koppelt es jede Lib an die App.
 
-`@nx/angular:unit-test` (Nx 23.1) ist **kein anderer Runner**. Es ist ein dünner Wrapper, der `executeUnitTestBuilder` aus `@angular/build` aufruft. Vorher mappt er `@nx/angular:ng-packagr-lite` → `@angular/build:ng-packagr` im Builder-Context. Vitest, Browser-Provider, TestBed-Init und `runnerConfig` bleiben also Angulars Builder. Der Fallback `@nx/vitest` + `@analogjs/vitest-angular` war damit nicht nötig.
+`@nx/angular:unit-test` (Nx 23.1) ist **kein anderer Runner**. Es ist ein dünner Wrapper, der `executeUnitTestBuilder` aus `@angular/build` aufruft. Vorher mappt er `@nx/angular:ng-packagr-lite` → `@angular/build:ng-packagr` im Builder-Context. Vitest, Browser-Provider, TestBed-Init und `runnerConfig` bleiben also Angulars Builder. Der Fallback `@nx/vitest` + `@analogjs/vitest-angular` war damit nicht nötig. Seit den Libs ohne Config-Dateien steckt `@nx/angular:unit-test` hinter `./tools/ng-lib:test`, weil das Lib-Build-Target jetzt `./tools/ng-lib:build` ist (siehe [Executor-Wrapper](#executor-wrapper-toolsng-lib)).
 
 ### Limitierungen
 
@@ -249,18 +345,27 @@ Mit `buildTarget: client:build:development` gleiche Warnung für `@nx/angular:ap
 
 ### Neue `<domain>/testing` anlegen
 
-1. `libs/<d>/testing/project.json`: Tags `scope:<d>`, `type:testing`, `feat:none`, Targets nur `lint` + `typecheck` (**kein** `build`). Dazu `tsconfig.json` wie bei den anderen Libs.
-2. `src/fixtures/<x>.fixture.ts` (Builder `aX()`), `src/handlers/<d>.handlers.ts` (`<d>Handlers`, `<d>Scenarios`), `src/index.ts`. Nur `msw`, `@blueprint/<d>/types` und `@blueprint/shared/testing` importieren. Braucht ein Handler ein DTO, gehört es nach `<d>/types`.
-3. `tsconfig.base.json` → Pfad `@blueprint/<d>/testing`.
-4. In jeder Lib mit Specs: `"test": {}` in der `project.json` und eine `tsconfig.spec.json`.
-5. `pnpm verify:boundaries` prüft Tag-Schema und dass das Testing-Projekt kein `build` hat.
+1. Ordner `libs/<d>/testing/` mit `src/index.ts`. Mehr nicht: das Plugin macht daraus `<d>-testing` mit `scope:<d>`, `type:testing`, `feat:none`, Targets `lint` + `typecheck`, **kein** `build`. Der Alias `@blueprint/<d>/testing` kommt aus dem Wildcard-Pfad.
+2. `src/fixtures/<x>.fixture.ts` (Builder `aX()`), `src/handlers/<d>.handlers.ts` (`<d>Handlers`, `<d>Scenarios`), Exporte in `src/index.ts`. Nur `msw`, `@blueprint/<d>/types` und `@blueprint/shared/testing` importieren. Braucht ein Handler ein DTO, gehört es nach `<d>/types`.
+3. Specs: `*.spec.ts` in `src/` einer Lib ablegen, das `test`-Target entsteht automatisch.
+4. `pnpm verify:boundaries` prüft Tag-Schema, dass das Testing-Projekt kein `build` hat und `test` genau bei Libs mit Specs existiert.
 
 ## Verifikation
 
 ```sh
-pnpm exec nx run-many -t build lint test typecheck   # 37 Projekte grün (build 34, lint 37, typecheck 35, test 5)
-pnpm verify:boundaries                                # 61/61 Fälle + Tag-Schema + Test-Isolation + client-Bundle
+pnpm exec nx run-many -t build lint test typecheck   # 37 Projekte, 111 Tasks grün (build 34, lint 37, typecheck 35, test 5)
+pnpm verify:boundaries                                # 66/66 Fälle + Tag-Schema + Test-Isolation + neue Lib + client-Bundle
 ```
+
+Beweise für „Libs ohne Config-Dateien“ (tatsächlich ausgeführt, eigener Nx-Cache):
+
+- `find libs -mindepth 2 -name '*.json' -not -path '*/src/*' -not -path '*/public/*'` → leer, nur `libs/tsconfig*.json` (Tiefe 1).
+- `run-many` mit `--skip-nx-cache`: 111 Tasks grün, dieselben wie vorher; Tests 1+3+3+3 Browser + 23 `sheriff-blueprint` (6 skipped).
+- `dist` (32 Libs + App, 346 Dateien) per `diff -r` identisch zum Stand `2857237`.
+- App baut gegen dist: Text `Bookings` in `dist/libs/layout/ui/esm2022/nav-bar.js` durch einen Marker ersetzt, `nx run client:build --skip-nx-cache --exclude-task-dependencies` → Marker im App-Bundle (`main-*.js`), in den Quellen nicht vorhanden.
+- Plain `eslint` mit leerem `NX_WORKSPACE_DATA_DIRECTORY` auf einem Verstoß in `booking/ui` (`→ @blueprint/booking/data`) → Fehler `type:ui`, Exit 1.
+- MSW: Default-Handler (`beforeEach`) in `booking.store.spec.ts` entfernt → `booking-data:test` rot.
+- Folgelauf ohne `--skip-nx-cache`: 109/111 aus dem Cache (die 2 übrigen: `sheriff-blueprint:build/test`, dort ohne `cache`, wie vorher).
 
 Die 4 Lint-Warnungen in `sheriff-blueprint` (`no-non-null-assertion` in Tests) gab es schon vorher. Baseline vor dem Umbau: alles grün. `client:lint` scheiterte nur flaky, weil die Sheriff-e2e-Specs parallel temporäre Dateien in `apps/client` schrieben.
 
@@ -297,5 +402,7 @@ Die 4 Lint-Warnungen in `sheriff-blueprint` (`no-non-null-assertion` in Tests) g
 | testing: testing → types / shared/testing | erlaubt | ✅ |
 | testing: msw, msw/browser, vitest, @vitest/* in Produktion/App | blockiert | ✅ `bannedExternalImports` |
 | testing: msw in testing-Lib / Spec | erlaubt | ✅ |
+| neue Lib (nur `src/index.ts`): utils → api, → fremder Scope, fremder Slice → neue Lib, Deep-Alias | blockiert | ✅ `type:utils` / `scope:tmpverify` / `scope:booking` / `no-restricted-imports` |
+| neue Lib → shared | erlaubt | ✅ |
 
 Zusätzlich wurden echte Verstöße in Quelldateien eingebaut, per `nx lint <projekt>` geprüft und danach zurückgebaut: `booking-ui`, `checkin-feat-history-feature`, `client` und `checkin-feat-checkin-data` schlugen jeweils mit `@nx/enforce-module-boundaries` fehl. Die Kommentare `// boundary-violation-example: …` in den Quellen markieren weitere Verstöße zum Einkommentieren.
