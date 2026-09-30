@@ -23,23 +23,35 @@ import { join } from 'node:path';
 
 const workspaceRoot = join(import.meta.dirname, '..');
 
-// Throwaway project WITHOUT tags for the noTag case, created for this run only
-// (every real project is tagged). Outside libs/: the tag validation in
-// eslint.config.mjs would reject it there. Not under tmp/: .gitignore'd paths
-// are invisible to Nx. No daemon, so the graph sees it immediately.
+// Throwaway projects, created for this run only (nothing real needs them):
+// - one WITHOUT tags for the noTag case (every real project is tagged).
+//   Outside libs/: the tag validation in eslint.config.mjs would reject it.
+// - a second type:types lib in the booking slice: every slice has exactly one
+//   types lib, so types -> types in the own scope needs a second source.
+// Not under tmp/: .gitignore'd paths are invisible to Nx. No daemon, so the
+// graph sees them immediately.
 process.env.NX_DAEMON = 'false';
 const UNTAGGED = 'tools/verify-untagged';
-const untaggedDir = join(workspaceRoot, UNTAGGED);
-rmSync(untaggedDir, { recursive: true, force: true });
-mkdirSync(join(untaggedDir, 'src'), { recursive: true });
-writeFileSync(
-  join(untaggedDir, 'project.json'),
-  JSON.stringify({ name: 'verify-untagged', projectType: 'library', sourceRoot: `${UNTAGGED}/src`, tags: [] }),
-);
-const removeUntagged = () => {
-  rmSync(untaggedDir, { recursive: true, force: true });
-  // drop it from the cached graph again. Fresh process: this one's Nx file
-  // index still lists the deleted project.json.
+const EXTRA_TYPES = 'libs/booking/verify-types';
+const throwaways = [
+  { dir: UNTAGGED, name: 'verify-untagged', tags: [] },
+  { dir: EXTRA_TYPES, name: 'verify-booking-types', tags: ['scope:booking', 'type:types'] },
+];
+const deleteThrowawayDirs = () => {
+  for (const { dir } of throwaways) rmSync(join(workspaceRoot, dir), { recursive: true, force: true });
+};
+deleteThrowawayDirs();
+for (const { dir, name, tags } of throwaways) {
+  mkdirSync(join(workspaceRoot, dir, 'src'), { recursive: true });
+  writeFileSync(
+    join(workspaceRoot, dir, 'project.json'),
+    JSON.stringify({ name, projectType: 'library', sourceRoot: `${dir}/src`, tags }),
+  );
+}
+const removeThrowawayProjects = () => {
+  deleteThrowawayDirs();
+  // drop them from the cached graph again. Fresh process: this one's Nx file
+  // index still lists the deleted project.json files.
   execFileSync('pnpm', ['exec', 'nx', 'show', 'projects'], { cwd: workspaceRoot, stdio: 'ignore' });
 };
 
@@ -61,7 +73,13 @@ const cases = [
   ['ui -> api', 'libs/booking/ui', "import '@blueprint/booking/api';", 'red'],
   ['ui -> data', 'libs/booking/ui', "import '@blueprint/booking/data';", 'red'],
   ['ui -> events', 'libs/booking/ui', "import '@blueprint/booking/events';", 'green'],
-  ['types -> anything', 'libs/booking/types', "import '@blueprint/shared/types';", 'red'],
+  // types: only other types libs — own scope, shared, never a foreign slice
+  ['types -> own-scope types', EXTRA_TYPES, "import '@blueprint/booking/types';", 'green'],
+  ['types -> shared types', 'libs/booking/types', "import '@blueprint/shared/types';", 'green'],
+  ['types -> utils', 'libs/booking/types', "import '@blueprint/booking/utils';", 'red'],
+  ['types -> shared utils', 'libs/booking/types', "import '@blueprint/shared/utils';", 'red'],
+  ['types -> foreign types', 'libs/checkin/types', "import '@blueprint/booking/types';", 'red'],
+  ['types -> foreign port', 'libs/checkin/types', "import '@blueprint/booking/api';", 'red'],
   ['utils -> events', 'libs/booking/utils', "import '@blueprint/booking/events';", 'red'],
   ['events -> data', 'libs/booking/events', "import '@blueprint/booking/data';", 'red'],
   ['infra -> data', 'libs/booking/infra', "import '@blueprint/booking/data';", 'red'],
@@ -123,7 +141,7 @@ let projectGraph;
 try {
   projectGraph = await createProjectGraphAsync({ exitOnError: false });
 } catch (error) {
-  removeUntagged();
+  removeThrowawayProjects();
   throw error;
 }
 const { depConstraints } = await import('../eslint.config.mjs');
@@ -189,7 +207,7 @@ try {
     });
   }
 } finally {
-  removeUntagged();
+  removeThrowawayProjects();
 }
 
 const markdown = process.argv.includes('--markdown');

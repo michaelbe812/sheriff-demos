@@ -36,7 +36,8 @@ await createProjectGraphAsync({ exitOnError: false });
 // type axis — the layer matrix (X may depend on Y)
 // ---------------------------------------------------------------------------
 const layerMatrix = {
-    "type:types": [],
+    // shared vocabulary may build on other types (own slice or shared)
+    "type:types": ["type:types"],
     "type:utils": ["type:types", "type:utils"],
     "type:events": ["type:types", "type:utils", "type:events"],
     // the contract: NOT infra — that is the inversion
