@@ -16,6 +16,7 @@ import { join } from "node:path";
  *   port                       slice api — the only lib foreign scopes may use
  *   feat-port                  feat api — the only feat lib sibling feats may use
  *   type:app                   apps (composition root of the whole app)
+ *   type:tooling               packages/* (outside the app architecture)
  *
  * All constraints whose source tags match a project apply with AND semantics:
  * the type axis and the scope axis must BOTH allow an import.
@@ -119,7 +120,9 @@ const scopeAxis = [
     // shared is dumb: it never reaches into a slice
     { sourceTag: "scope:shared", onlyDependOnLibsWithTags: ["scope:shared"] },
     // the app composes slices via their shell, binds to ports, uses shared
-    { sourceTag: "type:app", onlyDependOnLibsWithTags: ["type:shell", "port", "scope:shared"] }
+    { sourceTag: "type:app", onlyDependOnLibsWithTags: ["type:shell", "port", "scope:shared"] },
+    // tooling packages (packages/*) are outside the app architecture
+    { sourceTag: "type:tooling", onlyDependOnLibsWithTags: ["type:tooling"] }
 ];
 
 // ---------------------------------------------------------------------------

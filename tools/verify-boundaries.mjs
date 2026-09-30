@@ -15,13 +15,34 @@
  *   node tools/verify-boundaries.mjs            # table + exit code
  *   node tools/verify-boundaries.mjs --markdown # table for docs
  */
-import { readCachedProjectGraph } from '@nx/devkit';
+import { createProjectGraphAsync } from '@nx/devkit';
 import { ESLint } from 'eslint';
-import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { depConstraints } from '../eslint.config.mjs';
 
 const workspaceRoot = join(import.meta.dirname, '..');
+
+// Throwaway project WITHOUT tags for the noTag case, created for this run only
+// (every real project is tagged). Outside libs/: the tag validation in
+// eslint.config.mjs would reject it there. Not under tmp/: .gitignore'd paths
+// are invisible to Nx. No daemon, so the graph sees it immediately.
+process.env.NX_DAEMON = 'false';
+const UNTAGGED = 'tools/verify-untagged';
+const untaggedDir = join(workspaceRoot, UNTAGGED);
+rmSync(untaggedDir, { recursive: true, force: true });
+mkdirSync(join(untaggedDir, 'src'), { recursive: true });
+writeFileSync(
+  join(untaggedDir, 'project.json'),
+  JSON.stringify({ name: 'verify-untagged', projectType: 'library', sourceRoot: `${UNTAGGED}/src`, tags: [] }),
+);
+const removeUntagged = () => {
+  rmSync(untaggedDir, { recursive: true, force: true });
+  // drop it from the cached graph again. Fresh process: this one's Nx file
+  // index still lists the deleted project.json.
+  execFileSync('pnpm', ['exec', 'nx', 'show', 'projects'], { cwd: workspaceRoot, stdio: 'ignore' });
+};
+
 const RULE = '@nx/enforce-module-boundaries';
 
 const DEEP = 'no-restricted-imports';
@@ -76,7 +97,8 @@ const cases = [
   ['relative import across libs', 'libs/booking/feat-manage-booking/feature', "import '../../../data/src/booking.store';", 'red'],
   ['deep import into lib', 'libs/checkin/feat-history/feature', "import '@blueprint/checkin/data/src/internal/checkin.mapper';", 'red', DEEP],
   ['deep import cross-scope', 'libs/checkin/data', "import '@blueprint/booking/data/src/booking.store';", 'red', DEEP],
-  ['untagged project (noTag)', 'packages/sheriff-blueprint/src', "import '@blueprint/shared/utils';", 'red'],
+  ['untagged project (noTag)', `${UNTAGGED}/src`, "import '@blueprint/shared/utils';", 'red'],
+  ['tooling -> lib', 'packages/sheriff-blueprint/src', "import '@blueprint/shared/utils';", 'red'],
   // npm
   ['HttpClient in data', 'libs/booking/data', HTTP, 'red'],
   ['HttpClient in feature', 'libs/booking/feat-check-booking/feature', HTTP, 'red'],
@@ -97,7 +119,15 @@ async function lintImport(fromLib, code, ruleId = RULE) {
 const shortMessage = (text) => text.split('\n')[0].replace(/\s+/g, ' ').slice(0, 110);
 
 // --- tag decision, mirroring Nx' hasTag (exact | glob | /regex/) ------------
-const projects = Object.values(readCachedProjectGraph().nodes);
+let projectGraph;
+try {
+  projectGraph = await createProjectGraphAsync({ exitOnError: false });
+} catch (error) {
+  removeUntagged();
+  throw error;
+}
+const { depConstraints } = await import('../eslint.config.mjs');
+const projects = Object.values(projectGraph.nodes);
 const tsPaths = JSON.parse(readFileSync(join(workspaceRoot, 'tsconfig.base.json'), 'utf-8')).compilerOptions.paths;
 
 const projectOf = (dir) =>
@@ -145,17 +175,21 @@ function messageKind(message) {
 const importOf = (code) => code.match(/['"]([^'"]+)['"]/)?.[1] ?? code;
 
 const rows = [];
-for (const [rule, fromLib, code, expected, ruleId] of cases) {
-  const violations = await lintImport(fromLib, code, ruleId);
-  const actual = violations.length > 0 ? 'red' : 'green';
-  const tags = tagDecision(fromLib, importOf(code));
-  const tagsAgree = tags === null || (expected === 'red') === tags.startsWith('blocked');
-  rows.push({
-    rule, fromLib, code, expected, actual, tags,
-    passed: actual === expected && tagsAgree,
-    message: violations[0] ? shortMessage(violations[0].message) : '',
-    kind: violations[0] ? messageKind(violations[0].message) : '',
-  });
+try {
+  for (const [rule, fromLib, code, expected, ruleId] of cases) {
+    const violations = await lintImport(fromLib, code, ruleId);
+    const actual = violations.length > 0 ? 'red' : 'green';
+    const tags = tagDecision(fromLib, importOf(code));
+    const tagsAgree = tags === null || (expected === 'red') === tags.startsWith('blocked');
+    rows.push({
+      rule, fromLib, code, expected, actual, tags,
+      passed: actual === expected && tagsAgree,
+      message: violations[0] ? shortMessage(violations[0].message) : '',
+      kind: violations[0] ? messageKind(violations[0].message) : '',
+    });
+  }
+} finally {
+  removeUntagged();
 }
 
 const markdown = process.argv.includes('--markdown');
