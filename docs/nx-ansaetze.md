@@ -8,7 +8,7 @@ Alle Angaben stammen aus tatsächlich ausgeführten Läufen (Stand 30. September
 
 | Branch | Basis | Libs (alle buildable) | `nx run-many` | Boundary-Tests | App-Build | Sheriff |
 |---|---|---|---|---|---|---|
-| `feat/nx-blueprint` | `feat/sheriff-config-blueprint` | 32 | ✅ build, lint, test, typecheck (34 Projekte) | ✅ 38/38 | gegen `dist/` | entfernt |
+| `feat/nx-blueprint` | `feat/sheriff-config-blueprint` | 35 (32 + 3 testing, 0 Config-Dateien/Lib) | ✅ build, lint, test, typecheck (38 Projekte, 114 Tasks) | ✅ `verify` 71/71 | gegen `dist/` | entfernt |
 | `feat/nx-inverted-domain-ports` | `feat/inverted-domain-ports` | 34 | ✅ build, lint, test, typecheck (36 Projekte) | ✅ 52/52 | aus Source (`dist/` getestet, Option) | entfernt |
 | `feat/nx-hexagonal-core` | `feat/hexagonal-framework-core` | 19 | ✅ build, lint, typecheck (21 Projekte) | ✅ 60/60 | gegen `dist/` | entfernt |
 
@@ -63,6 +63,12 @@ Nx kennt nur Grenzen zwischen Projekten. Deshalb wird aus jedem Sheriff-Modul (O
 - Feat-Isolation: Nx kennt keine Negation. Deshalb gibt es den positiven Marker `feat:none` für alles außerhalb eines Feats, dazu `feat:<f>` und `feat-port`.
 - `sharedFeatures` fällt weg, auth und layout sind normale Scopes.
 - Buildable + App baut gegen `dist/` (Chunks identisch zum Source-Build).
+
+**Libs ohne Config-Dateien.** Crystal-Plugin (`packages/tooling`) leitet Name, Tags, Alias und Targets jeder Lib aus dem Pfad ab (Marker `libs/**/src/index.ts`). Build/Test laufen über die lokalen Executoren `ng-lib-build`/`ng-lib-application`/`ng-lib-test` (Wrapper um `@nx/angular`), die Build-Dateien (`ng-package.json`, `package.json`, tsconfig) nur temporär unter `tmp/ng-lib/` erzeugen. Ergebnis: **0 Dateien pro Lib** außerhalb `src/` (vorher 7). `tooling:verify` meldet jede Config-Datei unter `libs/**` rot.
+
+**Testing & MSW.** Unit-/Komponententests laufen nur im Vitest Browser Mode (Chromium headless), kein jsdom. HTTP mockt MSW per Service Worker. `shared/testing` hält Worker-Setup + Fixture `worker` (auto-fixture, startet einmal, `resetHandlers` nach jedem Test), je Domain eine `<d>/testing`-Lib (`type:testing`, kein `build`) mit Fixtures/Handlern/Szenarien. Sieben Schutzschichten verhindern MSW/Vitest-Leaks in Produktionscode und App-Bundle (depConstraints, `bannedExternalImports`, fehlendes `build`-Target, Build-Inputs, Asset-Pfad, Bundle-Scan, Zyklenfreiheit).
+
+**Tooling.** Lokales Nx-Plugin `packages/tooling` bündelt Crystal-Plugin, Executoren, Generatoren (`domain`, `layer`, `feat`, `testing`, `move`, `rename`, `remove`, `component`, `service`, `store`) und Skripte. Sync-Generator `app-routes` hält Slice-Shells und `app.routes.ts` deckungsgleich (`nx sync`/`sync:check`). Eine Scope-Liste (`nx.json`) plus Config-Wächter (`tooling:verify`) verhindern Tippfehler-Scopes und Config-Dateien in Libs. `verify:nx-internals` läuft nach `nx migrate`/Angular-Updates gegen die Nx-Interna-Annahmen der Executoren. CI (`.github/workflows/ci.yml`): `sync:check`, `affected` (PR) bzw. `run-many` (Push), `tooling:verify`.
 
 ### Inverted Domain Ports → `feat/nx-inverted-domain-ports`
 
