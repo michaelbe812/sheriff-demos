@@ -123,14 +123,24 @@ export async function generateClient(client, workspaceRoot) {
   return written;
 }
 
-/** Normalized spec text: YAML (with a source comment) or JSON (2 spaces), chosen by the file extension. */
-export function serializeSpec(document, file, url, projectName) {
-  if (file.endsWith('.json')) return `${JSON.stringify(document, null, 2)}\n`;
-  return [
-    `# Source: ${url}`,
-    `# Update: nx run ${projectName}:update-spec (overwrites this file, normalized). Committed, the only source for generate.`,
-    YAML.stringify(document, { lineWidth: 0, aliasDuplicateObjects: false }),
-  ].join('\n');
+/**
+ * Normalized spec text: YAML (with a source comment) or JSON, chosen by the file extension, then
+ * Prettier with the workspace config — the same result the generators' formatFiles produce, so
+ * `update-spec` right after `nx g …:client` reports "unchanged".
+ */
+export async function serializeSpec(document, file, url, projectName, workspaceRoot) {
+  const text = file.endsWith('.json')
+    ? `${JSON.stringify(document, null, 2)}\n`
+    : [
+        `# Source: ${url}`,
+        `# Update: nx run ${projectName}:update-spec (overwrites this file, normalized). Committed, the only source for generate.`,
+        YAML.stringify(document, { lineWidth: 0, aliasDuplicateObjects: false }),
+      ].join('\n');
+  const prettier = await import('prettier').catch(() => undefined);
+  if (!prettier) return text;
+  const filepath = join(workspaceRoot, file);
+  const options = (await prettier.resolveConfig(filepath, { editorconfig: true })) ?? {};
+  return prettier.format(text, { ...options, filepath });
 }
 
 /**
@@ -142,7 +152,7 @@ export async function updateSpec(client, workspaceRoot, projectName) {
   const response = await fetch(client.spec.url);
   if (!response.ok) throw new Error(`GET ${client.spec.url}: ${response.status}`);
   const document = YAML.parse(await response.text());
-  const normalized = serializeSpec(document, client.spec.file, client.spec.url, projectName);
+  const normalized = await serializeSpec(document, client.spec.file, client.spec.url, projectName, workspaceRoot);
   const file = join(workspaceRoot, client.spec.file);
   const before = existsSync(file) ? readFileSync(file, 'utf-8') : undefined;
   if (before !== normalized) writeFileSync(file, normalized);

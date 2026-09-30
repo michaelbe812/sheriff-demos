@@ -15,7 +15,7 @@ export function readClientsJson(tree: Tree): ClientsConfig & { $schema?: string 
   return JSON.parse(tree.read(CLIENTS_CONFIG_FILE, 'utf-8') ?? '{}');
 }
 
-/** Same format as committed (2 spaces + newline; the file is prettier-ignored), key order kept. */
+/** 2 spaces + newline (Prettier-stable, formatFiles keeps it), key order kept. */
 export function writeClientsJson(tree: Tree, config: ClientsConfig): void {
   tree.write(CLIENTS_CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`);
 }
