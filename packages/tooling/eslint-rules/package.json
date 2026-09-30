@@ -1,0 +1,14 @@
+{
+  "name": "@blueprint/tooling-eslint-rules",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ESLint-Regeln der Namensschemata (Dateinamen je Layer, Symbolnamen, Public API), lesen Layer/Scope/Feat aus @blueprint/tooling-conventions. Geladen von eslint.config.mjs über loadWorkspaceRules (@nx/eslint-plugin).",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@blueprint/tooling-conventions": "workspace:*"
+  }
+}

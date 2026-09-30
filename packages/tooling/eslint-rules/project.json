@@ -1,0 +1,40 @@
+{
+  "name": "tooling-eslint-rules",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/tooling/eslint-rules/src",
+  "tags": ["type:tooling", "tooling:eslint-rules"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^default",
+        {
+          "externalDependencies": ["typescript", "@typescript-eslint/utils"]
+        }
+      ],
+      "options": {
+        "command": "tsc -p packages/tooling/eslint-rules/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^default",
+        {
+          "externalDependencies": ["vitest", "@typescript-eslint/utils", "@typescript-eslint/rule-tester", "typescript"]
+        }
+      ],
+      "options": {
+        "command": "vitest run --config packages/tooling/eslint-rules/vitest.config.mts"
+      }
+    }
+  }
+}
