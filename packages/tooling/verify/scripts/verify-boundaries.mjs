@@ -15,6 +15,8 @@
  * folders ↔ specs ↔ libs, graph edges, targets, nothing committed), and a client
  * build proves the bundle carries no msw/vitest/faker; the tooling libs (packages/tooling/*) are checked for
  * name/package/tags, exports ↔ tsconfig.base.json paths, and `nx affected` reaching the users of tooling files.
+ * Naming cases prove the naming rules (packages/tooling/eslint-rules, @angular-eslint) are wired into the real
+ * config: a virtual file per case, the expected rule fires — or none for conforming and generated code.
  *
  * Usage: node packages/tooling/verify/scripts/verify-boundaries.mjs   (exit 1 on any mismatch)
  */
@@ -203,6 +205,8 @@ const cases = [
   blocked('tooling: ng-lib -> openapi', 'packages/tooling/ng-lib', '@blueprint/tooling-openapi', 'tooling:ng-lib'),
   blocked('tooling: ng-lib -> conventions', 'packages/tooling/ng-lib', '@blueprint/tooling-conventions', 'tooling:ng-lib'),
   blocked('tooling: verify -> workspace', 'packages/tooling/verify', '@blueprint/tooling-workspace', 'tooling:verify'),
+  allowed('tooling: eslint-rules -> conventions', 'packages/tooling/eslint-rules', '@blueprint/tooling-conventions'),
+  blocked('tooling: eslint-rules -> workspace', 'packages/tooling/eslint-rules', '@blueprint/tooling-workspace', 'tooling:eslint-rules'),
   blockedInSpec('tooling: conventions spec -> openapi', 'packages/tooling/conventions', '@blueprint/tooling-openapi', [CYCLE, 'tooling:conventions']),
   blocked('tooling: relative across tooling libs', 'packages/tooling/workspace', '../../conventions/src/lib-conventions', 'Projects cannot be imported by a relative or absolute path'),
   blocked('tooling: tooling -> lib', 'packages/tooling/openapi', '@blueprint/shared/api', 'type:tooling'),
@@ -217,6 +221,45 @@ const cases = [
   blocked('new lib: foreign slice only via port', 'libs/checkin/ui', NEW_LIB_ALIAS, 'scope:checkin'),
   blocked('new lib: deep alias import', 'libs/booking/utils', `${NEW_LIB_ALIAS}/src/internal`, 'Deep import'),
 ];
+
+/**
+ * Naming scheme (docs/nx-umsetzung.md → Namensschema): the rule logic is covered by the RuleTester specs of
+ * tooling-eslint-rules; these cases prove the wiring in the real eslint.config.mjs — loader, files/ignores,
+ * options (selector prefix) — incl. the exclusion of generated code. `file` may be an existing file:
+ * only its virtual content is linted.
+ */
+const NAMING_RULES = [
+  'blueprint/lib-file-naming',
+  'blueprint/layer-symbol-naming',
+  'blueprint/no-internal-export',
+  '@angular-eslint/component-selector',
+  '@typescript-eslint/naming-convention',
+];
+const component = (selector, className) =>
+  `import { Component } from '@angular/core';\n@Component({ selector: '${selector}', template: '' })\nexport class ${className} {}\n`;
+const naming = (rule, file, code, expectedRule, expectedText) => ({ rule, file, code, expectedRule, expectedText, allowed: !expectedRule });
+
+const namingCases = [
+  naming('naming: .store.ts outside data/ui/feature', 'libs/booking/utils/src/tmp-verify.store.ts', 'export class TmpVerifyStore {}\n', 'blueprint/lib-file-naming', 'belongs into a data/ui/feature lib'),
+  naming('naming: plain file in a slice types lib', 'libs/booking/types/src/tmp-verify.ts', 'export type TmpVerify = string;\n', 'blueprint/lib-file-naming', 'carry their kind'),
+  naming('naming: folder not kebab-case', 'libs/booking/ui/src/TmpVerify/tmp-verify.ts', 'export const tmpVerify = 1;\n', 'blueprint/lib-file-naming', 'must be kebab-case'),
+  naming('naming: store class ↔ file', 'libs/booking/data/src/tmp-verify.store.ts', 'export class Bookings {}\n', 'blueprint/layer-symbol-naming', '"TmpVerifyStore"'),
+  naming('naming: feat container ↔ feat', 'libs/checkin/feat-history/feature/src/feat-history.ts', component('app-feat-history', 'HistoryPage'), 'blueprint/layer-symbol-naming', '"FeatHistory"'),
+  naming('naming: routes export ↔ scope', 'libs/booking/shell/src/booking.routes.ts', 'export const routes = [];\n', 'blueprint/layer-symbol-naming', '"bookingRoutes"'),
+  naming('naming: component selector ↔ file', 'libs/booking/ui/src/tmp-verify.ts', component('app-other', 'TmpVerify'), 'blueprint/layer-symbol-naming', '"app-tmp-verify"'),
+  naming('naming: component selector prefix', 'libs/booking/ui/src/tmp-verify.ts', component('bk-tmp-verify', 'TmpVerify'), '@angular-eslint/component-selector', 'prefix'),
+  naming('naming: internal/ in public API', 'libs/checkin/data/src/index.ts', "export * from './internal/checkin.mapper';\n", 'blueprint/no-internal-export', 'internal/ is lib-private'),
+  naming('naming: casing (class)', 'libs/booking/data/src/tmp-verify.ts', 'export class tmp_verify {}\n', '@typescript-eslint/naming-convention', 'PascalCase'),
+  naming('naming: conforming names', 'libs/booking/data/src/tmp-verify.store.ts', 'export class TmpVerifyStore {}\n'),
+  naming('naming: conforming component', 'libs/booking/ui/src/tmp-verify.ts', component('app-tmp-verify', 'TmpVerify')),
+  naming('naming: src/generated/** excluded', 'libs/booking/types/src/generated/model/tmp_verify.ts', 'export class tmp_verify {}\n'),
+  naming('naming: generated client lib excluded', 'libs/generated/pet-client/api/src/tmp-verify.store.ts', 'export class Whatever {}\n'),
+];
+
+async function lintNamingCase({ file, code }, eslint) {
+  const [result] = await eslint.lintText(code, { filePath: join(workspaceRoot, file) });
+  return result.messages.filter((m) => NAMING_RULES.includes(m.ruleId));
+}
 
 /**
  * Tag schema vs folder layout. The tags are inferred by
@@ -519,6 +562,7 @@ const AFFECTED_PROBES = [
   { file: 'packages/tooling/ng-lib/scripts/typecheck-lib.mjs', expected: ['booking-types', 'shared-testing'] },
   { file: 'packages/tooling/workspace/src/plugin/blueprint-libs.ts', expected: ['booking-ui', 'checkin-testing', 'client'] },
   { file: 'packages/tooling/conventions/src/lib-conventions.ts', expected: ['booking-ui', 'generated-pet-client-api', 'client'] },
+  { file: 'packages/tooling/eslint-rules/src/rules/lib-file-naming.ts', expected: ['booking-ui', 'shared-testing', 'generated-pet-client-api'] },
   { file: 'packages/tooling/openapi/src/facade/facade.mjs', expected: ['generated-pet-client', 'booking-api', 'client'] },
   { file: 'packages/tooling/openapi/src/testing/testing.mjs', expected: ['booking-generated-booking-client-testing'] },
   { file: 'openapi-clients.json', expected: ['generated-pet-client-api', 'booking-generated-booking-client-testing', 'client'] },
@@ -599,6 +643,14 @@ async function main() {
         ? findings.length === 0
         : findings.length > 0 && [testCase.expectedText].flat().some((expected) => text.includes(expected));
       rows.push({ ...testCase, pass, text });
+    }
+    for (const testCase of namingCases) {
+      const findings = await lintNamingCase(testCase, eslint);
+      const text = findings.map((f) => `${f.ruleId}: ${f.message}`).join(' | ');
+      const pass = testCase.allowed
+        ? findings.length === 0
+        : findings.some((f) => f.ruleId === testCase.expectedRule && f.message.includes(testCase.expectedText));
+      rows.push({ ...testCase, from: testCase.file, importPath: testCase.code.split('\n').at(-2) ?? '', pass, text });
     }
     const clients = checkGeneratedClients(projectGraph);
     const bundle = checkClientBundle();
