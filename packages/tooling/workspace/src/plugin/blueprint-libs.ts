@@ -77,8 +77,11 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '{workspaceRoot}/packages/tooling/workspace/src/plugin/**/*',
         '{workspaceRoot}/packages/tooling/openapi/src/plugin/**/*',
         '{workspaceRoot}/packages/tooling/conventions/src/lib-conventions.ts',
+        // naming rules (blueprint/*), loaded from source by eslint.config.mjs
+        '{workspaceRoot}/packages/tooling/eslint-rules/src/**/*',
+        '!{workspaceRoot}/packages/tooling/eslint-rules/src/**/*.spec.ts',
         GENERATED_CODE_INPUT,
-        { externalDependencies: ['eslint'] },
+        { externalDependencies: ['eslint', 'angular-eslint', 'typescript-eslint'] },
       ],
       dependsOn: [GENERATE_DEPS],
       options: { command: 'eslint .', cwd: '{projectRoot}' },
