@@ -107,6 +107,9 @@ function markerAppBuildsAgainstDist() {
 
 function missingHandlerFailsTest() {
   const original = readFileSync(SPEC_FILE, 'utf-8');
+  // Vitest browser mode stores a screenshot of the failing test next to the spec
+  const screenshots = join(dirname(SPEC_FILE), '__screenshots__');
+  const hadScreenshots = existsSync(screenshots);
   if (!original.includes(DEFAULT_HANDLERS_LINE)) throw new Error(`${SPEC_FILE}: default handler line not found`);
   try {
     writeFileSync(SPEC_FILE, original.replace(DEFAULT_HANDLERS_LINE, ''));
@@ -120,6 +123,7 @@ function missingHandlerFailsTest() {
     throw new Error('booking-data:test stayed green without default handlers');
   } finally {
     writeFileSync(SPEC_FILE, original);
+    if (!hadScreenshots) rmSync(screenshots, { recursive: true, force: true });
   }
 }
 
