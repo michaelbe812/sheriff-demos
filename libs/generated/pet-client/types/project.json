@@ -1,0 +1,13 @@
+{
+  "name": "generated-pet-client-types",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/generated/pet-client/types/src",
+  "tags": ["scope:shared", "type:types", "feat:none", "generated"],
+  "implicitDependencies": ["generated-pet-client"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {}
+  }
+}

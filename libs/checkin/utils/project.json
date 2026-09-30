@@ -1,0 +1,12 @@
+{
+  "name": "checkin-utils",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/checkin/utils/src",
+  "tags": ["scope:checkin", "type:utils", "feat:none"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {}
+  }
+}

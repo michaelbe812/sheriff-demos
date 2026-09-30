@@ -1,0 +1,12 @@
+{
+  "name": "checkin-events",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/checkin/events/src",
+  "tags": ["scope:checkin", "type:events", "feat:none"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {}
+  }
+}

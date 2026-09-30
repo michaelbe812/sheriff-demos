@@ -1,0 +1,6 @@
+{
+  "name": "@blueprint/checkin/events",
+  "version": "0.0.1",
+  "private": true,
+  "sideEffects": false
+}

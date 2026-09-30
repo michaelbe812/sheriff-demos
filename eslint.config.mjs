@@ -1,5 +1,7 @@
 import nx from "@nx/eslint-plugin";
 import { createProjectGraphAsync, readCachedProjectGraph } from "@nx/devkit";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * Blueprint architecture as pure Nx module boundaries — see
@@ -18,9 +20,8 @@ import { createProjectGraphAsync, readCachedProjectGraph } from "@nx/devkit";
  */
 
 /**
- * Lib projects (and their tags) come from the local plugin
- * packages/tooling/workspace/src/plugin/blueprint-libs.ts — there is no project.json to read, so
- * the project graph is the single source of truth. Built on demand below.
+ * Tags of all projects (every lib's project.json) from the project graph — the Nx rule needs the
+ * graph anyway (built on demand below).
  */
 const projectGraph = await ensureProjectGraph();
 const projectNodes = Object.values(projectGraph?.nodes ?? {});
@@ -71,8 +72,8 @@ const httpOnlyInApi = ["type:utils", "type:events", "type:data", "type:ui", "typ
 /**
  * sheriff `sameTag` has no Nx equivalent (no back-reference from source to
  * target tag) => one constraint per scope / feat, generated from the tags
- * that actually exist. A new slice/feat is covered as soon as its first lib
- * folder (with src/index.ts) exists — the plugin derives the tag.
+ * that actually exist. A new slice/feat is covered as soon as its first lib's
+ * project.json carries the tag (the generators derive it from the path).
  */
 function sameTagConstraints(tags) {
     const slices = tagsWithPrefix(tags, "scope:", "scope:shared");
@@ -90,15 +91,15 @@ function sameTagConstraints(tags) {
 /**
  * Nx resolves `@blueprint/<lib>/<deep/path>` to the lib and checks only the
  * tags — the deep import itself passes. Public API = index.ts only, so every
- * path below a lib alias is banned. tsconfig.base.json has a single wildcard
- * `@blueprint/*` -> `libs/*\/src/index.ts`, so the aliases are derived from
- * the lib roots (alias = `@blueprint/` + path below libs/).
+ * path below a lib alias is banned. Generated from the exact lib entries of
+ * tsconfig.base.json `paths` (one per lib, target below libs/; the tooling
+ * entries keep their subpath exports).
  */
 function deepImportPatterns() {
-    return projectNodes
-        // libs only (they carry the alias) — not the OpenAPI client projects libs/**/generated/<client>
-        .filter((node) => node.data.root.startsWith("libs/") && node.data.metadata?.js?.packageName)
-        .map((node) => `@blueprint/${node.data.root.slice("libs/".length)}`)
+    const { paths } = JSON.parse(readFileSync(join(import.meta.dirname, "tsconfig.base.json"), "utf-8")).compilerOptions;
+    return Object.entries(paths)
+        .filter(([, targets]) => targets.some((target) => target.startsWith("./libs/")))
+        .map(([alias]) => alias)
         .sort()
         .map((alias) => ({
             group: [`${alias}/**`],
@@ -109,16 +110,15 @@ function deepImportPatterns() {
 /**
  * Tooling libs (packages/tooling/<lib>, tag tooling:<lib>), imported only via @blueprint/tooling-<lib>:
  *   conventions  path → tags, scope list, Tree helpers — the base, knows no other tooling lib
- *   openapi      clients (plugin, facade, generator) — builds on the conventions only
- *   workspace    libs plugin + generators — conventions, openapi (move/remove keep openapi-clients.json
- *                in step), ng-lib (its targets use the executors; package.json dependency, no import)
- *   ng-lib       executors around Nx internals — standalone, knows no conventions/openapi
+ *   openapi      clients (project config, facade, generator) — builds on the conventions only
+ *   workspace    generators — conventions, openapi (move/remove keep openapi-clients.json in step)
+ *   ng-lib       test executor (Vitest UI flag) around an Nx internal — standalone, knows no conventions/openapi
  *   verify       proofs, read the project graph — standalone
  */
 const toolingConstraints = [
     { sourceTag: "tooling:conventions", onlyDependOnLibsWithTags: [] },
     { sourceTag: "tooling:openapi", onlyDependOnLibsWithTags: ["tooling:conventions"] },
-    { sourceTag: "tooling:workspace", onlyDependOnLibsWithTags: ["tooling:conventions", "tooling:openapi", "tooling:ng-lib"] },
+    { sourceTag: "tooling:workspace", onlyDependOnLibsWithTags: ["tooling:conventions", "tooling:openapi"] },
     { sourceTag: "tooling:ng-lib", onlyDependOnLibsWithTags: [] },
     { sourceTag: "tooling:verify", onlyDependOnLibsWithTags: [] },
 ];

@@ -1,0 +1,47 @@
+{
+  "name": "generated-pet-client",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "tags": ["scope:shared", "generated"],
+  "targets": {
+    "generate": {
+      "executor": "@blueprint/tooling-openapi:generate",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/libs/generated/pet-client/openapi.yaml",
+        {
+          "json": "{workspaceRoot}/openapi-clients.json",
+          "fields": ["defaultAdapter", "clients.generated/pet-client"]
+        },
+        "{workspaceRoot}/libs/generated/pet-client/types/src/index.ts",
+        "{workspaceRoot}/libs/generated/pet-client/api/src/index.ts",
+        "{workspaceRoot}/libs/generated/pet-client/core/src/index.ts",
+        "{workspaceRoot}/packages/tooling/openapi/src/facade/**/*",
+        "{workspaceRoot}/packages/tooling/openapi/src/executors/**/*",
+        "{workspaceRoot}/openapitools.json",
+        {
+          "externalDependencies": ["@openapitools/openapi-generator-cli", "typescript", "yaml"]
+        },
+        {
+          "runtime": "java -version 2>&1"
+        }
+      ],
+      "outputs": [
+        "{projectRoot}/types/src/generated",
+        "{projectRoot}/api/src/generated",
+        "{projectRoot}/core/src/generated"
+      ],
+      "options": {
+        "client": "generated/pet-client"
+      }
+    },
+    "update-spec": {
+      "executor": "@blueprint/tooling-openapi:update-spec",
+      "cache": false,
+      "inputs": ["{workspaceRoot}/openapi-clients.json"],
+      "options": {
+        "client": "generated/pet-client"
+      }
+    }
+  }
+}

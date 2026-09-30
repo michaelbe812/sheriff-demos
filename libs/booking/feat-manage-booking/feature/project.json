@@ -1,0 +1,12 @@
+{
+  "name": "booking-feat-manage-booking-feature",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/feat-manage-booking/feature/src",
+  "tags": ["scope:booking", "type:feature", "feat:manage-booking"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {}
+  }
+}

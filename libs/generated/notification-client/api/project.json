@@ -1,0 +1,17 @@
+{
+  "name": "generated-notification-client-api",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/generated/notification-client/api/src",
+  "tags": ["scope:shared", "type:api", "feat:none", "generated"],
+  "implicitDependencies": [
+    "generated-notification-client",
+    "generated-notification-client-types",
+    "generated-notification-client-core"
+  ],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {}
+  }
+}

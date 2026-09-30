@@ -4,15 +4,11 @@
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "apps/client/src",
-  "tags": [
-    "type:app"
-  ],
+  "tags": ["type:app"],
   "targets": {
     "build": {
-      "executor": "@blueprint/tooling-ng-lib:application",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "executor": "@nx/angular:application",
+      "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/client",
@@ -24,9 +20,7 @@
             "input": "apps/client/public"
           }
         ],
-        "styles": [
-          "apps/client/src/styles.css"
-        ],
+        "styles": ["apps/client/src/styles.css"],
         "buildLibsFromSource": false
       },
       "configurations": {

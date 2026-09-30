@@ -11,6 +11,7 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "cache": true,
+      "dependsOn": [],
       "inputs": [
         "default",
         "^default",
@@ -28,7 +29,7 @@
       "inputs": [
         "default",
         "^default",
-        "{workspaceRoot}/packages/tooling/workspace/src/plugin/**/*",
+        "{workspaceRoot}/nx.json",
         "{workspaceRoot}/openapitools.json",
         "{workspaceRoot}/package.json",
         "{workspaceRoot}/pnpm-lock.yaml",

@@ -1,0 +1,47 @@
+{
+  "name": "booking-generated-booking-client",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "tags": ["scope:booking", "generated"],
+  "targets": {
+    "generate": {
+      "executor": "@blueprint/tooling-openapi:generate",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/libs/booking/generated/booking-client/openapi.yaml",
+        {
+          "json": "{workspaceRoot}/openapi-clients.json",
+          "fields": ["defaultAdapter", "clients.booking/generated/booking-client"]
+        },
+        "{workspaceRoot}/libs/booking/generated/booking-client/types/src/index.ts",
+        "{workspaceRoot}/libs/booking/generated/booking-client/api/src/index.ts",
+        "{workspaceRoot}/libs/booking/generated/booking-client/core/src/index.ts",
+        "{workspaceRoot}/packages/tooling/openapi/src/facade/**/*",
+        "{workspaceRoot}/packages/tooling/openapi/src/executors/**/*",
+        "{workspaceRoot}/openapitools.json",
+        {
+          "externalDependencies": ["@openapitools/openapi-generator-cli", "typescript", "yaml"]
+        },
+        {
+          "runtime": "java -version 2>&1"
+        }
+      ],
+      "outputs": [
+        "{projectRoot}/types/src/generated",
+        "{projectRoot}/api/src/generated",
+        "{projectRoot}/core/src/generated"
+      ],
+      "options": {
+        "client": "booking/generated/booking-client"
+      }
+    },
+    "update-spec": {
+      "executor": "@blueprint/tooling-openapi:update-spec",
+      "cache": false,
+      "inputs": ["{workspaceRoot}/openapi-clients.json"],
+      "options": {
+        "client": "booking/generated/booking-client"
+      }
+    }
+  }
+}

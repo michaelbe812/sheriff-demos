@@ -1,0 +1,12 @@
+{
+  "name": "checkin-feat-history-feature",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/checkin/feat-history/feature/src",
+  "tags": ["scope:checkin", "type:feature", "feat:history"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {}
+  }
+}

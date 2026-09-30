@@ -7,7 +7,8 @@
       "default",
       "!{projectRoot}/.eslintrc.json",
       "!{projectRoot}/eslint.config.mjs",
-      "!{projectRoot}/**/*.spec.ts"
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/tsconfig.spec.json"
     ],
     "sharedGlobals": []
   },
@@ -23,21 +24,91 @@
       ]
     },
     "lint": {
-      "executor": "@nx/eslint:lint",
-      "cache": true
+      "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": ["^generate"],
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/eslint.config.mjs",
+        "{workspaceRoot}/tsconfig.base.json",
+        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
+        { "externalDependencies": ["eslint"] }
+      ],
+      "options": { "command": "eslint .", "cwd": "{projectRoot}" }
     },
-    "@blueprint/tooling-ng-lib:application": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": ["^generate"],
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/tsconfig.base.json",
+        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
+        { "externalDependencies": ["typescript"] }
+      ],
+      "options": { "command": "tsc -p {projectRoot}/tsconfig.json" }
+    },
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite",
+      "cache": true,
+      "dependsOn": ["^build", "^generate"],
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/tsconfig.base.json",
+        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
+        { "externalDependencies": ["ng-packagr", "@angular/compiler-cli", "typescript"] }
+      ],
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "project": "{projectRoot}/ng-package.json",
+        "tsConfig": "{projectRoot}/tsconfig.lib.json"
+      },
+      "configurations": {
+        "production": { "tsConfig": "{projectRoot}/tsconfig.lib.prod.json" },
+        "development": {}
+      }
+    },
+    "test": {
+      "executor": "@blueprint/tooling-ng-lib:test",
+      "cache": true,
+      "dependsOn": ["^generate"],
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{workspaceRoot}/vitest-base.config.mts",
+        "{workspaceRoot}/packages/tooling/ng-lib/src/**/*",
+        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
+        {
+          "externalDependencies": [
+            "vitest",
+            "@vitest/browser-playwright",
+            "msw",
+            "openapi-msw",
+            "@faker-js/faker",
+            "@angular/build"
+          ]
+        }
+      ],
+      "options": {
+        "tsConfig": "{projectRoot}/tsconfig.spec.json",
+        "runnerConfig": "vitest-base.config.mts",
+        "browsers": ["chromiumHeadless"],
+        "watch": false
+      }
+    },
+    "@nx/angular:application": {
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": [
         "production",
         "^production",
         "{workspaceRoot}/tsconfig.base.json",
-        "{workspaceRoot}/packages/tooling/ng-lib/src/**/*",
-        {
-          "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
-          "transitive": true
-        }
+        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true }
       ]
     }
   },
@@ -49,17 +120,6 @@
       "unitTestRunner": "none"
     }
   },
-  "plugins": [
-    {
-      "plugin": "@blueprint/tooling-workspace",
-      "options": {
-        "scopes": ["auth", "booking", "checkin", "layout", "shared"]
-      }
-    },
-    {
-      "plugin": "@blueprint/tooling-openapi"
-    }
-  ],
   "sync": {
     "globalGenerators": ["@blueprint/tooling-workspace:app-routes"]
   }

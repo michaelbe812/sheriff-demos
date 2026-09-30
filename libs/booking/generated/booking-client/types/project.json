@@ -1,0 +1,13 @@
+{
+  "name": "booking-generated-booking-client-types",
+  "$schema": "../../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/generated/booking-client/types/src",
+  "tags": ["scope:booking", "type:types", "feat:none", "generated"],
+  "implicitDependencies": ["booking-generated-booking-client"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {}
+  }
+}

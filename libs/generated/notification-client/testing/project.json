@@ -1,0 +1,33 @@
+{
+  "name": "generated-notification-client-testing",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/generated/notification-client/testing/src",
+  "tags": ["scope:shared", "type:testing", "feat:none", "generated"],
+  "implicitDependencies": ["generated-notification-client"],
+  "targets": {
+    "lint": {
+      "dependsOn": ["generate", "^generate"]
+    },
+    "typecheck": {
+      "dependsOn": ["generate", "^generate"]
+    },
+    "generate": {
+      "executor": "@blueprint/tooling-openapi:generate-testing",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/libs/generated/notification-client/openapi.yaml",
+        "{workspaceRoot}/packages/tooling/openapi/src/facade/facade.mjs",
+        "{workspaceRoot}/packages/tooling/openapi/src/testing/**/*",
+        "{workspaceRoot}/packages/tooling/openapi/src/executors/generate-testing.js",
+        {
+          "externalDependencies": ["openapi-typescript", "orval", "yaml"]
+        }
+      ],
+      "outputs": ["{projectRoot}/src/generated"],
+      "options": {
+        "client": "generated/notification-client"
+      }
+    }
+  }
+}

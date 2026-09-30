@@ -1,0 +1,11 @@
+{
+  "name": "booking-testing",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/testing/src",
+  "tags": ["scope:booking", "type:testing", "feat:none"],
+  "targets": {
+    "lint": {},
+    "typecheck": {}
+  }
+}

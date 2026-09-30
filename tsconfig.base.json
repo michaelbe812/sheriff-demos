@@ -10,36 +10,68 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "strict": false,
     "paths": {
-      "@blueprint/tooling-conventions": [
-        "./packages/tooling/conventions/src/lib-conventions.ts"
+      "@blueprint/auth/api": ["./libs/auth/api/src/index.ts"],
+      "@blueprint/auth/data": ["./libs/auth/data/src/index.ts"],
+      "@blueprint/auth/shell": ["./libs/auth/shell/src/index.ts"],
+      "@blueprint/booking/api": ["./libs/booking/api/src/index.ts"],
+      "@blueprint/booking/data": ["./libs/booking/data/src/index.ts"],
+      "@blueprint/booking/events": ["./libs/booking/events/src/index.ts"],
+      "@blueprint/booking/feat-check-booking/api": ["./libs/booking/feat-check-booking/api/src/index.ts"],
+      "@blueprint/booking/feat-check-booking/data": ["./libs/booking/feat-check-booking/data/src/index.ts"],
+      "@blueprint/booking/feat-check-booking/feature": ["./libs/booking/feat-check-booking/feature/src/index.ts"],
+      "@blueprint/booking/feat-check-booking/ui": ["./libs/booking/feat-check-booking/ui/src/index.ts"],
+      "@blueprint/booking/feat-manage-booking/feature": ["./libs/booking/feat-manage-booking/feature/src/index.ts"],
+      "@blueprint/booking/generated/booking-client/api": ["./libs/booking/generated/booking-client/api/src/index.ts"],
+      "@blueprint/booking/generated/booking-client/core": ["./libs/booking/generated/booking-client/core/src/index.ts"],
+      "@blueprint/booking/generated/booking-client/testing": [
+        "./libs/booking/generated/booking-client/testing/src/index.ts"
       ],
-      "@blueprint/tooling-conventions/tree": [
-        "./packages/tooling/conventions/src/tree.ts"
+      "@blueprint/booking/generated/booking-client/types": [
+        "./libs/booking/generated/booking-client/types/src/index.ts"
       ],
-      "@blueprint/tooling-conventions/testing": [
-        "./packages/tooling/conventions/src/testing/blueprint-tree.ts"
-      ],
-      "@blueprint/tooling-openapi": [
-        "./packages/tooling/openapi/src/plugin/openapi-clients.ts"
-      ],
-      "@blueprint/tooling-openapi/clients": [
-        "./packages/tooling/openapi/src/clients.ts"
-      ],
-      "@blueprint/*": [
-        "./libs/*/src/index.ts"
-      ]
+      "@blueprint/booking/shell": ["./libs/booking/shell/src/index.ts"],
+      "@blueprint/booking/testing": ["./libs/booking/testing/src/index.ts"],
+      "@blueprint/booking/types": ["./libs/booking/types/src/index.ts"],
+      "@blueprint/booking/ui": ["./libs/booking/ui/src/index.ts"],
+      "@blueprint/booking/utils": ["./libs/booking/utils/src/index.ts"],
+      "@blueprint/checkin/api": ["./libs/checkin/api/src/index.ts"],
+      "@blueprint/checkin/data": ["./libs/checkin/data/src/index.ts"],
+      "@blueprint/checkin/events": ["./libs/checkin/events/src/index.ts"],
+      "@blueprint/checkin/feat-checkin/api": ["./libs/checkin/feat-checkin/api/src/index.ts"],
+      "@blueprint/checkin/feat-checkin/data": ["./libs/checkin/feat-checkin/data/src/index.ts"],
+      "@blueprint/checkin/feat-checkin/feature": ["./libs/checkin/feat-checkin/feature/src/index.ts"],
+      "@blueprint/checkin/feat-history/feature": ["./libs/checkin/feat-history/feature/src/index.ts"],
+      "@blueprint/checkin/shell": ["./libs/checkin/shell/src/index.ts"],
+      "@blueprint/checkin/testing": ["./libs/checkin/testing/src/index.ts"],
+      "@blueprint/checkin/types": ["./libs/checkin/types/src/index.ts"],
+      "@blueprint/checkin/ui": ["./libs/checkin/ui/src/index.ts"],
+      "@blueprint/checkin/utils": ["./libs/checkin/utils/src/index.ts"],
+      "@blueprint/generated/notification-client/api": ["./libs/generated/notification-client/api/src/index.ts"],
+      "@blueprint/generated/notification-client/core": ["./libs/generated/notification-client/core/src/index.ts"],
+      "@blueprint/generated/notification-client/testing": ["./libs/generated/notification-client/testing/src/index.ts"],
+      "@blueprint/generated/notification-client/types": ["./libs/generated/notification-client/types/src/index.ts"],
+      "@blueprint/generated/pet-client/api": ["./libs/generated/pet-client/api/src/index.ts"],
+      "@blueprint/generated/pet-client/core": ["./libs/generated/pet-client/core/src/index.ts"],
+      "@blueprint/generated/pet-client/testing": ["./libs/generated/pet-client/testing/src/index.ts"],
+      "@blueprint/generated/pet-client/types": ["./libs/generated/pet-client/types/src/index.ts"],
+      "@blueprint/layout/shell": ["./libs/layout/shell/src/index.ts"],
+      "@blueprint/layout/ui": ["./libs/layout/ui/src/index.ts"],
+      "@blueprint/shared/api": ["./libs/shared/api/src/index.ts"],
+      "@blueprint/shared/testing": ["./libs/shared/testing/src/index.ts"],
+      "@blueprint/shared/types": ["./libs/shared/types/src/index.ts"],
+      "@blueprint/shared/ui": ["./libs/shared/ui/src/index.ts"],
+      "@blueprint/shared/utils": ["./libs/shared/utils/src/index.ts"],
+      "@blueprint/tooling-conventions": ["./packages/tooling/conventions/src/lib-conventions.ts"],
+      "@blueprint/tooling-conventions/testing": ["./packages/tooling/conventions/src/testing/blueprint-tree.ts"],
+      "@blueprint/tooling-conventions/tree": ["./packages/tooling/conventions/src/tree.ts"],
+      "@blueprint/tooling-openapi": ["./packages/tooling/openapi/src/project-config.ts"],
+      "@blueprint/tooling-openapi/clients": ["./packages/tooling/openapi/src/clients.ts"]
     }
   },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+  "exclude": ["node_modules", "tmp"]
 }
