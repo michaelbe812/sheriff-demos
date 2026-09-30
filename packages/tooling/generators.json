@@ -34,6 +34,21 @@
       "factory": "./src/generators/remove/generator",
       "schema": "./src/generators/remove/schema.json",
       "description": "Lib, Feat oder Domain löschen, Routes + Scope austragen; bricht bei Importen ab (außer --force)."
+    },
+    "component": {
+      "factory": "./src/generators/component/generator",
+      "schema": "./src/generators/component/schema.json",
+      "description": "Standalone-OnPush-Komponente in einer Lib (Wrapper, @nx/angular:component findet Libs ohne project.json nicht)."
+    },
+    "service": {
+      "factory": "./src/generators/service/generator",
+      "schema": "./src/generators/service/schema.json",
+      "description": "Injectable in einer Lib (Wrapper)."
+    },
+    "store": {
+      "factory": "./src/generators/store/generator",
+      "schema": "./src/generators/store/schema.json",
+      "description": "Signal-Store in einer Lib (Wrapper)."
     }
   }
 }

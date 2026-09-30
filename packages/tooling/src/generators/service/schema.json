@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintService",
+  "title": "Service in einer Lib",
+  "description": "Dünner Wrapper: @nx/angular-Generatoren finden Libs ohne project.json nicht.",
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "libs/<scope>/<layer>/src/<name> (Unterordner erlaubt).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Pfad (libs/<scope>/<layer>/src/<name>)?"
+    },
+    "export": { "type": "boolean", "description": "Aus index.ts exportieren.", "default": true },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["path"]
+}
