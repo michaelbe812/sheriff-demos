@@ -21,7 +21,7 @@
  * Exits 1 on any mismatch.
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -35,6 +35,30 @@ const BOUNDARY_RULE = '@nx/enforce-module-boundaries';
 
 const APP = 'apps/hexagonal-demo/src/app';
 const lib = (name) => `libs/${name}/src/lib`;
+
+/**
+ * Throwaway type:types libs, created for this run only: the workspace has a
+ * single types lib (shared/types), so types -> types needs a second source
+ * inside shared and one inside a slice. Only project.json — the probe file is
+ * virtual. Not under tmp/: .gitignore'd paths are invisible to Nx.
+ */
+const PROBE_LIBS = [
+  { name: 'verify-shared-types', dir: 'libs/shared/verify-types', tags: ['scope:shared', 'type:types'] },
+  { name: 'verify-booking-types', dir: 'libs/booking/verify-types', tags: ['scope:booking', 'type:types'] },
+];
+const deleteProbeLibs = () => PROBE_LIBS.forEach(({ dir }) => rmSync(join(WORKSPACE_ROOT, dir), { recursive: true, force: true }));
+function createProbeLibs() {
+  deleteProbeLibs();
+  for (const { name, dir, tags } of PROBE_LIBS) {
+    mkdirSync(join(WORKSPACE_ROOT, dir), { recursive: true });
+    writeFileSync(join(WORKSPACE_ROOT, dir, 'project.json'), JSON.stringify({ name, projectType: 'library', sourceRoot: `${dir}/src`, tags }));
+  }
+}
+/** Deletes the probe libs and drops them from the cached graph (fresh process: this one's file index still lists them). */
+function removeProbeLibs() {
+  deleteProbeLibs();
+  spawnSync('pnpm', ['exec', 'nx', 'show', 'projects'], { cwd: WORKSPACE_ROOT, stdio: 'ignore' });
+}
 
 /** [id, source dir, import statement, expected, rule?] — V# = __violations.example.ts */
 const CASES = [
@@ -91,6 +115,14 @@ const CASES = [
   ['model -> domain', lib('booking/model'), `import { canCancel } from '@hex/booking/domain';`, 'red'],
   ['model -> @angular/core (frameworkfrei)', lib('booking/model'), `import { signal } from '@angular/core';`, 'red'],
   ['cross-slice: domain -> fremdes model', lib('booking/domain'), `import { toCustomerId } from '@hex/customer/model';`, 'red'],
+  // types -> only other types: own scope, shared — never a foreign slice, not even via port
+  ['types -> types im eigenen Scope', lib('shared/verify-types'), `import type { Branded } from '@hex/shared/types';`, 'green'],
+  ['slice-types -> shared-types', lib('booking/verify-types'), `import type { Branded } from '@hex/shared/types';`, 'green'],
+  ['slice-types -> shared-util', lib('booking/verify-types'), `import { formatMoney } from '@hex/shared/util';`, 'red'],
+  ['slice-types -> eigenes model', lib('booking/verify-types'), `import type { Booking } from '@hex/booking/model';`, 'red'],
+  ['slice-types -> fremdes model (Domain-Types)', lib('booking/verify-types'), `import type { Customer } from '@hex/customer/model';`, 'red'],
+  ['slice-types -> fremder port-in', lib('booking/verify-types'), `import { CUSTOMER_API } from '@hex/customer/port-in';`, 'red'],
+  ['model -> shared-types', lib('booking/model'), `import type { Branded } from '@hex/shared/types';`, 'green'],
 ];
 
 const VARIANTS = {
@@ -216,12 +248,18 @@ function checkTagHygiene(graph, depConstraints) {
   return problems;
 }
 
-const graph = await createProjectGraphAsync({ exitOnError: true });
-const { moduleBoundaryOptions } = await import(pathToFileURL(join(WORKSPACE_ROOT, 'eslint.config.mjs')).href);
-
+createProbeLibs();
 const results = [];
-for (const testCase of CASES) results.push(await runCase(testCase));
-const problems = [...checkTagHygiene(graph, moduleBoundaryOptions.depConstraints), ...checkNoLibCycles(graph, moduleBoundaryOptions), ...checkRuleRunsWithoutGraphCache()];
+let problems;
+try {
+  const graph = await createProjectGraphAsync({ exitOnError: true });
+  const { moduleBoundaryOptions } = await import(pathToFileURL(join(WORKSPACE_ROOT, 'eslint.config.mjs')).href);
+  for (const testCase of CASES) results.push(await runCase(testCase));
+  problems = [...checkTagHygiene(graph, moduleBoundaryOptions.depConstraints), ...checkNoLibCycles(graph, moduleBoundaryOptions)];
+} finally {
+  removeProbeLibs();
+}
+problems.push(...checkRuleRunsWithoutGraphCache());
 
 console.log(`| # | Fall | erwartet | ${Object.keys(VARIANTS).join(' | ')} | ok | Meldung |`);
 console.log(`|---|---|---|${Object.keys(VARIANTS).map(() => '---').join('|')}|---|---|`);
