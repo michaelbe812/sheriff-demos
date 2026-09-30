@@ -32,10 +32,18 @@
         "^default",
         "{workspaceRoot}/eslint.config.mjs",
         "{workspaceRoot}/tsconfig.base.json",
-        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
-        { "externalDependencies": ["eslint"] }
+        {
+          "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
+          "transitive": true
+        },
+        {
+          "externalDependencies": ["eslint"]
+        }
       ],
-      "options": { "command": "eslint .", "cwd": "{projectRoot}" }
+      "options": {
+        "command": "eslint .",
+        "cwd": "{projectRoot}"
+      }
     },
     "typecheck": {
       "executor": "nx:run-commands",
@@ -45,10 +53,17 @@
         "default",
         "^default",
         "{workspaceRoot}/tsconfig.base.json",
-        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
-        { "externalDependencies": ["typescript"] }
+        {
+          "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
+          "transitive": true
+        },
+        {
+          "externalDependencies": ["typescript"]
+        }
       ],
-      "options": { "command": "tsc -p {projectRoot}/tsconfig.json" }
+      "options": {
+        "command": "tsc -p {projectRoot}/tsconfig.json"
+      }
     },
     "build": {
       "executor": "@nx/angular:ng-packagr-lite",
@@ -58,8 +73,13 @@
         "production",
         "^production",
         "{workspaceRoot}/tsconfig.base.json",
-        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
-        { "externalDependencies": ["ng-packagr", "@angular/compiler-cli", "typescript"] }
+        {
+          "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
+          "transitive": true
+        },
+        {
+          "externalDependencies": ["ng-packagr", "@angular/compiler-cli", "typescript"]
+        }
       ],
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "defaultConfiguration": "production",
@@ -68,7 +88,9 @@
         "tsConfig": "{projectRoot}/tsconfig.lib.json"
       },
       "configurations": {
-        "production": { "tsConfig": "{projectRoot}/tsconfig.lib.prod.json" },
+        "production": {
+          "tsConfig": "{projectRoot}/tsconfig.lib.prod.json"
+        },
         "development": {}
       }
     },
@@ -82,7 +104,10 @@
         "{workspaceRoot}/tsconfig.base.json",
         "{workspaceRoot}/vitest-base.config.mts",
         "{workspaceRoot}/packages/tooling/ng-lib/src/**/*",
-        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
+        {
+          "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
+          "transitive": true
+        },
         {
           "externalDependencies": [
             "vitest",
@@ -108,7 +133,10 @@
         "production",
         "^production",
         "{workspaceRoot}/tsconfig.base.json",
-        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true }
+        {
+          "dependentTasksOutputFiles": "**/src/generated/**/*.ts",
+          "transitive": true
+        }
       ]
     }
   },
@@ -118,6 +146,9 @@
       "linter": "eslint",
       "style": "css",
       "unitTestRunner": "none"
+    },
+    "@nx/angular:component": {
+      "style": "css"
     }
   },
   "sync": {
