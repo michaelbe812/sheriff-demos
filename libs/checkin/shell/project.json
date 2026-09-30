@@ -5,6 +5,9 @@
   "sourceRoot": "libs/checkin/shell/src",
   "tags": ["scope:checkin", "type:shell"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite"
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     }

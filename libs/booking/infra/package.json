@@ -1,0 +1,9 @@
+{
+  "name": "@blueprint/booking/infra",
+  "version": "0.0.1",
+  "private": true,
+  "peerDependencies": {
+    "@angular/core": "^22.0.0"
+  },
+  "sideEffects": false
+}

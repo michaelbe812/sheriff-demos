@@ -34,7 +34,36 @@
         "{workspaceRoot}/eslint.config.mjs",
         "{workspaceRoot}/tools/eslint-rules/**/*"
       ]
-    }
+    },
+    "build": [
+      {
+        "filter": {
+          "executor": "@nx/angular:ng-packagr-lite"
+        },
+        "cache": true,
+        "dependsOn": [
+          "^build"
+        ],
+        "inputs": [
+          "production",
+          "^production"
+        ],
+        "outputs": [
+          "{workspaceRoot}/dist/{projectRoot}"
+        ],
+        "defaultConfiguration": "production",
+        "options": {
+          "project": "{projectRoot}/ng-package.json",
+          "tsConfig": "{projectRoot}/tsconfig.lib.json"
+        },
+        "configurations": {
+          "production": {
+            "tsConfig": "{projectRoot}/tsconfig.lib.prod.json"
+          },
+          "development": {}
+        }
+      }
+    ]
   },
   "generators": {
     "@nx/angular:application": {

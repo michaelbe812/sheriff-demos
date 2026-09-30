@@ -5,6 +5,9 @@
   "sourceRoot": "libs/booking/feat-check-booking/api/src",
   "tags": ["scope:booking/feat-check-booking", "type:api", "feat-port"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite"
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     }

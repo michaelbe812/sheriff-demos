@@ -5,6 +5,9 @@
   "sourceRoot": "libs/layout/shell/src",
   "tags": ["scope:layout", "type:shell"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite"
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     }

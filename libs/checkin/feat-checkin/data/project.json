@@ -5,6 +5,9 @@
   "sourceRoot": "libs/checkin/feat-checkin/data/src",
   "tags": ["scope:checkin/feat-checkin", "type:data"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite"
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     }

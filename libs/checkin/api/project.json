@@ -5,6 +5,9 @@
   "sourceRoot": "libs/checkin/api/src",
   "tags": ["scope:checkin", "type:api", "port"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite"
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     }
