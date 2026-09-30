@@ -1,5 +1,6 @@
 import nx from "@nx/eslint-plugin";
 import { readdirSync } from "node:fs";
+import { createProjectGraphAsync } from "nx/src/devkit-exports.js";
 
 /**
  * Ports & Adapters (hexagonal), FRAMEWORK-AWARE CORE — enforced with Nx only.
@@ -16,6 +17,17 @@ import { readdirSync } from "node:fs";
  * `'*'` catch-all cannot widen anything. That is the opposite of Sheriff's
  * OR'ed depRules, so the "no '*' rule" workaround is not needed here.
  */
+
+/**
+ * @nx/enforce-module-boundaries only reads the CACHED project graph. Without
+ * one (fresh clone, `nx reset`, plain `eslint`, lint-staged, IDE) it prints a
+ * warning and SKIPS — exit code 0, boundaries unchecked. Inside an Nx task the
+ * graph is fresh already; everywhere else build/refresh it first so the rule
+ * always runs against the current libs and tags.
+ */
+if (!process.env.NX_TASK_TARGET_PROJECT) {
+    await createProjectGraphAsync({ exitOnError: false });
+}
 
 /** Every folder under libs/ except shared/ is a slice = one hexagon. */
 const slices = readdirSync(new URL("./libs", import.meta.url), { withFileTypes: true })

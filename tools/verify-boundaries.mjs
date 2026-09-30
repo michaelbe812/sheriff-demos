@@ -15,11 +15,14 @@
  *              ['*'] } — proves a catch-all cannot widen anything in Nx
  *
  * Also checks tag hygiene (one scope + one type per lib, a constraint for every
- * tag) and that the lib graph is acyclic without any ignore (buildable libs
- * with `dependsOn: ^build` need a DAG).
+ * tag), that the lib graph is acyclic without any ignore (buildable libs
+ * with `dependsOn: ^build` need a DAG), and that plain `eslint` without any
+ * cached project graph still enforces the boundaries (no silent skip).
  * Exits 1 on any mismatch.
  */
-import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -175,6 +178,26 @@ function checkNoLibCycles(graph, options) {
   return problems;
 }
 
+/**
+ * The rule skips silently (warning, exit 0) without a cached project graph.
+ * eslint.config.mjs builds one outside Nx tasks — prove it with the plain
+ * eslint CLI against an EMPTY workspace-data dir.
+ */
+function checkRuleRunsWithoutGraphCache() {
+  const emptyDataDir = mkdtempSync(join(tmpdir(), 'nx-data-'));
+  try {
+    const eslint = spawnSync('node', ['node_modules/eslint/bin/eslint.js', '--stdin', '--stdin-filename', `${lib('booking/domain')}/__probe__.ts`], {
+      cwd: WORKSPACE_ROOT,
+      input: `import { InMemoryBookingRepository } from '@hex/booking/adapter-driven';\n`,
+      encoding: 'utf8',
+      env: { ...process.env, NX_WORKSPACE_DATA_DIRECTORY: emptyDataDir, NX_DAEMON: 'false' },
+    });
+    return eslint.status === 1 && eslint.stdout.includes(BOUNDARY_RULE) ? [] : [`eslint without graph cache did not report ${BOUNDARY_RULE} (exit ${eslint.status})`];
+  } finally {
+    rmSync(emptyDataDir, { recursive: true, force: true });
+  }
+}
+
 function checkTagHygiene(graph, depConstraints) {
   const problems = [];
   const constrainedTags = new Set(depConstraints.flatMap((c) => c.allSourceTags ?? [c.sourceTag]));
@@ -198,7 +221,7 @@ const { moduleBoundaryOptions } = await import(pathToFileURL(join(WORKSPACE_ROOT
 
 const results = [];
 for (const testCase of CASES) results.push(await runCase(testCase));
-const problems = [...checkTagHygiene(graph, moduleBoundaryOptions.depConstraints), ...checkNoLibCycles(graph, moduleBoundaryOptions)];
+const problems = [...checkTagHygiene(graph, moduleBoundaryOptions.depConstraints), ...checkNoLibCycles(graph, moduleBoundaryOptions), ...checkRuleRunsWithoutGraphCache()];
 
 console.log(`| # | Fall | erwartet | ${Object.keys(VARIANTS).join(' | ')} | ok | Meldung |`);
 console.log(`|---|---|---|${Object.keys(VARIANTS).map(() => '---').join('|')}|---|---|`);
