@@ -49,6 +49,11 @@
       "factory": "./src/generators/store/generator",
       "schema": "./src/generators/store/schema.json",
       "description": "Signal-Store in einer Lib (Wrapper)."
+    },
+    "app-routes": {
+      "factory": "./src/sync/app-routes/generator",
+      "schema": "./src/sync/app-routes/schema.json",
+      "description": "Sync-Generator (nx sync): Slice-Shells in app.routes.ts registriert, keine Route auf fehlende Libs."
     }
   }
 }

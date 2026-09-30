@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintAppRoutesSync",
+  "title": "Sync: Slice-Shells ↔ app.routes.ts",
+  "description": "Jede Slice-Shell (libs/<s>/shell mit Routes) ist lazy in den App-Routes registriert, keine Route zeigt auf eine fehlende Lib.",
+  "type": "object",
+  "properties": {
+    "appRoutesFile": { "type": "string", "default": "apps/client/src/app/app.routes.ts" }
+  }
+}

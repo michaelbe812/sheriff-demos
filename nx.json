@@ -52,5 +52,8 @@
         "scopes": ["auth", "booking", "checkin", "layout", "shared"]
       }
     }
-  ]
+  ],
+  "sync": {
+    "globalGenerators": ["@blueprint/tooling:app-routes"]
+  }
 }
