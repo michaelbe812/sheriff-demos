@@ -12,6 +12,7 @@
   "targets": {
     "build": {},
     "lint": {},
-    "typecheck": {}
+    "typecheck": {},
+    "test": {}
   }
 }

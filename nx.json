@@ -9,7 +9,9 @@
     "production": [
       "default",
       "!{projectRoot}/.eslintrc.json",
-      "!{projectRoot}/eslint.config.mjs"
+      "!{projectRoot}/eslint.config.mjs",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/tsconfig.spec.json"
     ],
     "sharedGlobals": []
   },
@@ -74,6 +76,23 @@
       ],
       "options": {
         "command": "tsc -p {projectRoot}/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/angular:unit-test",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/vitest-base.config.mts"
+      ],
+      "options": {
+        "tsConfig": "{projectRoot}/tsconfig.spec.json",
+        "runnerConfig": "vitest-base.config.mts",
+        "browsers": [
+          "chromiumHeadless"
+        ],
+        "watch": false
       }
     }
   },
