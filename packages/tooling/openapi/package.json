@@ -2,10 +2,10 @@
   "name": "@blueprint/tooling-openapi",
   "version": "0.0.0",
   "private": true,
-  "description": "Generierte OpenAPI-Clients: Crystal-Plugin für openapi-clients.json, Facade (Vertrag, Registry, Adapter, Split, Barrel), Testing-Generierung, Executoren generate/update-spec/generate-testing, Generator client.",
-  "main": "./src/plugin/openapi-clients.ts",
+  "description": "Generierte OpenAPI-Clients: explizite Projekt-Config (project.json der Clients), Facade (Vertrag, Registry, Adapter, Split, Barrel), Testing-Generierung, Executoren generate/update-spec/generate-testing, Generator client.",
+  "main": "./src/project-config.ts",
   "exports": {
-    ".": "./src/plugin/openapi-clients.ts",
+    ".": "./src/project-config.ts",
     "./clients": "./src/clients.ts",
     "./package.json": "./package.json"
   },

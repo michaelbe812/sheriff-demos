@@ -207,9 +207,6 @@ importers:
       '@blueprint/tooling-conventions':
         specifier: workspace:*
         version: link:../conventions
-      '@blueprint/tooling-ng-lib':
-        specifier: workspace:*
-        version: link:../ng-lib
       '@blueprint/tooling-openapi':
         specifier: workspace:*
         version: link:../openapi

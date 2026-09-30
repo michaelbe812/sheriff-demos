@@ -3,11 +3,24 @@
  * (used by the client generator and by move/rename/remove of @blueprint/tooling-workspace).
  */
 import type { Tree } from '@nx/devkit';
-import { CLIENTS_CONFIG_FILE, parseClientPath } from '@blueprint/tooling-conventions';
-import type { ClientEntry, ClientsConfig } from './plugin/openapi-clients';
-import { forEachSourceFile } from '@blueprint/tooling-conventions/tree';
+import {
+  CLIENTS_CONFIG_FILE,
+  GENERATED_TAG,
+  LIBS_DIR,
+  parseClientPath,
+  projectNameFor,
+} from '@blueprint/tooling-conventions';
+import type { ClientEntry, ClientsConfig } from './project-config';
+import {
+  forEachSourceFile,
+  type Moved,
+  offsetFromRoot,
+  readJsonFile,
+  replacePaths,
+  writeJsonFile,
+} from '@blueprint/tooling-conventions/tree';
 
-export type { ClientEntry, ClientsConfig } from './plugin/openapi-clients';
+export type { ClientEntry, ClientsConfig } from './project-config';
 
 /** openapi-clients.json in the tree (defaults if missing). */
 export function readClientsJson(tree: Tree): ClientsConfig & { $schema?: string } {
@@ -50,6 +63,26 @@ export function updateClientEntries(tree: Tree, from: string, to?: string): [str
   );
   if (changed.length) writeClientsJson(tree, { ...config, clients });
   return changed;
+}
+
+/**
+ * The client project.json (libs/<client>/project.json, not a lib) after the client moved from `from` to `to`:
+ * name, $schema offset, scope tag, and every path in its targets (spec input, json fields, `client` option).
+ * `moved` = what the move generator moved (the client, or the slice it lives in). Returns the new project name.
+ */
+export function relocateClientProject(tree: Tree, from: string, to: string, moved: Moved = { from, to }): string {
+  const file = `${LIBS_DIR}/${to}/project.json`;
+  const client = parseClientPath(to);
+  const name = projectNameFor(to);
+  if (!tree.exists(file) || !client) return name;
+  const project = replacePaths(readJsonFile(tree, file), moved.from, moved.to) as Record<string, unknown>;
+  writeJsonFile(tree, file, {
+    ...project,
+    name,
+    $schema: `${offsetFromRoot(`${LIBS_DIR}/${to}`)}node_modules/nx/schemas/project-schema.json`,
+    tags: [`scope:${client.scope}`, GENERATED_TAG],
+  });
+  return name;
 }
 
 /** `pet-client` → `petClient` (prefix of the generated testing exports: petClientHttp, petClientHandlers …). */

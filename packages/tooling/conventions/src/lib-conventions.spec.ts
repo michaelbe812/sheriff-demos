@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveTags, libPathError, parseClientPath, parseLibPath } from './lib-conventions';
+import { deriveTags, libPathError, parseClientPath, parseLibPath, scopesOfFile } from './lib-conventions';
 
 const scopes = ['auth', 'booking', 'checkin', 'layout', 'shared'];
 
@@ -30,6 +30,13 @@ describe('deriveTags', () => {
 
   it('accepts every scope without a list (backwards compatible)', () => {
     expect(deriveTags('anything/ui')).toContain('scope:anything');
+  });
+
+  it('reads the scope list of lib-scopes.json', () => {
+    expect(scopesOfFile({ scopes })).toEqual(scopes);
+    expect(scopesOfFile({})).toBeUndefined();
+    expect(scopesOfFile(undefined)).toBeUndefined();
+    expect(libPathError('payment/ui', { scopes })).toContain('Allowed scopes (lib-scopes.json)');
   });
 });
 

@@ -1,8 +1,7 @@
 /**
- * Folder convention of the blueprint libs — the single source of truth for
- * the crystal plugins (@blueprint/tooling-workspace: libs, @blueprint/tooling-openapi: clients),
- * the generators and the sync generator.
- * No runtime imports: the plugins load it in every graph computation.
+ * Folder convention of the blueprint libs — the single source of truth for the generators
+ * (they write project.json tags, tsconfig paths, config files) and the sync generator.
+ * No runtime imports (pure path logic, also used by lib-files.ts).
  *
  *   libs/<scope>/<layer>                  scope:<scope> type:<layer> feat:none
  *   libs/<scope>/feat-<feat>/<layer>      scope:<scope> type:<layer> feat:<feat>
@@ -14,8 +13,14 @@
  *   openapi-clients.json (workspace root), see packages/tooling/openapi.
  */
 
-/** nx.json → plugins entry that owns the scope list (options.scopes); its generators create slices. */
-export const WORKSPACE_PLUGIN = '@blueprint/tooling-workspace';
+/** Package of the workspace generators (domain, layer, feat, …) — named in hints. */
+export const WORKSPACE_PACKAGE = '@blueprint/tooling-workspace';
+/**
+ * Scope list (workspace root): allowed `libs/<scope>` folders, `{ "scopes": [...] }`. Folder typo guard,
+ * checked by tooling-verify:verify, maintained by the generators. Own file instead of nx.json: an nx.json
+ * change invalidates the whole cache.
+ */
+export const SCOPES_FILE = 'lib-scopes.json';
 
 export const LIBS_DIR = 'libs';
 export const ALIAS_PREFIX = '@blueprint/';
@@ -37,7 +42,7 @@ export const FEAT_LAYERS = KNOWN_LAYERS.filter((layer) => layer !== 'shell' && l
 export const GENERATED_FOLDER = 'generated';
 /** Marker tag of every generated client lib (and the client project). */
 export const GENERATED_TAG = 'generated';
-/** Client options, one entry per client (key = client path below libs/). Read by the plugin. */
+/** Client options, one entry per client (key = client path below libs/). Read by the OpenAPI executors. */
 export const CLIENTS_CONFIG_FILE = 'openapi-clients.json';
 /** Committed spec in the client folder — exactly one of them. */
 export const CLIENT_SPEC_FILES = ['openapi.yaml', 'openapi.json'];
@@ -50,9 +55,9 @@ export const CLIENT_PARTS: Record<string, string> = { types: 'types', api: 'api'
 /** Parts written by the code generator adapter (the facade); `testing` has its own generate target. */
 export const CLIENT_CODE_PARTS = ['types', 'api', 'core'];
 
-/** Options of the plugin entry in nx.json (`plugins[] → { plugin: WORKSPACE_PLUGIN, options }`). */
+/** Scope list (lib-scopes.json). */
 export interface BlueprintLibsOptions {
-  /** Allowed `libs/<scope>` folders. Unknown scope = graph error (folder typo guard). */
+  /** Allowed `libs/<scope>` folders. Unknown scope = error (folder typo guard). */
   scopes?: string[];
 }
 
@@ -120,25 +125,23 @@ export function libPathError(libPath: string, options: BlueprintLibsOptions = {}
     const suggestion = closestScope(parsed.scope, scopes);
     return (
       `${LIBS_DIR}/${libPath}: unknown scope "${parsed.scope}"${suggestion ? ` (did you mean "${suggestion}"?)` : ''}. ` +
-      `Allowed scopes (nx.json → plugins → ${WORKSPACE_PLUGIN} → options.scopes): ${scopes.join(', ')}. ` +
-      `New slice: nx g ${WORKSPACE_PLUGIN}:domain ${parsed.scope}`
+      `Allowed scopes (${SCOPES_FILE}): ${scopes.join(', ')}. ` +
+      `New slice: nx g ${WORKSPACE_PACKAGE}:domain ${parsed.scope}`
     );
   }
   return undefined;
 }
 
-/** Scope list of an nx.json (options of the WORKSPACE_PLUGIN entry); undefined without list. */
-export function scopesOfNxJson(nxJson: { plugins?: unknown[] } | undefined): string[] | undefined {
-  const entry = nxJson?.plugins?.find(
-    (plugin) => (typeof plugin === 'string' ? plugin : (plugin as { plugin?: string }).plugin) === WORKSPACE_PLUGIN,
-  );
-  return typeof entry === 'object' ? (entry as { options?: BlueprintLibsOptions }).options?.scopes : undefined;
+/** Scope list of a parsed lib-scopes.json; undefined without list. */
+export function scopesOfFile(content: unknown): string[] | undefined {
+  const scopes = (content as BlueprintLibsOptions | undefined)?.scopes;
+  return Array.isArray(scopes) ? scopes : undefined;
 }
 
 /** Tags of a lib, derived purely from its path below `libs/` (e.g. `booking/feat-check-booking/api`). */
 export function deriveTags(libPath: string, options: BlueprintLibsOptions = {}): string[] {
   const error = libPathError(libPath, options);
-  // fail the graph instead of silently creating an unconstrained lib (the old tag-typo problem)
+  // fail instead of silently creating an unconstrained lib (the old tag-typo problem)
   if (error) throw new Error(error);
   const { scope, feat, layer, client } = parseLibPath(libPath) as LibPath;
   // no port: a generated client is never a slice's public API — foreign slices only reach it via the port
@@ -155,7 +158,7 @@ export function deriveTags(libPath: string, options: BlueprintLibsOptions = {}):
 
 /** Project name: path below libs/ joined with "-". */
 export const projectNameFor = (libPath: string): string => libPath.replaceAll('/', '-');
-/** Import alias: resolved by the single `@blueprint/*` wildcard in tsconfig.base.json. */
+/** Import alias: one exact `paths` entry per lib in tsconfig.base.json. */
 export const aliasFor = (libPath: string): string => `${ALIAS_PREFIX}${libPath}`;
 
 /** Known scope with edit distance ≤ 2 (typo hint), if any. */

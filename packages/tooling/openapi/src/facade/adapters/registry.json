@@ -1,5 +1,5 @@
 {
-  "$comment": "Adapter registry: read by the facade (ESM) AND synchronously by the crystal plugin. `packages`, `inputs` and `runtime` become cache inputs of the generate target: adapter version = package version (+ jar version in openapitools.json, + JRE). A new adapter = one entry + one module.",
+  "$comment": "Adapter registry: read by the facade (ESM) AND synchronously by the client generator (project.json) and verify. `packages`, `inputs` and `runtime` become cache inputs of the generate target: adapter version = package version (+ jar version in openapitools.json, + JRE). A new adapter = one entry + one module.",
   "openapi-tools": {
     "module": "./openapi-tools.mjs",
     "packages": ["@openapitools/openapi-generator-cli"],
