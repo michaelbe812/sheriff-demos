@@ -43,21 +43,19 @@ jobs:
           key: openapi-generator-${{ hashFiles('openapitools.json') }}
       # unit/component tests run in Vitest browser mode (Chromium) with MSW
       - run: pnpm exec playwright install --with-deps chromium
-      # slice shells <-> app.routes.ts (sync generator @blueprint/tooling:app-routes)
+      # slice shells <-> app.routes.ts (sync generator @blueprint/tooling-workspace:app-routes)
       - run: pnpm exec nx sync:check
 
       - uses: nrwl/nx-set-shas@v4
         if: github.event_name == 'pull_request'
-      # PRs: only what the change affects. The libs have no graph edge to the tooling
-      # package (plugin + executors), so a tooling change runs everything.
+      # PRs: only what the change affects. Tooling changes need no fallback: every tooling file a lib
+      # task depends on is a {workspaceRoot} input of that task (ng-lib executors + typecheck-lib →
+      # build/test/typecheck, plugins + conventions → lint, facade/testing pipeline → generate,
+      # openapi-clients.json → update-spec), and `affected` follows inputs. Generators or verify only
+      # affect their own tooling lib.
       - name: build lint test typecheck (affected)
         if: github.event_name == 'pull_request'
-        run: |
-          if pnpm exec nx show projects --affected --json | grep -q '"tooling"'; then
-            pnpm exec nx run-many -t build lint test typecheck
-          else
-            pnpm exec nx affected -t build lint test typecheck
-          fi
+        run: pnpm exec nx affected -t build lint test typecheck
       - name: build lint test typecheck (all)
         if: github.event_name != 'pull_request'
         run: pnpm exec nx run-many -t build lint test typecheck

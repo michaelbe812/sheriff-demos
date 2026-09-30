@@ -197,6 +197,9 @@ export function createClientProjects(
       'update-spec': {
         executor: OPENAPI_EXECUTORS.updateSpec,
         cache: false,
+        // reads the url from the file at run time; not cached, so this input only feeds `nx affected`:
+        // an edited openapi-clients.json affects every client (the cache of generate stays per entry)
+        inputs: [`{workspaceRoot}/${CLIENTS_CONFIG_FILE}`],
         options: { client: clientPath },
         metadata: { description: `Downloads the entry's url into ${specFile} (normalized)` },
       },

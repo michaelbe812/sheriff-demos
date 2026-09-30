@@ -14,7 +14,7 @@
  * production, a client check the generated OpenAPI clients (openapi-clients.json ↔
  * folders ↔ specs ↔ libs, graph edges, targets, nothing committed), and a client
  * build proves the bundle carries no msw/vitest/faker; the tooling libs (packages/tooling/*) are checked for
- * name/package/tags and exports ↔ tsconfig.base.json paths.
+ * name/package/tags, exports ↔ tsconfig.base.json paths, and `nx affected` reaching the users of tooling files.
  *
  * Usage: node packages/tooling/verify/scripts/verify-boundaries.mjs   (exit 1 on any mismatch)
  */
@@ -494,6 +494,32 @@ function checkToolingLibs(projectGraph) {
   return { count: libs.length, aliases: Object.keys(expectedPaths).length, problems };
 }
 
+/**
+ * CI runs `nx affected` without a tooling fallback: a tooling change must affect the projects whose tasks
+ * use it — through the {workspaceRoot} inputs of those tasks (no graph edge from libs to tooling).
+ * Probe per tooling area: `nx show projects --affected --files=<file>` contains the expected projects.
+ */
+const AFFECTED_PROBES = [
+  { file: 'packages/tooling/ng-lib/src/build.js', expected: ['booking-data', 'generated-pet-client-api', 'client'] },
+  { file: 'packages/tooling/ng-lib/scripts/typecheck-lib.mjs', expected: ['booking-types', 'shared-testing'] },
+  { file: 'packages/tooling/workspace/src/plugin/blueprint-libs.ts', expected: ['booking-ui', 'checkin-testing', 'client'] },
+  { file: 'packages/tooling/conventions/src/lib-conventions.ts', expected: ['booking-ui', 'generated-pet-client-api', 'client'] },
+  { file: 'packages/tooling/openapi/src/facade/facade.mjs', expected: ['generated-pet-client', 'booking-api', 'client'] },
+  { file: 'packages/tooling/openapi/src/testing/testing.mjs', expected: ['booking-generated-booking-client-testing'] },
+  { file: 'openapi-clients.json', expected: ['generated-pet-client-api', 'booking-generated-booking-client-testing', 'client'] },
+];
+
+function checkAffected() {
+  const problems = [];
+  for (const { file, expected } of AFFECTED_PROBES) {
+    const output = execFileSync('pnpm', ['exec', 'nx', 'show', 'projects', '--affected', `--files=${file}`, '--json'], { encoding: 'utf-8' });
+    const affected = JSON.parse(output.slice(output.indexOf('[')));
+    const missing = expected.filter((project) => !affected.includes(project));
+    if (missing.length) problems.push(`${file}: does not affect ${missing.join(', ')} (task inputs?)`);
+  }
+  return { count: AFFECTED_PROBES.length, problems };
+}
+
 /** The real config, but without `enforceBuildableLibDependency` — isolates the tag constraints. */
 async function createTagsOnlyEslint() {
   const { blueprintDepConstraints } = await import('../../../../eslint.config.mjs');
@@ -544,6 +570,7 @@ async function main() {
     const isolation = checkTestIsolation(projectGraph);
     const newLib = checkNewLib(projectGraph);
     const tooling = checkToolingLibs(projectGraph);
+    const affected = checkAffected();
     const eslint = new ESLint({ cwd: workspaceRoot });
     const eslintTagsOnly = await createTagsOnlyEslint();
 
@@ -558,8 +585,8 @@ async function main() {
     }
     const clients = checkGeneratedClients(projectGraph);
     const bundle = checkClientBundle();
-    report(rows, libConfigs, schema, isolation, newLib, tooling, clients, bundle);
-    const problems = [libConfigs, schema, isolation, newLib, tooling, clients, bundle].flatMap((check) => check.problems);
+    report(rows, libConfigs, schema, isolation, newLib, tooling, affected, clients, bundle);
+    const problems = [libConfigs, schema, isolation, newLib, tooling, affected, clients, bundle].flatMap((check) => check.problems);
     process.exitCode = rows.every((r) => r.pass) && problems.length === 0 ? 0 : 1;
   } finally {
     rmSync(UNTAGGED_LIB, { recursive: true, force: true });
@@ -567,7 +594,7 @@ async function main() {
   }
 }
 
-function report(rows, libConfigs, schema, isolation, newLib, tooling, clients, bundle) {
+function report(rows, libConfigs, schema, isolation, newLib, tooling, affected, clients, bundle) {
   console.log('| Regel | von | Import | erwartet | Ergebnis |');
   console.log('|---|---|---|---|---|');
   for (const r of rows) {
@@ -588,6 +615,8 @@ function report(rows, libConfigs, schema, isolation, newLib, tooling, clients, b
   newLib.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Tooling-Libs: ${tooling.count} Libs (Name, Paket, Tags), ${tooling.aliases} Exporte ↔ tsconfig.base.json paths: ${tooling.problems.length} Probleme`);
   tooling.problems.forEach((p) => console.log(`  - ${p}`));
+  console.log(`nx affected für Tooling-Dateien (CI ohne Tooling-Fallback): ${affected.count} Proben, ${affected.problems.length} Probleme`);
+  affected.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(
     `Generierte Clients: ${clients.entries} Einträge in openapi-clients.json, ${clients.clients} Client-Projekte, ${clients.parts} Libs, ` +
       `${clients.generatedFiles} generierte Dateien (alle gitignored, keine committet); Konsistenz Eintrag ↔ Ordner ↔ Spec ↔ Libs, Kanten, Targets: ${clients.problems.length} Probleme`,

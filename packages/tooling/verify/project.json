@@ -29,10 +29,8 @@
         "{workspaceRoot}/nx.json",
         "{workspaceRoot}/openapi-clients.json",
         "{workspaceRoot}/tsconfig.base.json",
-        "{projectRoot}/scripts/verify-boundaries.mjs",
-        "{workspaceRoot}/packages/tooling/workspace/src/plugin/**/*",
-        "{workspaceRoot}/packages/tooling/openapi/src/plugin/**/*",
-        "{workspaceRoot}/packages/tooling/conventions/src/lib-conventions.ts",
+        "{workspaceRoot}/package.json",
+        "{workspaceRoot}/packages/tooling/**/*",
         {
           "dependentTasksOutputFiles": "**/*"
         },
