@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintLayer",
+  "title": "Lib in bestehender Domain",
+  "description": "libs/<domain>/<layer> mit Beispiel-Datei. Domain muss existieren, Layer aus der Plugin-Liste.",
+  "type": "object",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "Bestehende Domain (Scope).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Domain?"
+    },
+    "layer": {
+      "type": "string",
+      "description": "Layer: types, utils, events, api, data, ui, shell, testing.",
+      "$default": { "$source": "argv", "index": 1 },
+      "x-prompt": {
+        "message": "Layer?",
+        "type": "list",
+        "items": ["types", "utils", "events", "api", "data", "ui", "shell", "testing"]
+      }
+    },
+    "appRoutesFile": { "type": "string", "default": "apps/client/src/app/app.routes.ts" },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["domain", "layer"]
+}

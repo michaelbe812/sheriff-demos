@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintDomain",
+  "title": "Neue Domain (Slice)",
+  "description": "libs/<name>/{types,api,data,ui,shell} + testing + Beispiel-Spec, Lazy-Route in app.routes.ts, Scope in nx.json.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Domain-Name (kebab-case), zugleich Scope und Route-Pfad.",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Name der Domain (kebab-case)?",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "layers": {
+      "type": "string",
+      "description": "Layer, kommagetrennt (types, utils, events, api, data, ui, shell).",
+      "default": "types,api,data,ui,shell"
+    },
+    "testing": {
+      "type": "boolean",
+      "description": "libs/<name>/testing (fixtures, handlers, scenarios) + Beispiel-Spec anlegen.",
+      "default": true
+    },
+    "appRoutesFile": {
+      "type": "string",
+      "description": "App-Routes, in die die Shell lazy eingetragen wird.",
+      "default": "apps/client/src/app/app.routes.ts"
+    },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["name"]
+}

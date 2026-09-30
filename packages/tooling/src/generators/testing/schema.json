@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintTesting",
+  "title": "Testing-Lib einer Domain",
+  "description": "libs/<domain>/testing mit fixtures/, handlers/ (<d>Handlers, <d>Scenarios). Nur msw, <d>/types, shared/testing.",
+  "type": "object",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "Bestehende Domain (Scope).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Domain?"
+    },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["domain"]
+}
