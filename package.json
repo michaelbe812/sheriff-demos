@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "verify:boundaries": "node tools/verify-boundaries.mjs"
+    "verify:boundaries": "node tools/verify-boundaries.mjs",
+    "generate:clients": "nx run-many -t generate"
   },
   "private": true,
   "dependencies": {
