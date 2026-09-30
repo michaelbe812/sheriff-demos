@@ -19,33 +19,35 @@ libs/
   <domain>/testing, shared/testing          scope:<d>|shared type:testing feat:none   nur für Specs, siehe Testing & MSW
 ```
 
-- Jede Lib: `project.json` (Tags, `build` + `lint` + `typecheck`), `tsconfig.json`, `src/index.ts` als **einzige** öffentliche API, dazu die Build-Dateien (siehe [Buildable Libs](#buildable-libs)).
+- Jede Lib: `project.json` (Tags, `build` + `lint` + `typecheck`), `tsconfig.json`, `src/index.ts` als **einzige** öffentliche API. Build-Dateien pro Lib gibt es nicht (siehe [Buildable Libs](#buildable-libs)).
 - Alias: `@blueprint/<pfad-unter-libs>`, z.B. `@blueprint/booking/api` oder `@blueprint/checkin/feat-checkin/api`. Er zeigt direkt auf `index.ts`. Einen Wildcard-Alias gibt es nicht mehr.
 - Projektname = Pfad mit `-` (`booking-feat-check-booking-data`).
 - `booking.routes.ts`/`checkin.routes.ts` exportieren jetzt benannt (`bookingRoutes`), weil `export *` keinen Default re-exportiert.
 - Ein lib-privater Ordner `internal/` (z.B. `checkin/data/src/internal/checkin.mapper.ts`) ist bloße Konvention. Privat ist die Datei, weil `index.ts` sie nicht exportiert.
 
-**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2. Das sind 224 Boilerplate-Dateien (7 pro Lib: `project.json`, `tsconfig.json`, `index.ts` + für den Build `package.json`, `ng-package.json`, `tsconfig.lib.json`, `tsconfig.lib.prod.json`) und 32 `paths`-Einträge. Ein neuer Bucket bedeutet eine neue Lib, nicht einen neuen Ordner. Dazu kommen 3 Testing-Libs (ohne Build, je `project.json`, `tsconfig.json`, `index.ts`), siehe [Testing & MSW](#testing--msw).
+**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2. Das sind 96 Boilerplate-Dateien (3 pro Lib: `project.json`, `tsconfig.json`, `index.ts`) und 32 `paths`-Einträge. Build-Config ist gemeinsam (`libs/tsconfig.lib.json`, `tools/ng-lib`). Ein neuer Bucket bedeutet eine neue Lib, nicht einen neuen Ordner.
 
 ## Buildable Libs
 
-Jede Lib hat ein `build`-Target mit `@nx/angular:ng-packagr-lite` (incremental buildable, `ng-packagr` ~22.0). Die komplette Target-Config steht in `nx.json` → `targetDefaults.build` (`dependsOn: ["^build"]`, cache, `production`-Inputs, Output `dist/{projectRoot}`, Optionen mit `{projectRoot}`). In der `project.json` steht nur `"build": {}`.
+Jede Lib hat ein `build`-Target mit dem lokalen Executor `./tools/ng-lib:build` (incremental buildable). Er delegiert unverändert an `@nx/angular:ng-packagr-lite` (`ng-packagr` ~22.0). Die komplette Target-Config steht in `nx.json` → `targetDefaults.build` (`dependsOn: ["^build"]`, cache, Output `dist/{projectRoot}`). In der `project.json` steht nur `"build": {}`.
 
-Pro Lib zusätzlich:
+**Keine Build-Dateien pro Lib.** Der Executor erzeugt pro Lauf in `tmp/ng-lib/<projectRoot>/<target>/`:
 
-| Datei | Inhalt |
-|---|---|
-| `package.json` | `name` = Import-Alias (`@blueprint/booking/data`), `private: true`, `peerDependencies` = tatsächlich importierte `@angular/*` |
-| `ng-package.json` | `dest: dist/libs/<pfad>`, `entryFile: src/index.ts` |
-| `tsconfig.lib.json` | erweitert `tsconfig.json` (`noEmit: false`, Declarations) |
-| `tsconfig.lib.prod.json` | ohne `declarationMap` |
+| Datei | Inhalt | warum nötig |
+|---|---|---|
+| `ng-package.json` | `dest` = `dist/<projectRoot>`, `entryFile` = `<projectRoot>/src/index.ts` (absolut) | ng-packagr (`forProject`) liest die Config nur aus einer Datei |
+| `package.json` | `name` = Alias aus `tsconfig.base.json`, `private`, `sideEffects: false`, `peerDependencies` aus dem Projekt-Graph | ng-packagr verlangt sie neben der ng-package.json (`Cannot discover package sources … 'package.json' was not found`) |
+| `tsconfig.json` | `extends` gemeinsame `libs/tsconfig.lib.json`, `paths` der Abhängigkeiten auf `dist/` | siehe unten |
 
+- **Gemeinsame tsconfig** `libs/tsconfig.lib.json`. ng-packagr kompiliert nur `entryFile` (rootNames), `include` muss nur irgendeine Datei treffen (sonst TS18003). `production` = Option `compilerOptions: { declarationMap: false }`, statt einer eigenen prod-tsconfig.
+- **Warum die Paths selbst umgeschrieben werden:** Nx (`@nx/js` `calculateProjectBuildableDependencies`) nimmt den Import-Namen einer Abhängigkeit aus deren lib-`package.json`, sonst den Projektnamen (`booking-data`). Ohne lib-`package.json` bliebe `@blueprint/booking/data` auf den Quellen. Beim Lib-Build scheitert das laut, die **App baut aber still aus Source**. Deshalb gibt es auch `./tools/ng-lib:application` (Wrapper um `@nx/angular:application`), der dieselben dist-Paths setzt. Alias-Quelle: `metadata.js.packageName` des Projekts, sonst exakter oder Wildcard-`paths`-Eintrag.
+- **Inputs:** `libs/tsconfig.lib.json`, `tsconfig.base.json` und `tools/ng-lib/**` sind explizite Build-Inputs, weil sie außerhalb der Libs liegen.
+- **dist ist byte-identisch** zum Setup mit Dateien pro Lib (alle 32 Libs + App, `diff -r`).
 - **Incremental:** Beim Lib-Build schreibt Nx die Pfade abhängiger Libs auf `dist/` um. Ohne gebaute Abhängigkeit schlägt der Build fehl (`TS2307`), `dependsOn: ^build` sorgt für die Reihenfolge.
-- **App:** `client:build` nutzt `@nx/angular:application` mit `buildLibsFromSource: false`, bündelt also die gebauten Libs aus `dist/`. Die Chunks sind identisch zum Source-Build (main ~217 kB, 8 Lazy-Chunks, `bookingRoutes`/`checkinRoutes` lazy). `serve` (`@angular/build:dev-server`) baut weiterhin aus den Sources. Für `serve` gegen `dist/` bräuchte es `@nx/angular:dev-server` und damit `@angular-devkit/build-angular`, deshalb bewusst nicht umgesetzt.
+- **App:** `client:build` nutzt `./tools/ng-lib:application` (→ `@nx/angular:application`) mit `buildLibsFromSource: false`, bündelt also die gebauten Libs aus `dist/`. Die Chunks sind identisch zum Source-Build (main ~217 kB, 8 Lazy-Chunks, `bookingRoutes`/`checkinRoutes` lazy). `serve` (`@angular/build:dev-server`) baut weiterhin aus den Sources. Für `serve` gegen `dist/` bräuchte es `@nx/angular:dev-server` und damit `@angular-devkit/build-angular`, deshalb bewusst nicht umgesetzt.
 - **Source-Aliase bleiben:** `tsconfig.base.json` zeigt weiter auf `src/index.ts` (IDE, `typecheck`, Lint).
 - **Output:** `ng-packagr-lite` erzeugt `esm2022/` (eine Datei pro Quelldatei) + `.d.ts`, in *full compilation mode*, ohne FESM-Bundle. Das reicht für das App-Bundling, ist aber nicht publizierbar (deshalb `private: true`). Publizierbar wäre `@nx/angular:package` (FESM2022 + partial compilation).
 - **`enforceBuildableLibDependency`** bleibt an. Da alle Libs buildable sind, greift es nur bei neuen Libs ohne `build`.
-- Nx leitet aus der lib-`package.json` das Tag `npm:private` ab. Keine Constraint nutzt es, die depConstraints sind unverändert.
 
 ## Tag-Schema
 

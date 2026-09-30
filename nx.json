@@ -10,22 +10,11 @@
       "default",
       "!{projectRoot}/.eslintrc.json",
       "!{projectRoot}/eslint.config.mjs",
-      "!{projectRoot}/**/*.spec.ts",
-      "!{projectRoot}/tsconfig.spec.json"
+      "!{projectRoot}/**/*.spec.ts"
     ],
     "sharedGlobals": []
   },
   "targetDefaults": {
-    "@nx/angular:application": {
-      "cache": true,
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "production",
-        "^production"
-      ]
-    },
     "@nx/eslint:lint": {
       "cache": true,
       "inputs": [
@@ -40,6 +29,18 @@
     "lint": {
       "executor": "@nx/eslint:lint",
       "cache": true
+    },
+    "./tools/ng-lib:application": {
+      "cache": true,
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{workspaceRoot}/tools/ng-lib/**/*"
+      ]
     }
   },
   "generators": {

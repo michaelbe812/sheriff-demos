@@ -50,6 +50,9 @@ export function deriveTags(libPath: string): string[] {
   return tags;
 }
 
+/** Shared tsconfigs every lib compiles with — they live outside the lib, so they are explicit inputs. */
+const SHARED_TS_INPUTS = ['{workspaceRoot}/tsconfig.base.json', '{workspaceRoot}/libs/tsconfig.json'];
+
 const hasSpecFiles = (dir: string): boolean =>
   existsSync(dir) &&
   readdirSync(dir, { recursive: true }).some((file) => String(file).endsWith('.spec.ts'));
@@ -77,28 +80,31 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
       inputs: [
         'default',
         '^default',
-        '{workspaceRoot}/tsconfig.base.json',
-        '{workspaceRoot}/libs/tsconfig.json',
+        ...SHARED_TS_INPUTS,
         '{workspaceRoot}/tools/typecheck-lib.mjs',
         { externalDependencies: ['typescript'] },
       ],
       options: { command: 'node tools/typecheck-lib.mjs {projectRoot}' },
     },
-    // Part B hook: today still ng-packagr-lite with the per-lib build files.
-    // A config-less wrapper executor would only swap `executor`/`options` here.
+    // ./tools/ng-lib:build generates ng-package.json, package.json and tsconfig (dist paths) in tmp/
+    // and delegates to @nx/angular:ng-packagr-lite — no build files in the lib
     build: {
-      executor: '@nx/angular:ng-packagr-lite',
+      executor: './tools/ng-lib:build',
       cache: true,
       dependsOn: ['^build'],
-      inputs: ['production', '^production'],
+      inputs: [
+        'production',
+        '^production',
+        ...SHARED_TS_INPUTS,
+        '{workspaceRoot}/libs/tsconfig.lib.json',
+        '{workspaceRoot}/tools/ng-lib/**/*',
+        { externalDependencies: ['ng-packagr', '@angular/compiler-cli', 'typescript'] },
+      ],
       outputs: ['{workspaceRoot}/dist/{projectRoot}'],
       defaultConfiguration: 'production',
-      options: {
-        project: '{projectRoot}/ng-package.json',
-        tsConfig: '{projectRoot}/tsconfig.lib.json',
-      },
+      options: { tsConfig: 'libs/tsconfig.lib.json' },
       configurations: {
-        production: { tsConfig: '{projectRoot}/tsconfig.lib.prod.json' },
+        production: { compilerOptions: { declarationMap: false } },
         development: {},
       },
     },
@@ -106,13 +112,22 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
   // test-only libs are consumed from source by the specs — never built, never shipped
   if (isTestingLib) delete targets['build'];
   if (hasSpecFiles(join(workspaceRoot, projectRoot, 'src'))) {
-    // Vitest browser mode (Chromium) via the Angular unit-test builder, MSW set up in vitest-base.config.mts
+    // Vitest browser mode (Chromium) via @nx/angular:unit-test; the wrapper narrows the shared
+    // spec tsconfig to this lib and maps the ng-lib build target for the Angular builder
     targets['test'] = {
-      executor: '@nx/angular:unit-test',
+      executor: './tools/ng-lib:test',
       cache: true,
-      inputs: ['default', '^production', '{workspaceRoot}/vitest-base.config.mts'],
+      inputs: [
+        'default',
+        '^production',
+        ...SHARED_TS_INPUTS,
+        '{workspaceRoot}/libs/tsconfig.spec.json',
+        '{workspaceRoot}/tools/ng-lib/**/*',
+        '{workspaceRoot}/vitest-base.config.mts',
+        { externalDependencies: ['vitest', '@vitest/browser-playwright', 'msw', '@angular/build'] },
+      ],
       options: {
-        tsConfig: '{projectRoot}/tsconfig.spec.json',
+        tsConfig: 'libs/tsconfig.spec.json',
         runnerConfig: 'vitest-base.config.mts',
         browsers: ['chromiumHeadless'],
         watch: false,

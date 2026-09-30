@@ -1,9 +1,0 @@
-{
-  "name": "@blueprint/checkin/feat-history/feature",
-  "version": "0.0.1",
-  "private": true,
-  "peerDependencies": {
-    "@angular/core": "^22.0.0"
-  },
-  "sideEffects": false
-}

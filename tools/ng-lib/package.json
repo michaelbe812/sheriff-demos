@@ -1,0 +1,5 @@
+{
+  "name": "@blueprint/ng-lib",
+  "private": true,
+  "executors": "./executors.json"
+}

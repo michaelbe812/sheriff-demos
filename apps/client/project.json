@@ -9,7 +9,7 @@
   ],
   "targets": {
     "build": {
-      "executor": "@nx/angular:application",
+      "executor": "./tools/ng-lib:application",
       "outputs": [
         "{options.outputPath}"
       ],
