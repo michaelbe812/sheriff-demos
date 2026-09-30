@@ -13,7 +13,8 @@
  * a test-isolation check the non-lint layers keeping test code out of
  * production, a client check the generated OpenAPI clients (openapi-clients.json ↔
  * folders ↔ specs ↔ libs, graph edges, targets, nothing committed), and a client
- * build proves the bundle carries no msw/vitest/faker.
+ * build proves the bundle carries no msw/vitest/faker; the tooling libs (packages/tooling/*) are checked for
+ * name/package/tags and exports ↔ tsconfig.base.json paths.
  *
  * Usage: node packages/tooling/verify/scripts/verify-boundaries.mjs   (exit 1 on any mismatch)
  */
@@ -187,6 +188,26 @@ const cases = [
   allowedInGenerated('generated code: api -> @angular/common/http', 'libs/generated/pet-client/api', '@angular/common/http'),
   allowedInGenerated('generated code: core -> @angular/common/http', 'libs/generated/pet-client/core', '@angular/common/http'),
   allowedInGenerated('generated code: testing -> msw, faker, openapi-msw', 'libs/generated/pet-client/testing', 'openapi-msw'),
+
+  // tooling libs (packages/tooling/<lib>): explicit, acyclic package imports (conventions ← openapi ← workspace → ng-lib)
+  allowed('tooling: openapi -> conventions', 'packages/tooling/openapi', '@blueprint/tooling-conventions'),
+  allowed('tooling: openapi -> conventions/tree', 'packages/tooling/openapi', '@blueprint/tooling-conventions/tree'),
+  allowed('tooling: workspace -> conventions', 'packages/tooling/workspace', '@blueprint/tooling-conventions'),
+  allowed('tooling: workspace -> openapi/clients', 'packages/tooling/workspace', '@blueprint/tooling-openapi/clients'),
+  allowedInSpec('tooling: spec -> conventions/testing', 'packages/tooling/openapi', '@blueprint/tooling-conventions/testing'),
+  blocked('tooling: conventions -> openapi', 'packages/tooling/conventions', '@blueprint/tooling-openapi', [CYCLE, 'tooling:conventions']),
+  // ng-lib exports nothing (executors only) — its one module stands for "reuse a helper of ng-lib"
+  blocked('tooling: conventions -> ng-lib', 'packages/tooling/conventions', '@blueprint/tooling-ng-lib/src/lib.js', 'tooling:conventions'),
+  blocked('tooling: openapi -> workspace', 'packages/tooling/openapi', '@blueprint/tooling-workspace', [CYCLE, 'tooling:openapi']),
+  blocked('tooling: openapi -> ng-lib', 'packages/tooling/openapi', '@blueprint/tooling-ng-lib/src/lib.js', 'tooling:openapi'),
+  blocked('tooling: ng-lib -> openapi', 'packages/tooling/ng-lib', '@blueprint/tooling-openapi', 'tooling:ng-lib'),
+  blocked('tooling: ng-lib -> conventions', 'packages/tooling/ng-lib', '@blueprint/tooling-conventions', 'tooling:ng-lib'),
+  blocked('tooling: verify -> workspace', 'packages/tooling/verify', '@blueprint/tooling-workspace', 'tooling:verify'),
+  blockedInSpec('tooling: conventions spec -> openapi', 'packages/tooling/conventions', '@blueprint/tooling-openapi', [CYCLE, 'tooling:conventions']),
+  blocked('tooling: relative across tooling libs', 'packages/tooling/workspace', '../../conventions/src/lib-conventions', 'Projects cannot be imported by a relative or absolute path'),
+  blocked('tooling: tooling -> lib', 'packages/tooling/openapi', '@blueprint/shared/api', 'type:tooling'),
+  blocked('tooling: lib -> tooling', 'libs/booking/data', '@blueprint/tooling-conventions', 'non-buildable'),
+  { ...blocked('tooling: lib -> tooling (tags only)', 'libs/booking/data', '@blueprint/tooling-conventions', 'type:data'), tagsOnly: true },
 
   // new lib (only src/index.ts, created for this run): tags + constraints apply without any config
   blocked('new lib: layer rules (ui -> api)', NEW_LIB, '@blueprint/shared/api', 'type:ui'),
@@ -437,6 +458,42 @@ function checkClientBundle() {
   return { problems, files: files.length };
 }
 
+/**
+ * Tooling libs (packages/tooling/<lib>): project `tooling-<lib>`, package `@blueprint/tooling-<lib>`, tags
+ * `type:tooling` + `tooling:<lib>`. Every export of a tooling package that another one depends on needs an
+ * exact entry in tsconfig.base.json `paths` (and back): Nx transpiles plugins/generators with swc + these paths,
+ * the wildcard `@blueprint/*` (libs) would otherwise rewrite `@blueprint/tooling-…` to `libs/tooling-…`.
+ */
+function checkToolingLibs(projectGraph) {
+  const problems = [];
+  const toolingRoot = 'packages/tooling';
+  const libs = readdirSync(toolingRoot).filter((dir) => existsSync(join(toolingRoot, dir, 'package.json')));
+  const packages = Object.fromEntries(
+    libs.map((dir) => [dir, JSON.parse(readFileSync(join(toolingRoot, dir, 'package.json'), 'utf-8'))]),
+  );
+  const expectedPaths = {};
+  for (const dir of libs) {
+    const node = Object.values(projectGraph.nodes).find(({ data }) => data.root === `${toolingRoot}/${dir}`);
+    if (packages[dir].name !== `@blueprint/tooling-${dir}`) problems.push(`${toolingRoot}/${dir}: package must be @blueprint/tooling-${dir}`);
+    if (node?.name !== `tooling-${dir}`) problems.push(`${toolingRoot}/${dir}: project must be tooling-${dir}`);
+    for (const tag of ['type:tooling', `tooling:${dir}`]) if (!node?.data.tags?.includes(tag)) problems.push(`tooling-${dir}: missing tag ${tag}`);
+    for (const dependency of Object.keys(packages[dir].dependencies ?? {}).filter((name) => name.startsWith('@blueprint/tooling-'))) {
+      const target = dependency.slice('@blueprint/tooling-'.length);
+      for (const [subpath, file] of Object.entries(packages[target]?.exports ?? {})) {
+        if (subpath !== './package.json') expectedPaths[`${dependency}${subpath.slice(1)}`] = `./${toolingRoot}/${target}/${file.slice(2)}`;
+      }
+    }
+  }
+  const { paths } = JSON.parse(readFileSync('tsconfig.base.json', 'utf-8')).compilerOptions;
+  const actualPaths = Object.fromEntries(Object.entries(paths).filter(([alias]) => alias.startsWith('@blueprint/tooling-')));
+  for (const alias of new Set([...Object.keys(expectedPaths), ...Object.keys(actualPaths)])) {
+    if (JSON.stringify(actualPaths[alias]) !== JSON.stringify(expectedPaths[alias] && [expectedPaths[alias]])) {
+      problems.push(`tsconfig.base.json paths["${alias}"]: expected ${JSON.stringify(expectedPaths[alias] ?? 'none')} (package exports), got ${JSON.stringify(actualPaths[alias] ?? 'none')}`);
+    }
+  }
+  return { count: libs.length, aliases: Object.keys(expectedPaths).length, problems };
+}
+
 /** The real config, but without `enforceBuildableLibDependency` — isolates the tag constraints. */
 async function createTagsOnlyEslint() {
   const { blueprintDepConstraints } = await import('../../../../eslint.config.mjs');
@@ -486,6 +543,7 @@ async function main() {
     const schema = checkTagSchema(projectGraph);
     const isolation = checkTestIsolation(projectGraph);
     const newLib = checkNewLib(projectGraph);
+    const tooling = checkToolingLibs(projectGraph);
     const eslint = new ESLint({ cwd: workspaceRoot });
     const eslintTagsOnly = await createTagsOnlyEslint();
 
@@ -500,8 +558,8 @@ async function main() {
     }
     const clients = checkGeneratedClients(projectGraph);
     const bundle = checkClientBundle();
-    report(rows, libConfigs, schema, isolation, newLib, clients, bundle);
-    const problems = [libConfigs, schema, isolation, newLib, clients, bundle].flatMap((check) => check.problems);
+    report(rows, libConfigs, schema, isolation, newLib, tooling, clients, bundle);
+    const problems = [libConfigs, schema, isolation, newLib, tooling, clients, bundle].flatMap((check) => check.problems);
     process.exitCode = rows.every((r) => r.pass) && problems.length === 0 ? 0 : 1;
   } finally {
     rmSync(UNTAGGED_LIB, { recursive: true, force: true });
@@ -509,7 +567,7 @@ async function main() {
   }
 }
 
-function report(rows, libConfigs, schema, isolation, newLib, clients, bundle) {
+function report(rows, libConfigs, schema, isolation, newLib, tooling, clients, bundle) {
   console.log('| Regel | von | Import | erwartet | Ergebnis |');
   console.log('|---|---|---|---|---|');
   for (const r of rows) {
@@ -528,6 +586,8 @@ function report(rows, libConfigs, schema, isolation, newLib, clients, bundle) {
   isolation.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Neue Lib (nur ${NEW_LIB}/src/index.ts): ${newLib.problems.length ? 'NICHT ' : ''}automatisch Projekt ${JSON.stringify(newLib.actual ?? {})}`);
   newLib.problems.forEach((p) => console.log(`  - ${p}`));
+  console.log(`Tooling-Libs: ${tooling.count} Libs (Name, Paket, Tags), ${tooling.aliases} Exporte ↔ tsconfig.base.json paths: ${tooling.problems.length} Probleme`);
+  tooling.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(
     `Generierte Clients: ${clients.entries} Einträge in openapi-clients.json, ${clients.clients} Client-Projekte, ${clients.parts} Libs, ` +
       `${clients.generatedFiles} generierte Dateien (alle gitignored, keine committet); Konsistenz Eintrag ↔ Ordner ↔ Spec ↔ Libs, Kanten, Targets: ${clients.problems.length} Probleme`,

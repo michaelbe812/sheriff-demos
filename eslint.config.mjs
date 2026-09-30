@@ -107,6 +107,23 @@ function deepImportPatterns() {
 }
 
 /**
+ * Tooling libs (packages/tooling/<lib>, tag tooling:<lib>), imported only via @blueprint/tooling-<lib>:
+ *   conventions  path → tags, scope list, Tree helpers — the base, knows no other tooling lib
+ *   openapi      clients (plugin, facade, generator) — builds on the conventions only
+ *   workspace    libs plugin + generators — conventions, openapi (move/remove keep openapi-clients.json
+ *                in step), ng-lib (its targets use the executors; package.json dependency, no import)
+ *   ng-lib       executors around Nx internals — standalone, knows no conventions/openapi
+ *   verify       proofs, read the project graph — standalone
+ */
+const toolingConstraints = [
+    { sourceTag: "tooling:conventions", onlyDependOnLibsWithTags: [] },
+    { sourceTag: "tooling:openapi", onlyDependOnLibsWithTags: ["tooling:conventions"] },
+    { sourceTag: "tooling:workspace", onlyDependOnLibsWithTags: ["tooling:conventions", "tooling:openapi", "tooling:ng-lib"] },
+    { sourceTag: "tooling:ng-lib", onlyDependOnLibsWithTags: [] },
+    { sourceTag: "tooling:verify", onlyDependOnLibsWithTags: [] },
+];
+
+/**
  * @nx/enforce-module-boundaries reads the CACHED project graph and silently
  * skips (warning only) when there is none — e.g. plain `eslint` or the IDE
  * after a fresh clone / `nx reset`. `nx lint` builds it itself; for every
@@ -127,6 +144,7 @@ export const blueprintDepConstraints = [
     ...sameTagConstraints(allProjectTags()),
     // tooling packages (packages/*) are outside the app architecture
     { sourceTag: "type:tooling", onlyDependOnLibsWithTags: ["type:tooling"] },
+    ...toolingConstraints,
 ];
 
 /**
@@ -135,13 +153,16 @@ export const blueprintDepConstraints = [
  * handlers behind the booking port). Test packages are allowed.
  * Unchanged: `scope:shared` (shared never knows a domain, so only
  * shared/testing), `type:types` (testing libs build on types: a types spec
- * importing them would be a cycle), `type:tooling`, feat isolation.
+ * importing them would be a cycle), `type:tooling` + `tooling:*`, feat isolation.
  */
 const keepsItsTargetsInSpecs = ["type:types", "type:testing", "scope:shared", "type:tooling"];
 export const specDepConstraints = blueprintDepConstraints
     .filter((constraint) => !noTestPackagesInProduction.includes(constraint))
     .map((constraint) =>
-        constraint.onlyDependOnLibsWithTags && !keepsItsTargetsInSpecs.includes(constraint.sourceTag) && !constraint.sourceTag.startsWith("feat:")
+        constraint.onlyDependOnLibsWithTags &&
+        !keepsItsTargetsInSpecs.includes(constraint.sourceTag) &&
+        !constraint.sourceTag.startsWith("feat:") &&
+        !constraint.sourceTag.startsWith("tooling:")
             ? { ...constraint, onlyDependOnLibsWithTags: [...constraint.onlyDependOnLibsWithTags, "type:testing"] }
             : constraint,
     );
