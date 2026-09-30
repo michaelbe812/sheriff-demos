@@ -1,6 +1,6 @@
 import type { Tree } from '@nx/devkit';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createBlueprintTree, read } from '../../testing/blueprint-tree';
+import { createBlueprintTree, read, scopesOf } from '../../testing/blueprint-tree';
 import { moveGenerator } from '../move/generator';
 import { removeGenerator } from '../remove/generator';
 import { renameGenerator } from '../rename/generator';
@@ -103,6 +103,11 @@ describe('client generator', () => {
 
     expect(tree.exists('libs/booking/generated')).toBe(false);
     expect(read(tree, 'openapi-clients.json')).toBe(before);
+
+    // `generated` is no scope: removing one of two shared clients leaves the scope list alone
+    await clientGenerator(tree, { name: 'other-client', spec: 'specs/demo.yaml', skipFormat: true });
+    await removeGenerator(tree, { path: 'generated/keep-client', skipFormat: true });
+    expect(scopesOf(tree)).toEqual(['booking', 'layout', 'shared']);
   });
 
   it('remove refuses while a port imports the client', async () => {

@@ -5,7 +5,7 @@ import {
   type Tree,
   updateNxJson,
 } from '@nx/devkit';
-import { LIBS_DIR, parseLibPath, SHARED_SCOPE } from '../../plugin/lib-conventions';
+import { GENERATED_FOLDER, LIBS_DIR, parseLibPath, SHARED_SCOPE } from '../../plugin/lib-conventions';
 
 /** Name of this plugin in nx.json → plugins. */
 export const PLUGIN_NAME = '@blueprint/tooling';
@@ -49,7 +49,7 @@ export function writeIfMissing(tree: Tree, path: string, content: string): boole
 export function addExport(tree: Tree, libPath: string, relativeFile: string): void {
   const indexFile = `${LIBS_DIR}/${libPath}/src/index.ts`;
   const line = `export * from './${relativeFile.replace(/\.ts$/, '')}';`;
-  const content = tree.exists(indexFile) ? tree.read(indexFile, 'utf-8') ?? '' : '';
+  const content = tree.exists(indexFile) ? (tree.read(indexFile, 'utf-8') ?? '') : '';
   if (content.includes(line)) return;
   // a fresh lib may carry the placeholder `export {};`
   const kept = content.replace(/^export \{\};\s*$/m, '').trimEnd();
@@ -94,10 +94,14 @@ export function removeScope(tree: Tree, scope: string): void {
 export function assertSliceExists(tree: Tree, scope: string): void {
   const scopes = readScopes(tree);
   if (scopes && !scopes.includes(scope)) {
-    throw new Error(`Unknown scope "${scope}" (nx.json scopes: ${scopes.join(', ')}). Create it first: nx g ${PLUGIN_NAME}:domain ${scope}`);
+    throw new Error(
+      `Unknown scope "${scope}" (nx.json scopes: ${scopes.join(', ')}). Create it first: nx g ${PLUGIN_NAME}:domain ${scope}`,
+    );
   }
   if (listLibPaths(tree, scope).length === 0) {
-    throw new Error(`Slice "${scope}" has no libs below ${LIBS_DIR}/${scope}. Create it first: nx g ${PLUGIN_NAME}:domain ${scope}`);
+    throw new Error(
+      `Slice "${scope}" has no libs below ${LIBS_DIR}/${scope}. Create it first: nx g ${PLUGIN_NAME}:domain ${scope}`,
+    );
   }
 }
 
@@ -111,11 +115,17 @@ export function syncScopesWithLibs(tree: Tree, touchedScopes: string[]): void {
   }
 }
 
-export const scopeOf = (libPath: string): string => libPath.split('/')[0];
+/** Scope of a path below libs/ — `generated/…` (shared OpenAPI clients) belongs to `shared`, it is no scope. */
+export const scopeOf = (libPath: string): string => {
+  const first = libPath.split('/')[0];
+  return first === GENERATED_FOLDER ? SHARED_SCOPE : first;
+};
 
 export function assertValidLibPath(libPath: string): void {
   if (!parseLibPath(libPath)) {
-    throw new Error(`${LIBS_DIR}/${libPath}: not a blueprint lib path (libs/<scope>/<layer> or libs/<scope>/feat-<feat>/<layer>).`);
+    throw new Error(
+      `${LIBS_DIR}/${libPath}: not a blueprint lib path (libs/<scope>/<layer> or libs/<scope>/feat-<feat>/<layer>).`,
+    );
   }
 }
 
