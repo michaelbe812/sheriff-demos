@@ -12,6 +12,9 @@ export type { Booking } from '@blueprint/booking/types';
 export class BookingApi {
   async loadBookings(): Promise<Booking[]> {
     const response = await fetch('/api/bookings');
+    if (!response.ok) {
+      throw new Error(`GET /api/bookings failed: ${response.status}`);
+    }
     return (await response.json()) as Booking[];
   }
 }
