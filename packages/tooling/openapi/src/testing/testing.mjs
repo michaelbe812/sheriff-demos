@@ -57,7 +57,9 @@ export async function generateTestingLib(client, workspaceRoot) {
     },
     workspaceRoot,
   );
-  const mocks = readFileSync(join(rawDir, 'client.msw.ts'), 'utf-8');
+  // a spec without operations: orval writes no mock file at all
+  const mocksFile = join(rawDir, 'client.msw.ts');
+  const mocks = existsSync(mocksFile) ? readFileSync(mocksFile, 'utf-8') : '';
   // orval's "all handlers" function is named after the spec title: get<Title>Mock = () => [...]
   const aggregate = /export const (get\w+Mock) = \(\) => \[/.exec(mocks)?.[1];
   if (!aggregate) throw new Error(`${client.spec.file}: orval produced no msw handlers (no operations?)`);

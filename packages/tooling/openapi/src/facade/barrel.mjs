@@ -27,9 +27,10 @@ export function buildBarrel(rawDir, entries) {
   const lines = [];
   entries.forEach((entry, index) => {
     const moduleSymbol = checker.getSymbolAtLocation(program.getSourceFile(files[index]));
-    const exported = (moduleSymbol ? checker.getExportsOfModule(moduleSymbol) : []).filter(
-      (symbol) => symbol.name !== 'default',
-    );
+    // not a module (e.g. openapi-tools' empty model/models.ts for a spec without schemas): `export *` would
+    // not compile (TS2306), and there is nothing to re-export
+    if (!moduleSymbol) return;
+    const exported = checker.getExportsOfModule(moduleSymbol).filter((symbol) => symbol.name !== 'default');
     const specifier = `./${entry.replace(/\.ts$/, '')}`;
     const duplicates = exported.filter((symbol) => seen.has(symbol.name)).map((symbol) => symbol.name);
     if (!duplicates.length) {
@@ -47,5 +48,5 @@ export function buildBarrel(rawDir, entries) {
     }
     exported.forEach((symbol) => seen.add(symbol.name));
   });
-  return lines.join('\n');
+  return lines.length ? lines.join('\n') : 'export {};';
 }
