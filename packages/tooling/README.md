@@ -4,9 +4,10 @@ Lokales Nx-Plugin des Blueprints (Branch `feat/nx-blueprint`). Alles, was die Li
 
 | Teil | Datei(en) | Aufgabe |
 |---|---|---|
-| Crystal-Plugin | `src/plugin/blueprint-libs.ts`, `src/plugin/lib-conventions.ts` | macht jeden Ordner `libs/<scope>/<layer>` bzw. `libs/<scope>/feat-<f>/<layer>` mit `src/index.ts` zu einem Projekt (Name, Tags, Alias, Targets). Unbekannter Layer oder Scope → Graph-Fehler |
-| Executoren | `src/executors/ng-lib/*`, `executors.json` | `ng-lib-build`, `ng-lib-application`, `ng-lib-test`: erzeugen `ng-package.json`, `package.json`, tsconfig temporär unter `tmp/ng-lib/` und delegieren an `@nx/angular` |
-| Generatoren | `src/generators/*`, `generators.json` | domain, layer, feat, testing, move, rename, remove, component, service, store |
+| Crystal-Plugin | `src/plugin/blueprint-libs.ts`, `src/plugin/lib-conventions.ts`, `src/plugin/openapi-clients.ts` | macht jeden Ordner `libs/<scope>/<layer>` bzw. `libs/<scope>/feat-<f>/<layer>` mit `src/index.ts` zu einem Projekt (Name, Tags, Alias, Targets). Unbekannter Layer oder Scope → Graph-Fehler. Zweiter Marker `openapi-clients.json`: ein Client-Projekt pro Eintrag (`generate`, `update-spec`), Client-Libs `libs/[<d>/]generated/<client>/<teil>` mit Tags und Kanten |
+| OpenAPI | `src/openapi/*` | Facade (Vertrag, Registry, 3 Adapter, Split, Barrel, Header), Testing-Pipeline (openapi-typescript, orval, openapi-msw), Schema von `openapi-clients.json` |
+| Executoren | `src/executors/ng-lib/*`, `src/executors/openapi/*`, `executors.json` | `ng-lib-build`, `ng-lib-application`, `ng-lib-test`: erzeugen `ng-package.json`, `package.json`, tsconfig temporär unter `tmp/ng-lib/` und delegieren an `@nx/angular`. `openapi-generate`, `openapi-generate-testing`, `openapi-update-spec`: Option nur `client` (Pfad), der Rest kommt zur Laufzeit aus `openapi-clients.json` |
+| Generatoren | `src/generators/*`, `generators.json` | domain, layer, feat, testing, client, move, rename, remove, component, service, store |
 | Sync-Generator | `src/sync/app-routes` | `nx sync` / `nx sync:check`: Slice-Shells ↔ `app.routes.ts` |
 | Skripte | `scripts/*.mjs` | `typecheck-lib` (Target `typecheck` der Libs), `verify-boundaries` (Target `tooling:verify`), `verify-nx-internals` (nach `nx migrate`) |
 
@@ -34,6 +35,8 @@ nx g @blueprint/tooling:domain notes --layers=types,utils --testing=false
 nx g @blueprint/tooling:layer payment events                 # libs/payment/events
 nx g @blueprint/tooling:feat payment checkout --api --data --ui   # libs/payment/feat-checkout/{feature,api,data,ui} + Shell-Route
 nx g @blueprint/tooling:testing checkin                      # nur libs/checkin/testing (fixtures, handlers, scenarios)
+nx g @blueprint/tooling:client pet-client --spec=https://petstore3.swagger.io/api/v3/openapi.json
+nx g @blueprint/tooling:client booking-client --domain=booking --spec=./booking.yaml [--adapter=hey-api]
 nx g @blueprint/tooling:move booking/feat-rebook checkin/feat-rebook
 nx g @blueprint/tooling:rename payment billing               # Domain, Feat (booking/feat-a b) oder Lib
 nx g @blueprint/tooling:remove billing [--force]
@@ -48,10 +51,11 @@ nx g @blueprint/tooling:store libs/booking/ui/src/booking-filter
 | `layer <domain> <layer>` | eine Lib mit Beispiel; `shell` wird auch in den App-Routes registriert, `testing` = Testing-Generator | Domain existiert (Scope-Liste + mindestens eine Lib), Layer ∈ `SLICE_LAYERS` des Plugins (`feature` nur im Feat) |
 | `feat <domain> <name> [--api --data --ui]` | `feat-<name>/feature` (Container `Feat<Name>`, OnPush, Store in `providers`) + gewählte Unter-Libs; `loadComponent`-Route in den Shell-Routes der Domain (in `children`, falls vorhanden) | Domain existiert, kebab-case (`feat-` davor wird akzeptiert) |
 | `testing <domain>` | `libs/<d>/testing` allein. Nutzt `<Entity>` aus `<d>/types`, sonst deklariert die Fixture die Backend-Form selbst | Domain existiert |
-| `move <from> <to>` | verschiebt Lib, Feat oder Domain; schreibt alle `@blueprint/<from>…`-Specifier in `apps/` und `libs/` um (statisch, `export … from`, `import()` in Routes, auch in Kommentaren). Route-`path` folgt einer umbenannten Domain bzw. einem Feat; ein Feat in eine andere Domain wandert mit seiner Route in deren Shell. Scope-Liste nachgezogen | Ziel frei, jede Ziel-Lib erfüllt die Pfad-Konvention. Fundstellen außerhalb `apps/`/`libs/` (Doku, Skripte) werden nur gemeldet |
+| `client <name> [--domain] --spec [--url] [--adapter]` | `libs/[<d>/]generated/<name>/`: Spec (Datei unverändert, URL normalisiert als YAML), `types`, `api`, `core`, `testing` mit nur `src/index.ts` (`export * from './generated'`), Eintrag in `openapi-clients.json`. Der Code entsteht per `generate` (siehe [`docs/nx-umsetzung.md` → OpenAPI-Clients](../../docs/nx-umsetzung.md#openapi-clients)) | kebab-case, Domain existiert, Client neu, OpenAPI 3.x mit Pfaden, Adapter bekannt |
+| `move <from> <to>` | verschiebt Lib, Feat, Domain oder OpenAPI-Client (Eintrag in `openapi-clients.json` wandert mit, bei Umbenennung auch `<client>Http`/`<client>Handlers` in den Importen); schreibt alle `@blueprint/<from>…`-Specifier in `apps/` und `libs/` um (statisch, `export … from`, `import()` in Routes, auch in Kommentaren). Route-`path` folgt einer umbenannten Domain bzw. einem Feat; ein Feat in eine andere Domain wandert mit seiner Route in deren Shell. Scope-Liste nachgezogen | Ziel frei, jede Ziel-Lib erfüllt die Pfad-Konvention. Fundstellen außerhalb `apps/`/`libs/` (Doku, Skripte) werden nur gemeldet |
 | `rename <path> <name>` | `move` an denselben Ort (`payment` → `billing`, `booking/feat-a` → `feat-b`) | wie move |
-| `remove <path> [--force]` | löscht, trägt Lazy-Routes (App + Shell) und bei leerer Domain den Scope aus | bricht ab, solange Code sie importiert (Kommentare zählen nicht); `--force` löscht trotzdem und meldet die Stellen |
-| `component` / `service` / `store` `<libs/…/src/name>` | Datei + Export in `index.ts` (`--export=false` ohne) | Pfad liegt in einer Lib; Layer passt: component → ui/feature/shell, service → api/data/feature/shell, store → data/ui/feature |
+| `remove <path> [--force]` | löscht, trägt Lazy-Routes (App + Shell), bei leerer Domain den Scope und Client-Einträge in `openapi-clients.json` aus | bricht ab, solange Code sie importiert (Kommentare zählen nicht); `--force` löscht trotzdem und meldet die Stellen |
+| `component` / `service` / `store` `<libs/…/src/name>` | Datei + Export in `index.ts` (`--export=false` ohne) | Pfad liegt in einer Lib, die nicht generiert ist; Layer passt: component → ui/feature/shell, service → api/data/feature/shell, store → data/ui/feature |
 
 ### Warum eigene Wrapper für component/service/store
 
@@ -66,7 +70,7 @@ libs/bokking/ui: unknown scope "bokking" (did you mean "booking"?). Allowed scop
 @blueprint/tooling → options.scopes): auth, booking, checkin, layout, shared. New slice: nx g @blueprint/tooling:domain bokking
 ```
 
-`domain`, `move`/`rename` und `remove` pflegen die Liste. `tooling:verify` meldet Einträge ohne Lib. Die depConstraints (`sameTagConstraints()` in `eslint.config.mjs`) leiten Scopes weiter aus den Graph-Tags ab; weil das Plugin nur gelistete Scopes zulässt, sind Graph und Liste deckungsgleich.
+`domain`, `move`/`rename` und `remove` pflegen die Liste. `generated` ist reserviert und nie ein Scope: `libs/generated/<client>` gehört zu `shared`, `libs/<d>/generated/<client>` zur Domain. `tooling:verify` meldet Einträge ohne Lib. Die depConstraints (`sameTagConstraints()` in `eslint.config.mjs`) leiten Scopes weiter aus den Graph-Tags ab; weil das Plugin nur gelistete Scopes zulässt, sind Graph und Liste deckungsgleich.
 
 ## Sync-Generator
 
@@ -82,7 +86,7 @@ Shells ohne Routes (`auth/shell` = Provider, `layout/shell` = Komponente) sind n
 | Befehl | prüft |
 |---|---|
 | `nx test tooling` | Vitest (Node), Tree-basiert mit `createTreeWithEmptyWorkspace` + Fixture-Workspace (`src/testing/blueprint-tree.ts`): alle Generatoren, Routen-AST, Plugin-Konventionen, Sync-Generator |
-| `nx run tooling:verify` (`pnpm verify`) | `scripts/verify-boundaries.mjs`: Lint-Fälle gegen die echte ESLint-Config, Tag-Schema + Scope-Liste, Test-Isolation, neue Lib ohne Config, **keine Config-Dateien in `libs/`** (`project.json`, `package.json`, `tsconfig*.json`, `ng-package.json`, `eslint.config.*` außerhalb `src/`, Ausnahme `libs/tsconfig*.json`), Scan des Client-Bundles. Gecacht; Inputs: `libs/**`, `apps/**`, `eslint.config.mjs`, `nx.json`, `tsconfig.base.json`, Skript + Plugin, Output von `client:build` (dependsOn) |
+| `nx run tooling:verify` (`pnpm verify`) | `scripts/verify-boundaries.mjs`: 117 Lint-Fälle gegen die echte ESLint-Config (46 für generierte Clients, auch aus generiertem Code heraus), Tag-Schema + Scope-Liste, Test-Isolation, neue Lib ohne Config, **keine Config-Dateien in `libs/`** (`project.json`, `package.json`, `tsconfig*.json`, `ng-package.json`, `eslint.config.*`, `openapi.(yaml|json)` außerhalb `src/`, Ausnahmen `libs/tsconfig*.json` und die Spec im Client-Ordner), generierte Clients (Eintrag ↔ Ordner ↔ Spec ↔ Libs, Kanten, `^generate`/Hash-Inputs, nichts committet, alles gitignored), Scan des Client-Bundles (msw, vitest, faker). Gecacht; Inputs: `libs/**`, `apps/**`, `eslint.config.mjs`, `nx.json`, `openapi-clients.json`, `tsconfig.base.json`, Skript + Plugin, Output von `client:build` (dependsOn) |
 | `pnpm verify:nx-internals` | nach `nx migrate` / Angular-Update, siehe unten |
 
 ### `pnpm verify:nx-internals`
@@ -90,8 +94,18 @@ Shells ohne Routes (`auth/shell` = Provider, `layout/shell` = Komponente) sind n
 Die Executoren hängen an Nx-Interna. Nach jedem `nx migrate` (und Angular-Update) laufen lassen, vor dem Commit der Migration:
 
 1. `run-many -t build lint test typecheck --skip-nx-cache` in ein frisches `dist/`
-2. dist-Äquivalenz: sha256 jeder Datei gegen `nx-internals/dist-hashes.json` (Stand vor dem Umzug nach `packages/tooling`, 346 Dateien). Alternativ `--reference <dir>` gegen eine Kopie von `dist/` vor dem Update. Ändert ein Update den Output bewusst: prüfen, dann `--update-snapshot`
+2. dist-Äquivalenz: sha256 jeder Datei gegen `nx-internals/dist-hashes.json` (580 Dateien; seit den OpenAPI-Clients bewusst erneuert: +12 Client-Libs, geänderte Ports/Modelle, App-Chunks; alle übrigen Libs byte-gleich zum Stand vor dem Umzug nach `packages/tooling`). Alternativ `--reference <dir>` gegen eine Kopie von `dist/` vor dem Update. Ändert ein Update den Output bewusst: prüfen, dann `--update-snapshot`
 3. Marker: Text in `dist/libs/layout/ui/esm2022/nav-bar.js` ersetzt, `client:build --exclude-task-dependencies` → Marker muss im App-Bundle stehen (App baut gegen `dist`, nicht still aus Source). Danach wird `dist` wiederhergestellt
 4. MSW: `beforeEach(() => worker.use(...bookingHandlers))` aus `booking.store.spec.ts` entfernt → `booking-data:test` muss rot werden (`without a matching request handler`). Datei wird wiederhergestellt
 5. MSW-Worker: temporäre Spec in `booking/api` prüft, dass der Browser `/mockServiceWorker.js` des installierten msw-Pakets bekommt (Version + Checksumme). Vitest serviert ihn selbst (`vitest:browser:resolve-virtual`), es gibt weder `publicDir` noch eine committete Kopie. Das ist ein Vitest-Interna, deshalb hier geprüft
 6. `tooling:verify`
+
+## OpenAPI-Clients
+
+Kurzfassung, Details in [`docs/nx-umsetzung.md` → OpenAPI-Clients](../../docs/nx-umsetzung.md#openapi-clients):
+
+- `openapi-clients.json` (Root): ein Eintrag pro Client (`url`, `adapter`, `options`), Key = Pfad unter `libs/`. Default-Adapter `openapi-tools` (typescript-angular 7.25.0, Java), weitere: `hey-api` (0.83.x gepinnt), `nx-plugin-openapi`. Registry: `src/openapi/adapters/registry.json`.
+- Der Eintrag ist ein `json`-Input von `generate`, keine Target-Option: eine Änderung invalidiert nur diesen Client; Abhängige laufen nur neu, wenn sich der generierte Code ändert.
+- Jede Lib wartet per `^generate` auf den generierten Code ihrer Abhängigkeiten und hasht ihn (`dependentTasksOutputFiles`), weil Nx gitignored Dateien nicht sieht. Teil-Libs haben implizite Kanten zum Client-Projekt.
+- `<client>/testing` generiert aus der Spec: `schema.ts` (openapi-typescript), `mocks.ts` (orval msw + Faker), `<client>Http` (openapi-msw), `<client>Handlers`.
+- Neuer Adapter: Modul in `src/openapi/adapters/` (`generate`, `classify`, siehe `contract.d.ts`) + Eintrag in `registry.json` (Pakete, Inputs, Runtime) + `enum` in `openapi-clients.schema.json` und im `client`-Schema.

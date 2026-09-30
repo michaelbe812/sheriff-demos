@@ -17,6 +17,8 @@ libs/
       data/ ui/ …                           feat:<feat>
   shared/types|utils|api|ui                 scope:shared type:<layer> feat:none
   <domain>/testing, shared/testing          scope:<d>|shared type:testing feat:none   nur für Specs, siehe Testing & MSW
+  generated/<client>/types|api|core|testing           scope:shared      ┐ generierte OpenAPI-Clients, Marker `generated`,
+  <domain>/generated/<client>/types|api|core|testing  scope:<domain>    ┘ nur index.ts committet, siehe OpenAPI-Clients
 ```
 
 - Jede Lib = Ordner + `src/index.ts` als **einzige** öffentliche API. Außerhalb von `src/` gibt es pro Lib **keine Datei**: kein `project.json`, `package.json`, `ng-package.json`, `tsconfig*.json`. Projekt, Tags und Targets leitet das lokale Nx-Plugin `@blueprint/tooling` aus dem Pfad ab (siehe [Libs ohne Config-Dateien](#libs-ohne-config-dateien)), `tooling:verify` meldet jede solche Datei rot.
@@ -26,7 +28,7 @@ libs/
 - `booking.routes.ts`/`checkin.routes.ts` exportieren jetzt benannt (`bookingRoutes`), weil `export *` keinen Default re-exportiert.
 - Ein lib-privater Ordner `internal/` (z.B. `checkin/data/src/internal/checkin.mapper.ts`) ist bloße Konvention. Privat ist die Datei, weil `index.ts` sie nicht exportiert.
 
-**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2, dazu 3 Testing-Libs. Pro Lib nur noch `src/index.ts` als Pflichtdatei. Ein neuer Bucket bedeutet einen neuen Lib-Ordner mit `src/index.ts`. Die Konfiguration ist zentral (`packages/tooling`, `libs/tsconfig*.json`), Dateizählung siehe [Libs ohne Config-Dateien](#libs-ohne-config-dateien).
+**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2, dazu 3 Testing-Libs und 12 Libs der 3 Beispiel-Clients (je types/api/core/testing, nur `index.ts` committet). Pro Lib nur noch `src/index.ts` als Pflichtdatei. Ein neuer Bucket bedeutet einen neuen Lib-Ordner mit `src/index.ts`. Die Konfiguration ist zentral (`packages/tooling`, `libs/tsconfig*.json`), Dateizählung siehe [Libs ohne Config-Dateien](#libs-ohne-config-dateien).
 
 ## Buildable Libs
 
@@ -156,7 +158,7 @@ Seit msw 3 gibt es keinen committeten `mockServiceWorker.js` mehr: Vitest servie
 | Scope | `scope:<slice>`, `scope:shared` | jede Lib |
 | Type | `type:types\|utils\|events\|api\|data\|ui\|feature`, `type:app`, `type:tooling`, `type:testing` | jede Lib/App/Package |
 | Feat | `feat:<feat>` bzw. `feat:none` | jede Lib |
-| Marker | `port`, `feat-port`, `entry` | Slice-api, Feat-api, Slice-shell |
+| Marker | `port`, `feat-port`, `entry`, `generated` | Slice-api, Feat-api, Slice-shell, generierte Client-Libs (siehe [OpenAPI-Clients](#openapi-clients)) |
 
 ## depConstraints (`eslint.config.mjs`)
 
@@ -254,7 +256,7 @@ Unit- und Komponententests laufen **nur im Vitest Browser Mode** (Chromium headl
 
 ```
 libs/shared/testing/          scope:shared  type:testing  feat:none   kein build-Target
-  src/network.ts                `worker` (setupWorker aus msw/browser) + `test` mit Auto-Fixture `worker`
+  src/network.ts                `worker` (setupWorker aus msw/browser) + `test` mit Auto-Fixture `worker` (+ `faker.seed(FAKER_SEED)` pro Test)
 libs/<domain>/testing/        scope:<domain> type:testing feat:none   kein build-Target
   src/fixtures/                 Builder: aBooking(), aCheckinDto()
   src/handlers/                 <domain>Handlers (Normalfall), <domain>Scenarios (empty, serverError, with…)
@@ -262,7 +264,7 @@ vitest-base.config.mts        runnerConfig: msw-Prebundle-Fix, Browser-Condition
 ```
 
 - Domain-Testing-Libs importieren nur `msw` (nicht `msw/browser`), `type:types` und `shared/testing`. Deshalb liegt `CheckinDto` jetzt in `checkin/types` statt in `checkin/api`.
-- `test`-Target inferiert das Plugin für jede Lib, deren `src/` eine `*.spec.ts` enthält (heute `booking-api`, `booking-data`, `checkin-data`, `checkin-feat-checkin-feature`). Executor `@blueprint/tooling:ng-lib-test` (Wrapper um `@nx/angular:unit-test`), `browsers: ["chromiumHeadless"]`, `runnerConfig: vitest-base.config.mts`, `tsConfig: libs/tsconfig.spec.json`, `watch: false`. Keine Datei pro Lib, siehe [Libs ohne Config-Dateien](#libs-ohne-config-dateien).
+- `test`-Target inferiert das Plugin für jede Lib, deren `src/` eine `*.spec.ts` enthält (heute `booking-api`, `booking-data`, `checkin-api`, `checkin-data`, `checkin-feat-checkin-feature`, `shared-api`). Executor `@blueprint/tooling:ng-lib-test` (Wrapper um `@nx/angular:unit-test`), `browsers: ["chromiumHeadless"]`, `runnerConfig: vitest-base.config.mts`, `tsConfig: libs/tsconfig.spec.json`, `watch: false`. Keine Datei pro Lib, siehe [Libs ohne Config-Dateien](#libs-ohne-config-dateien).
 - Einmalig: `pnpm exec playwright install chromium`.
 
 ### So sieht ein Test aus
@@ -291,6 +293,7 @@ describe('BookingStore', () => {
 ```
 
 - **Fixture `worker`** (`auto: true`): startet den Worker einmal (`onUnhandledFrame: 'error'`, msw 3; vorher `onUnhandledRequest`; Promise-Guard), `use(worker)`, danach `worker.resetHandlers()`. Kein `stop`, wie im Rezept. Abweichungen vom Rezept: `start` nur beim ersten Test (Rezept: `await worker.start()` pro Test; hier teilen sich alle Specs einer Lib die Seite, `isolate: false`) und `setupWorker()` ohne Happy-Path-Handler, die Defaults setzt jede Spec selbst.
+- **Faker:** Die Fixture setzt vor jedem Test `faker.seed(FAKER_SEED)`. Die generierten Default-Handler der OpenAPI-Clients (orval + Faker) liefern damit in jedem Lauf dieselben Daten, unabhängig von der Reihenfolge der Tests.
 - **Default-Handler: explizit im Spec** per `beforeEach(() => worker.use(...))`, `worker` kommt dafür als Modul-Export. Kein globales Setup-File: Welche Handler gelten, steht in der Spec.
 - **Reihenfolge** (Vitest 4 löst Fixtures auch für `beforeEach` auf, Auto-Fixtures immer): Fixture-Setup (Worker läuft) → `beforeEach` (Defaults) → Test (`worker.use` wird vorangestellt, neuester Handler gewinnt) → Fixture-Teardown (`resetHandlers` entfernt Defaults und Overrides). Belegt per Probe-Spec (nicht eingecheckt): `fetch` im ersten `beforeEach` wird schon von MSW beantwortet; im Folgetest nach einem Override gilt wieder nur der Default (`listHandlers().length === 1`); ohne `resetHandlers` wird dieser Test rot (3 statt 1 Handler).
 - Ohne `beforeEach` gibt es keine Handler. Ein nicht gemockter Request wird von MSW geloggt und mit 500 beantwortet, der Test wird rot (`booking-api.spec.ts` prüft genau das).
@@ -303,11 +306,11 @@ describe('BookingStore', () => {
 |---|---|---|---|
 | 1 | depConstraints: Produktions-Layer kennen `type:testing` nicht, `type:feature`/`type:app` ohne Glob; `type:testing` → nur types, testing, shared | `eslint.config.mjs` | `nx lint`, verify-Fälle `testing: …` |
 | 1b | Spec-Override (`*.spec.ts`, `*.test.ts`, `test-setup.ts`): dieselben Constraints + `type:testing`, auch fremde Domain. `scope:shared` und `type:types` bleiben unverändert | `eslint.config.mjs` → `specDepConstraints` | verify (`allowedInSpec`/`blockedInSpec`) |
-| 2 | `bannedExternalImports` msw, vitest, @vitest, @testing-library, playwright in Produktions-Layern + App | `eslint.config.mjs` | verify |
+| 2 | `bannedExternalImports` msw, vitest, @vitest, @testing-library, playwright, openapi-msw, @faker-js in Produktions-Layern + App | `eslint.config.mjs` | verify |
 | 3 | Testing-Libs ohne `build`-Target (Plugin: Ordner `testing` → `type:testing`, kein `build`). Import aus Produktionscode scheitert zusätzlich an `enforceBuildableLibDependency`, im Spec-Override ist die Regel aus | Plugin, Spec-Override | verify (Test-Isolation aus dem Graph + Fälle) |
 | 4 | Die Build-tsconfig (`build.options.tsConfig` = `libs/tsconfig.lib.json`) schließt `**/*.spec.ts` aus, `build`-Inputs sind `production`, `production` schließt `**/*.spec.ts` aus, `peerDependencies` nur aus Produktionscode | `libs/tsconfig.lib.json`, Plugin, `nx.json`, `packages/tooling/src/executors/ng-lib/build.js` | verify (Test-Isolation liest Targets aus dem Graph) |
 | 5 | Kein `mockServiceWorker.js` im Repo: Vitest serviert ihn nur bei Testläufen aus dem msw-Paket. Kein App-Asset | `vitest-base.config.mts` | verify (keine committete Worker-Datei, keine testing/msw-Referenz in App-`project.json`) |
-| 6 | `nx build client` + Scan des Bundles auf `msw`, `mockServiceWorker`, `setupWorker`, `vitest` | `packages/tooling/scripts/verify-boundaries.mjs` | verify: 14 Dateien, 0 Treffer |
+| 6 | `nx build client` + Scan des Bundles auf `msw`, `mockServiceWorker`, `setupWorker`, `vitest`, `faker` | `packages/tooling/scripts/verify-boundaries.mjs` | verify: 14 Dateien, 0 Treffer |
 | 7 | Keine Zyklen, keine `ignoredCircularDependencies` (siehe unten) | Schnitt der Libs | `nx lint`, verify |
 
 ### Zyklen
@@ -359,6 +362,243 @@ nx g @blueprint/tooling:testing <d>     # für eine bestehende Domain; `domain` 
 3. Specs: `*.spec.ts` in `src/` einer Lib ablegen, das `test`-Target entsteht automatisch. Vorlage: `libs/<d>/data/src/<d>.store.spec.ts` aus dem Domain-Generator.
 4. `tooling:verify` prüft Tag-Schema, dass das Testing-Projekt kein `build` hat und `test` genau bei Libs mit Specs existiert.
 
+## OpenAPI-Clients
+
+HTTP-Clients werden aus OpenAPI-Specs generiert. Der Code-Generator ist austauschbar und steckt hinter einer Facade in `packages/tooling/src/openapi`. Die Facade legt fest, wo der Code liegt, und teilt ihn in Nx-Libs auf. Generierter Code wird **nicht committet**: pro Lib ist nur `src/index.ts` (`export * from './generated';`) im Repo, alles unter `src/generated/` ist gitignored und entsteht per `generate`-Target. Grundlage: Spike S1 (Facade, Branch `tmp/openapi-spike`), S2 (nx-plugin-openapi), S3 (MSW-Testing).
+
+### Architektur
+
+```
+openapi-clients.json (Root)            ein Eintrag pro Client: url?, adapter?, options?
+libs/[<domain>/]generated/<client>/
+  openapi.yaml | openapi.json          committet, einzige Quelle für generate (die url dient nur update-spec)
+        │
+        ▼  <client>:generate (gecacht) = @blueprint/tooling:openapi-generate
+ facade.mjs ── adapters/registry.json ──▶ adapter.generate(ctx) ──▶ tmp/openapi/<pfad>/raw/**
+        │                                 adapter.classify(ctx)  ──▶ { models, apis, core, entries }
+        ▼
+ split.mjs   Struktur pro Teil, relative Imports über Teilgrenzen → @blueprint/<pfad>/<teil> (TS-AST)
+ barrel.mjs  src/generated/index.ts aus den Entries (Namenskonflikte per TS-Checker aufgelöst)
+ Header      /* eslint-disable */ /* eslint-enable @nx/enforce-module-boundaries, no-restricted-imports */
+        ▼
+  types/src/generated/**   type:types      Models
+  api/src/generated/**     type:api        Services
+  core/src/generated/**    type:api        Runtime (Configuration, BASE_PATH, provideApi …, importiert HTTP)
+  testing/src/generated/** type:testing    eigenes generate: openapi-typescript + orval (msw, faker) + openapi-msw
+        ▼
+ Port (booking/api, checkin/api) bzw. shared/api ── mappt DTO → Modell, Promise statt Observable ──▶ Konsumenten
+```
+
+| Datei | Aufgabe |
+|---|---|
+| `packages/tooling/src/openapi/contract.d.ts` | Vertrag `ClientDefinition`, `GeneratorAdapter` (`generate`, `classify`), `Classification`, `AdapterRegistration` |
+| `…/openapi/facade.mjs`, `split.mjs`, `barrel.mjs` | `resolveClient` (Eintrag + Ordner → Definition), `generateClient`, `updateSpec`, Aufteilen, Barrel, Header |
+| `…/openapi/adapters/*.mjs`, `registry.json` | 3 Adapter, Registry mit Cache-Inputs je Adapter (Pakete, `openapitools.json`, `java -version`) |
+| `…/openapi/testing/testing.mjs` | Testing-Lib aus der Spec |
+| `…/executors/openapi/*` | `openapi-generate`, `openapi-generate-testing`, `openapi-update-spec` (Option nur `client`) |
+| `…/plugin/openapi-clients.ts`, `blueprint-libs.ts`, `lib-conventions.ts` | Client-Projekte, Kanten, Tags, Pfad-Konvention |
+| `…/generators/client`, `…/generators/shared/clients.ts` | Generator `client`, Pflege von `openapi-clients.json` in `move`/`rename`/`remove` |
+| `openapitools.json` | Jar-Version 7.25.0, `storageDir: ./node_modules/.cache/openapi-generator-cli` |
+
+### Ablage, Projekte, Tags
+
+```
+libs/generated/<client>/                   scope:shared    Client-Projekt generated-<client> (nur Targets, kein Code, kein Alias)
+libs/<domain>/generated/<client>/          scope:<domain>  Client-Projekt <domain>-generated-<client>
+  openapi.yaml|json                        committet
+  types/src/index.ts     → Lib …-types     scope:<s> type:types   feat:none generated
+  api/src/index.ts       → Lib …-api       scope:<s> type:api     feat:none generated   (kein port)
+  core/src/index.ts      → Lib …-core      scope:<s> type:api     feat:none generated
+  testing/src/index.ts   → Lib …-testing   scope:<s> type:testing feat:none generated   (kein build)
+  <teil>/src/generated/**                  gitignored (.gitignore: **/src/generated/**)
+```
+
+- **`generated` ist ein reservierter Ordner**, kein Scope und kein Layer. `libs/generated/…` gehört zu `shared`, die Scope-Liste bleibt unverändert. `domain generated` wird abgelehnt, ein falscher Pfad (`libs/generated/x/ui`) bricht den Graph ab.
+- **Kein `port`:** Ein generierter Client ist nie die öffentliche API eines Slices. Fremde Domains kommen nur über den Port an `booking/generated/**`.
+- **`core` ist `type:api`**, weil die Runtime `@angular/common/http` importiert (in `utils` verboten).
+- `type:types` → `type:types` gilt (Domain-Types dürfen generierte Models nutzen). `data`/`feature` dürfen generierte Services laut Matrix direkt nutzen, Konvention bleibt „über den Port“.
+- **Kein Pflicht-Wrapper für shared Clients:** der Domain-Port ist der Wrapper (`BookingNotifications`, `CheckinNotifications`), für den pet-client ist es `PetApi` in `shared/api`.
+- Config-Wächter: `openapi.(yaml|json)` ist nur im Client-Ordner erlaubt, an jeder anderen Stelle in `libs/` meldet `tooling:verify` sie als Config-Datei.
+
+### `openapi-clients.json`
+
+```json
+{
+  "$schema": "./packages/tooling/src/openapi/openapi-clients.schema.json",
+  "defaultAdapter": "openapi-tools",
+  "clients": {
+    "generated/pet-client": { "url": "https://petstore3.swagger.io/api/v3/openapi.json" },
+    "generated/notification-client": {},
+    "booking/generated/booking-client": {}
+  }
+}
+```
+
+| Feld | Bedeutung |
+|---|---|
+| Schlüssel | Client-Pfad unter `libs/` |
+| `adapter` | `openapi-tools` (Default), `hey-api`, `nx-plugin-openapi` |
+| `url` | nur für `update-spec` |
+| `options` | Adapter-Optionen, über die Adapter-Defaults gemergt (z.B. `{ "plugin": "hey-api" }` für nx-plugin-openapi) |
+
+Das Plugin liest die Datei (zweiter Marker `openapi-clients.json` im selben Crystal-Plugin) und erzeugt pro Eintrag ein Client-Projekt. Eintrag, Ordner und Spec müssen zusammenpassen: Eintrag ohne Spec, Teil-Lib ohne Eintrag, unbekannter Adapter oder Scope außerhalb der Scope-Liste brechen den Graph mit Hinweis ab. `tooling:verify` prüft zusätzlich die Gegenrichtung (Client-Ordner ohne Eintrag) und dass die vier `index.ts` genau `export * from './generated';` enthalten.
+
+**Warum eine eigene Datei statt `nx.json`:** Jede Änderung an `nx.json` invalidiert den ganzen Cache (Spike S1, belegt).
+
+**Warum der Eintrag kein Target-Option ist:** Nx hasht in `^default`/`^production` die `ProjectConfiguration` jeder Abhängigkeit mit (Hash-Plan von `shared-api:typecheck` enthält `generated-pet-client:ProjectConfiguration`). Stünde der Eintrag in den `options` von `generate`, liefe nach jeder Eintragsänderung alles neu, was vom Client abhängt, auch wenn der generierte Code gleich bleibt. Deshalb:
+
+- Target-Optionen sind nur `{ "client": "<pfad>" }`, die Executoren lesen den Eintrag zur Laufzeit (`resolveClient`).
+- Der Eintrag ist ein **`json`-Input** von `generate`: `{ "json": "{workspaceRoot}/openapi-clients.json", "fields": ["defaultAdapter", "clients.<pfad>"] }`.
+- `update-spec` gibt es für jeden Client (ohne `url` bricht es ab), damit eine neue `url` die Projekt-Config nicht ändert.
+- Ein Adapterwechsel ändert die Inputs (`externalDependencies` des Adapters) und damit die Projekt-Config. Die Abhängigen laufen dann neu, was sie wegen des neuen Codes ohnehin müssten.
+
+**Cache-Probe** (eigener Cache, `run-many -t build lint test typecheck generate`, 155 Tasks, Ausgangslage 153/155 aus dem Cache; die 2 übrigen sind `sheriff-blueprint:build/test` ohne Cache):
+
+| Änderung | neu gelaufen |
+|---|---|
+| pet-client: `"options": { "providedIn": "root" }` (= Default, gleicher Code) | nur `generated-pet-client:generate` (152/155) |
+| notification-client: `url` ergänzt | nur `generated-notification-client:generate` (152/155) |
+| pet-client: `"options": { "enumPropertyNaming": "original" }` (anderer Code) | pet-client (generate, Teile, testing), `shared-api` und dessen Abhängige (`checkin-api`, `checkin-data`, `checkin-feat-*`, `checkin-shell`); booking, notification, layout, auth aus dem Cache (116/155) |
+| booking-client-Spec: `description` am Schema | booking-client, booking-Libs, `checkin-feat-*`, `checkin-shell`, `client:build` (106/155) |
+| zurück | 153/155 |
+
+Vor dem Umbau auf den `json`-Input liefen im ersten Fall 41 Tasks neu (`shared-api`, `checkin-*`, `client:build` …), obwohl der generierte Code byte-gleich war.
+
+### Targets und Abhängigkeiten
+
+| Projekt | Target | Konfiguration |
+|---|---|---|
+| Client | `generate` | `@blueprint/tooling:openapi-generate`, gecacht. Inputs: Spec, eigener Eintrag (`json`-Input), die drei `index.ts`, Facade-Code (ohne `testing/`), Executoren, Adapter-Inputs aus `registry.json` (`externalDependencies` der Adapter-Pakete + `typescript`, `yaml`; bei Java-Adaptern `openapitools.json` und Runtime `java -version 2>&1`). Outputs: `{types,api,core}/src/generated` |
+| Client | `update-spec` | `@blueprint/tooling:openapi-update-spec`, nicht gecacht: lädt die `url`, schreibt YAML/JSON normalisiert (danach Prettier wie `formatFiles`) |
+| `…/testing` | `generate` | `@blueprint/tooling:openapi-generate-testing`, gecacht. Inputs: Spec, Testing-Pipeline, `openapi-typescript`, `orval`, `yaml`. Output `src/generated`. `lint`/`typecheck` hängen zusätzlich an `generate` |
+| jede Lib | `lint`, `typecheck`, `build`, `test` | `dependsOn: ['^generate']` (build: `['^build', '^generate']`), Input `{ dependentTasksOutputFiles: '**/src/generated/**/*.ts', transitive: true }` |
+| Teil-Lib | `implicitDependencies` | Client-Projekt; `api` → `core`, `types`; `core` → `types` |
+| `client:build` | Input (`targetDefaults`) | ebenfalls `dependentTasksOutputFiles` (die App bündelt die Libs aus `dist`) |
+
+- **Gitignored = für Nx unsichtbar.** Nx hasht keine gitignored Dateien und analysiert ihre Imports nicht. Deshalb der `dependentTasksOutputFiles`-Input (sonst kämen Konsumenten nach einer Spec-Änderung aus einem veralteten Cache) und die impliziten Kanten (sonst kein `affected` und keine Build-Reihenfolge). Beleg: Property `guestName` in der booking-Spec umbenannt → `booking-api:typecheck` rot; `description` ergänzt → auch `client:build` läuft neu (vor dem Fix blieb es im Cache).
+- `^generate` reicht über den ganzen Graph: `nx run booking-data:typecheck` generiert vorher den booking-client. Specs, die eine Testing-Lib importieren, sind Graph-Kanten, `^generate` erzeugt also auch die Testing-Libs.
+- **`nx affected`**: Spec-Änderung → Client, Teile, Port, Konsumenten, App (per impliziter Kante). Eine Änderung an `openapi-clients.json` gehört keinem Lib-Projekt, `affected` meldet nur `tooling` (Input von `tooling:verify`). Die CI lässt dann alles laufen.
+- **IDE:** `pnpm openapi:generate` (= `nx run-many -t generate`) nach dem Checkout, sonst meldet die IDE `Cannot find module './generated'`. Kein `postinstall`: `pnpm install` bräuchte dann Java und Netz. Build, Lint, Typecheck und Test generieren selbst.
+- Deterministisch: zweimal `generate --skip-nx-cache` ergibt byte-gleiche Dateien, die dist der Client-Libs steht im Snapshot von `verify:nx-internals`.
+
+### Generator `client`
+
+```sh
+nx g @blueprint/tooling:client <name> [--domain=<d>] --spec=<datei|url> [--url=<url>] [--adapter=openapi-tools|hey-api|nx-plugin-openapi]
+```
+
+- legt `libs/[<d>/]generated/<name>/` an: Spec (Datei unverändert als `openapi.yaml|json`; URL einmal geladen und wie `update-spec` normalisiert), `types|api|core|testing/src/index.ts`, Eintrag in `openapi-clients.json` (`url` = `--url` oder die Spec-URL; `adapter` nur, wenn er vom `defaultAdapter` abweicht)
+- prüft: kebab-case, Domain existiert, Client neu, OpenAPI 3.x mit mindestens einem Pfad, Adapter bekannt
+- `move`/`rename`: Eintrag wird mitgezogen (auch beim Verschieben einer ganzen Domain), Aliase umgeschrieben, bei `rename` auch die generierten Testing-Namen (`demoClientHttp` → `thingClientHttp`). `remove`: Eintrag raus, bricht ab, solange Code den Client importiert. Ein `remove` direkt nach `client` stellt den Ausgangszustand exakt wieder her (Spec im Tooling-Test)
+- `component`/`service`/`store` lehnen generierte Libs ab
+
+### Adapter
+
+| | openapi-tools (Default) | hey-api | nx-plugin-openapi |
+|---|---|---|---|
+| Paket | `@openapitools/openapi-generator-cli` 2.41.0 + Jar 7.25.0 | `@hey-api/openapi-ts` **0.83.1** (gepinnt) | `@nx-plugin-openapi/core`, `plugin-openapi`, `plugin-hey-api` 1.0.0, Backend über `options.plugin` |
+| Java | ja (JRE 11+, CI: Temurin 17). Jar-Download beim ersten `generate` nach `node_modules/.cache/openapi-generator-cli` | nein | je nach Backend |
+| Ausgabe → Teile | `model/*` → types, `api/*` → api, Root-Dateien → core; verworfen `index.ts`, `api.module.ts` | `types.gen.ts` → types, `sdk.gen.ts` + `@angular/**` → api, `client.gen.ts`, `client/**`, `core/**` → core | wie das Backend |
+| Service-API | `BookingsService.listBookings(): Observable<Booking[]>`, `providedIn: 'root'`, `provideApi()` | `listBookings({ httpClient }): Promise<{ data, error, response }>` | wie das Backend |
+| Models | `interface` + `namespace` (Enums als `const … as const`) | `type` mit Literal-Unions | wie das Backend |
+
+**Tausch-Beweis** am booking-client (Eintrag in `openapi-clients.json` + Port, `run-many -t build lint test typecheck`, 50 Projekte):
+
+| Eintrag | Dateien types/api/core | Port | Ergebnis |
+|---|---|---|---|
+| `{}` (openapi-tools) | 3/2/7 | Variante A | grün |
+| `{ "adapter": "hey-api" }` | 1/3/12 | Variante B | grün |
+| `{ "adapter": "nx-plugin-openapi", "options": { "plugin": "hey-api" } }` | 1/3/12 | Variante B | grün |
+| `{ "adapter": "nx-plugin-openapi" }` (Backend openapi-tools) | 3/2/7 | Variante A | grün |
+
+`git status` zeigte jeweils nur `openapi-clients.json` und `libs/booking/api/src/booking-api.ts`. Alle Konsumenten (data, feature, checkin, Tests, MSW-Handler) blieben unverändert:
+
+```ts
+// A (openapi-tools): Observable + HttpErrorResponse
+private readonly bookings = inject(BookingsService);
+return (await firstValueFrom(this.bookings.listBookings(), { defaultValue: [] })).map(toBooking);
+
+// B (hey-api): Promise + Fehler als Wert
+private readonly http = inject(HttpClient);
+const { data, response } = await listBookings({ httpClient: this.http });
+if (!response) return []; // abgebrochen
+if (!response.ok) throw new Error(`GET /api/bookings failed: ${response.status}`);
+return (data ?? []).map(toBooking);
+```
+
+Die Testing-Lib hängt nicht am Adapter (nur an der Spec), ein Tausch lässt sie im Cache.
+
+### Testing-Lib pro Client
+
+`<client>/testing` (`type:testing`, gleicher Scope wie der Client) entsteht nur aus der Spec:
+
+| Datei in `src/generated/` | Werkzeug | Inhalt |
+|---|---|---|
+| `schema.ts` | openapi-typescript 7.13 | `paths`, `components`, `operations` |
+| `mocks.ts`, `model/**` | orval 8.38 (nur msw-Mocks, `useExamples`, Faker) | `get<Op>MockHandler(override?)`, `get<Op>ResponseMock()` je Operation |
+| `http.ts` | openapi-msw 2.0 | `<client>Http = createOpenApiHttp<paths>({ baseUrl: servers[0].url })`, `<client>BaseUrl` |
+| `handlers.ts` | – | `<client>Handlers`: ein Default-Handler je Operation (Spec-`example`s, Faker füllt den Rest) |
+
+```ts
+import { bookingClientHandlers, bookingClientHttp } from '@blueprint/booking/generated/booking-client/testing';
+
+beforeEach(() => worker.use(...bookingClientHandlers));                        // generierte Defaults
+worker.use(bookingClientHttp.get('/bookings', ({ response }) => response(200).json([aBooking()])));
+worker.use(bookingClientHttp.get('/bookings', ({ response }) => response('default').json({ message: 'boom' }, { status: 500 })));
+// Compile-Fehler: unbekannter Pfad, nicht dokumentierter Status, falscher Body
+```
+
+- **Faker deterministisch:** Die `worker`-Fixture in `shared/testing` ruft vor jedem Test `faker.seed(FAKER_SEED)`. `PetApi`-Spec belegt: zweimal geladen mit neuem Seed → gleiche Daten.
+- **Specs pflegen:** `example` an jedem Property der eigenen Specs, dann liefern die generierten Handler lesbare Daten (`'Booking b-101 confirmed'` statt Zufallstext).
+- **Grenzen:** Testing-Libs haben kein `build`. `openapi-msw` und `@faker-js/*` stehen in den `bannedExternalImports` der Produktions-Layer, der Bundle-Scan von `tooling:verify` sucht zusätzlich nach `faker` (0 Treffer).
+- `booking/testing` baut `bookingHandlers`/`bookingScenarios` jetzt auf `bookingClientHttp`: eine Spec-Änderung bricht die handgeschriebenen Handler beim Typecheck.
+- pnpm: `peerDependencyRules.allowedVersions` für `openapi-msw>msw` (3), `openapi-typescript>typescript` (6), `msw` (3, `@vitest/mocker`) und `@nx/devkit>nx` (23, von nx-plugin-openapi).
+
+### Beispiele
+
+| Client | Spec | Konsum | Tests |
+|---|---|---|---|
+| `libs/generated/pet-client` (shared) | Petstore 3, `update-spec` von `https://petstore3.swagger.io/api/v3/openapi.json` | `PetApi` in `shared/api` (`availablePets()`) | `shared/api/src/pet-api.spec.ts`: generierte Handler + Seed, typisiertes Szenario (`status=available`), dokumentierter 400 |
+| `libs/generated/notification-client` (shared) | selbst geschrieben: `GET /notifications?topic=`, `POST /notifications/{id}/read` | Ports `BookingNotifications` (`booking/api`) und `CheckinNotifications` (`checkin/api`), Modelle in `booking/types`, `checkin/types` | je 4 Tests: Default-Handler, Topic-Filter per `notificationClientHttp` mit generierter Factory, `markRead`, 404 |
+| `libs/booking/generated/booking-client` (booking) | selbst geschrieben: `GET /bookings` (Model wie `booking/types`, `default`-Fehler) | `BookingApi` (Port) | `booking-api.spec.ts` (unbehandelter Request, generierte Handler), `booking.store.spec.ts` und `feat-checkin.spec.ts` über die typisierten `bookingHandlers`/`bookingScenarios` |
+
+`HttpClient`: Angular 22 stellt ihn `providedIn: 'root'` mit `FetchBackend` bereit, MSW sieht die Requests ohne Provider im Test. In der App steht `provideHttpClient(withFetch())` explizit. Ein beim TestBed-Reset abgebrochener Request endet ohne Wert, die Ports behandeln das als „nichts geladen“ (`defaultValue: []`).
+
+### CI
+
+`.github/workflows/ci.yml`: `actions/setup-java@v4` (Temurin 17) und `actions/cache@v4` für `node_modules/.cache/openapi-generator-cli` (Key: Hash von `openapitools.json`), sonst unverändert. `generate` läuft über `^generate` in `run-many`/`affected` mit. `update-spec` läuft nur manuell (`nx run <client>:update-spec`), das Ergebnis kommt per normalem PR.
+
+### Verify
+
+`tooling:verify`: 117 Fälle, davon 46 für generierte Clients:
+
+| Fälle | erwartet |
+|---|---|
+| Port → eigener Client (api, types, core), Port/`shared/api` → shared Client | erlaubt |
+| fremde Domain (api, types, feat-data) → `booking/generated/**`, shared → Domain-Client | blockiert (`scope:checkin`, `scope:shared`) |
+| ui → Client api/core (Domain + shared), utils → api, Domain-types → api, app → Domain-Client, Deep-Import | blockiert |
+| ui → Client types, data/feature → Client api (Matrix), types → types | erlaubt |
+| Produktion/App → Client-testing, testing → Client api, fremdes testing → Domain-Client-testing, `openapi-msw`/`@faker-js/faker` in Produktion | blockiert |
+| Spec → eigenes/shared Client-testing, Domain-testing → eigenes Client-testing | erlaubt; shared-Spec → Domain-Client-testing blockiert |
+| aus generiertem Code (mit Header): types → api/core desselben Clients, types → `@angular/core`, shared → Domain-Client, api → data/events, Deep-Import, testing → api | blockiert; api → core, api/core → `@angular/common/http`, testing → `openapi-msw` erlaubt |
+
+Dazu der Check „Generierte Clients“: Eintrag ↔ Ordner ↔ eine Spec ↔ vier Libs, `index.ts`-Inhalt, `generate`-Optionen nur `{ client }` + `json`-Input, `update-spec` vorhanden, Kante Teil → Client, `^generate` + `dependentTasksOutputFiles` an jedem Lib-Target und an `client:build`, Testing-`generate` gecacht und vor `lint`/`typecheck`, nichts unter `src/generated/` committet, alles gitignored.
+
+### Limitierungen
+
+| Limitierung | Umgang |
+|---|---|
+| Gitignored Code ist für Nx unsichtbar (Hash, Kanten, `peerDependencies` der dist) | `dependentTasksOutputFiles` + implizite Kanten, im Verify geprüft. `peerDependencies` der Client-dist bleiben leer (harmlos, `private`) |
+| Adapterwechsel ändert die Projekt-Config des Clients | Abhängige laufen neu, was sie für den neuen Code ohnehin müssen |
+| `nx affected` sieht Änderungen an `openapi-clients.json` nur als `tooling` | CI lässt bei `tooling` alles laufen |
+| openapi-tools braucht Java und beim ersten `generate` Netz (Jar) | CI: setup-java + Cache; lokal JRE 11+. hey-api braucht beides nicht |
+| hey-api 0.83 statt aktuell (ab 0.96 Node ≥ 22.13, ab 0.98 ≥ 22.18) | bei Node ≥ 22.18 anheben, Klassifizierung prüfen |
+| orval 8.38 verlangt laut `engines` Node ≥ 22.18, läuft aber lokal unter 22.16 | CI nutzt Node 22 aktuell; bei Problemen Node anheben |
+| `nx-plugin-openapi` bringt `@nx/devkit` 19 mit | `peerDependencyRules` (`@nx/devkit>nx: 23`), funktional ok |
+| `formatFiles` von Nx ignoriert `.prettierignore` (übergibt kein `ignorePath`) | Specs und `openapi-clients.json` sind Prettier-formatiert, `update-spec` formatiert genauso nach |
+| `type:testing` → `scope:shared` erlaubt auch shared Client-api in Testing-Libs | bestehende Regel (für `shared/testing`), nicht verschärft |
+| `data`/`feature` dürfen generierte Services laut Matrix nutzen | Konvention „über den Port“, bewusst so gelassen |
+
 ## Tooling & Generatoren
 
 Alles Werkzeug liegt im lokalen Nx-Plugin **`packages/tooling`** (`@blueprint/tooling`, Projekt `tooling`, `type:tooling`). Details, Optionen und Begründungen: [`packages/tooling/README.md`](../packages/tooling/README.md).
@@ -366,6 +606,8 @@ Alles Werkzeug liegt im lokalen Nx-Plugin **`packages/tooling`** (`@blueprint/to
 | Teil | Wo |
 |---|---|
 | Crystal-Plugin + Scope-Liste | `src/plugin/`, `nx.json` → `plugins[@blueprint/tooling].options.scopes` |
+| OpenAPI-Facade, Adapter, Testing-Pipeline | `src/openapi/`, Client-Optionen in `openapi-clients.json` (Root) |
+| Executoren `openapi-generate`, `openapi-generate-testing`, `openapi-update-spec` | `src/executors/openapi/` |
 | Executoren `ng-lib-build`, `ng-lib-application`, `ng-lib-test` | `src/executors/ng-lib/` |
 | Generatoren | `src/generators/`, `generators.json` |
 | Sync-Generator `app-routes` | `src/sync/app-routes/`, `nx.json` → `sync.globalGenerators` |
@@ -384,6 +626,9 @@ nx g @blueprint/tooling:layer payment events
 nx g @blueprint/tooling:feat payment checkout --api --data
 # testing-Gerüst für eine bestehende Domain
 nx g @blueprint/tooling:testing checkin
+# generierter OpenAPI-Client (shared oder --domain), Spec als Datei oder URL
+nx g @blueprint/tooling:client weather-client --spec=https://example.org/openapi.json
+nx g @blueprint/tooling:client billing-client --domain=booking --spec=./specs/billing.yaml --adapter=hey-api
 # verschieben / umbenennen (Importe inkl. import() in Routes, Route-Pfade, Scope-Liste)
 nx g @blueprint/tooling:move booking/feat-rebook checkin/feat-rebook
 nx g @blueprint/tooling:rename payment billing
@@ -403,7 +648,7 @@ nx g @blueprint/tooling:component libs/booking/ui/src/booking-badge
 
 ### CI
 
-`.github/workflows/ci.yml` (Push auf `main`/`feat/nx-blueprint`, PRs): `pnpm install --frozen-lockfile`, `playwright install --with-deps chromium`, `nx sync:check`, dann bei PRs `nx affected -t build lint test typecheck` (Basis per `nrwl/nx-set-shas`), bei Pushes `run-many`, zuletzt `nx run tooling:verify`. Die Libs haben keine Graph-Kante zum Tooling-Package, deshalb läuft bei einer Tooling-Änderung auch im PR alles (`nx show projects --affected` enthält `tooling`).
+`.github/workflows/ci.yml` (Push auf `main`/`feat/nx-blueprint`, PRs): `pnpm install --frozen-lockfile`, Java 17 (Temurin) + Jar-Cache für openapi-tools, `playwright install --with-deps chromium`, `nx sync:check`, dann bei PRs `nx affected -t build lint test typecheck` (Basis per `nrwl/nx-set-shas`), bei Pushes `run-many`, zuletzt `nx run tooling:verify`. Die Libs haben keine Graph-Kante zum Tooling-Package, deshalb läuft bei einer Tooling-Änderung auch im PR alles (`nx show projects --affected` enthält `tooling`).
 
 ### Nach `nx migrate`
 
@@ -412,8 +657,8 @@ nx g @blueprint/tooling:component libs/booking/ui/src/booking-badge
 ## Verifikation
 
 ```sh
-pnpm exec nx run-many -t build lint test typecheck   # 38 Projekte, 114 Tasks grün (build 34, lint 38, typecheck 36, test 6)
-pnpm verify                                           # nx run tooling:verify: 71/71 Fälle + Config-Wächter + Tag-Schema/Scope-Liste + Test-Isolation + neue Lib + client-Bundle
+pnpm exec nx run-many -t build lint test typecheck   # 50 Projekte, 149 Tasks + 6 generate grün (build 43, lint 50, typecheck 48, test 8)
+pnpm verify                                           # nx run tooling:verify: 117/117 Fälle + Config-Wächter + Tag-Schema/Scope-Liste + Test-Isolation + neue Lib + generierte Clients + client-Bundle
 pnpm exec nx sync:check                               # app.routes.ts ↔ Slice-Shells
 pnpm verify:nx-internals                              # nach nx migrate, siehe Tooling & Generatoren
 ```
@@ -422,7 +667,7 @@ Beweise für „Libs ohne Config-Dateien“ (tatsächlich ausgeführt, eigener N
 
 - `find libs -mindepth 2 -name '*.json' -not -path '*/src/*' -not -path '*/public/*'` → leer, nur `libs/tsconfig*.json` (Tiefe 1).
 - `run-many` mit `--skip-nx-cache`: 111 Tasks grün, dieselben wie vorher; Tests 1+3+3+3 Browser + 23 `sheriff-blueprint` (6 skipped).
-- `dist` (32 Libs + App, 346 Dateien) per `diff -r` identisch zum Stand `2857237`.
+- `dist` (32 Libs + App, 346 Dateien) per `diff -r` identisch zum Stand `2857237`. Seit den OpenAPI-Clients 580 Dateien: +12 Client-Libs (dist der generierten types/api/core), geändert nur `booking/api`, `booking/types`, `checkin/api`, `checkin/types`, `shared/api` (neue Ports/Modelle) und die App-Chunks; alle anderen Libs byte-gleich. Snapshot bewusst per `--update-snapshot` erneuert, ein frischer Clone baut exakt diese 580 Dateien.
 - App baut gegen dist: Text `Bookings` in `dist/libs/layout/ui/esm2022/nav-bar.js` durch einen Marker ersetzt, `nx run client:build --skip-nx-cache --exclude-task-dependencies` → Marker im App-Bundle (`main-*.js`), in den Quellen nicht vorhanden.
 - Plain `eslint` mit leerem `NX_WORKSPACE_DATA_DIRECTORY` auf einem Verstoß in `booking/ui` (`→ @blueprint/booking/data`) → Fehler `type:ui`, Exit 1.
 - MSW: Default-Handler (`beforeEach`) in `booking.store.spec.ts` entfernt → `booking-data:test` rot.
@@ -469,3 +714,93 @@ Die 4 Lint-Warnungen in `sheriff-blueprint` (`no-non-null-assertion` in Tests) g
 | neue Lib → shared | erlaubt | ✅ |
 
 Zusätzlich wurden echte Verstöße in Quelldateien eingebaut, per `nx lint <projekt>` geprüft und danach zurückgebaut: `booking-ui`, `checkin-feat-history-feature`, `client` und `checkin-feat-checkin-data` schlugen jeweils mit `@nx/enforce-module-boundaries` fehl. Die Kommentare `// boundary-violation-example: …` in den Quellen markieren weitere Verstöße zum Einkommentieren.
+
+## Selbst ausprobieren
+
+Voraussetzungen: Node 22 (≥ 22.16), pnpm 10, Java 11+ (`java -version`, für den Adapter openapi-tools), Netz beim ersten Lauf (Jar-Download, Petstore-URL).
+
+```sh
+# 1. frischer Checkout
+git clone <repo-url> sheriff-blue-print && cd sheriff-blue-print
+git checkout feat/nx-blueprint
+pnpm install
+pnpm exec playwright install chromium          # einmalig, Browser für die Tests
+
+# 2. generieren (optional: build/lint/test/typecheck generieren selbst; hilft der IDE)
+pnpm openapi:generate                           # = nx run-many -t generate, 6 Tasks
+git status                                      # leer: generierter Code ist gitignored
+ls libs/booking/generated/booking-client/*/src/generated
+
+# 3. bauen, testen, prüfen
+pnpm exec nx run-many -t build lint test typecheck
+pnpm verify                                     # nx run tooling:verify, 117 Fälle + Checks
+pnpm exec nx sync:check
+
+# 4. ansehen
+pnpm exec nx graph                              # Projekte generated-*, Kanten Teil → Client
+pnpm exec nx show project booking-generated-booking-client   # Targets generate/update-spec, Inputs
+pnpm exec nx show projects --affected --files libs/generated/notification-client/openapi.yaml
+
+# 5. Tests im Browser sehen (headed, bleibt offen bis Strg+C)
+pnpm exec nx run booking-api:test --browsers=chromium --watch
+#   Vitest-UI geht zusätzlich mit: pnpm add -D @vitest/ui@~4.1.11 && pnpm exec nx run booking-api:test --ui --watch (nicht vorinstalliert)
+
+# 6. neuen Client anlegen (Datei oder URL), nutzen, wieder entfernen
+cat > /tmp/demo.yaml <<'YAML'
+openapi: 3.0.3
+info: { title: Demo API, version: 1.0.0 }
+servers: [{ url: /api }]
+paths:
+  /greetings:
+    get:
+      operationId: listGreetings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Greeting" } }
+components:
+  schemas:
+    Greeting:
+      type: object
+      required: [id, text]
+      properties:
+        id: { type: string, example: g-1 }
+        text: { type: string, example: Hello }
+YAML
+pnpm exec nx g @blueprint/tooling:client demo-client --spec=/tmp/demo.yaml   # shared; Domain: --domain=checkin, Adapter: --adapter=hey-api
+pnpm exec nx run-many -t build lint test typecheck
+#   nutzen: @blueprint/generated/demo-client/api im api-Layer, in Specs
+#   import { demoClientHandlers, demoClientHttp } from '@blueprint/generated/demo-client/testing'
+pnpm exec nx g @blueprint/tooling:remove generated/demo-client
+git status                                      # wieder leer
+
+# 7. Adapter tauschen (booking-client)
+#   openapi-clients.json: "booking/generated/booking-client": { "adapter": "hey-api" }
+#   libs/booking/api/src/booking-api.ts: Variante B (siehe Abschnitt Adapter)
+pnpm exec nx run-many -t build lint test typecheck
+git checkout openapi-clients.json libs/booking/api/src/booking-api.ts
+
+# 8. Spec aktualisieren (nur Clients mit url)
+pnpm exec nx run generated-pet-client:update-spec   # "unchanged" oder "updated"
+git diff libs/generated/pet-client/openapi.yaml
+
+# 9. Cache pro Client
+#   openapi-clients.json: "generated/pet-client": { "url": "…", "options": { "providedIn": "root" } }
+pnpm exec nx run-many -t build lint test typecheck generate   # nur generated-pet-client:generate läuft neu
+git checkout openapi-clients.json
+
+# 10. Negativprobe Boundaries
+printf "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';\nexport const x = BookingsService;\n" > libs/booking/ui/src/probe.ts
+pnpm exec nx lint booking-ui                    # rot: type:ui darf kein type:api
+mv libs/booking/ui/src/probe.ts libs/checkin/data/src/probe.ts
+pnpm exec nx lint checkin-data                  # rot: scope:checkin nur über den Port
+rm libs/checkin/data/src/probe.ts
+
+# 11. Negativprobe fehlender Handler
+#   in libs/booking/api/src/booking-notifications.spec.ts die Zeile
+#   beforeEach(() => worker.use(...notificationClientHandlers)); auskommentieren
+pnpm exec nx test booking-api                   # rot: [MSW] … without a matching request handler
+git checkout libs/booking/api/src/booking-notifications.spec.ts
+```
