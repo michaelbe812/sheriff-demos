@@ -2,17 +2,28 @@
   "$schema": "https://json-schema.org/schema",
   "$id": "BlueprintComponent",
   "title": "Component in einer Lib",
-  "description": "Dünner Wrapper: @nx/angular-Generatoren finden Libs ohne project.json nicht.",
+  "description": "Dünne Vorbelegung für @nx/angular:component: Layer-Prüfung (ui/feature/shell, kein generierter Client), inline, app-Präfix, ohne Spec, Export aus index.ts.",
   "type": "object",
   "properties": {
     "path": {
       "type": "string",
       "description": "libs/<scope>/<layer>/src/<name> (Unterordner erlaubt).",
-      "$default": { "$source": "argv", "index": 0 },
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
       "x-prompt": "Pfad (libs/<scope>/<layer>/src/<name>)?"
     },
-    "export": { "type": "boolean", "description": "Aus index.ts exportieren.", "default": true },
-    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+    "export": {
+      "type": "boolean",
+      "description": "Aus index.ts exportieren.",
+      "default": true
+    },
+    "skipFormat": {
+      "type": "boolean",
+      "default": false,
+      "x-priority": "internal"
+    }
   },
   "required": ["path"]
 }

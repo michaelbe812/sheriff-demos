@@ -3,12 +3,12 @@
     "domain": {
       "factory": "./src/generators/domain/generator",
       "schema": "./src/generators/domain/schema.json",
-      "description": "Neue Domain: libs/<d>/{types,api,data,ui,shell} + testing + Beispiel-Spec, Lazy-Route, Scope-Liste."
+      "description": "Neue Domain: libs/<d>/{types,api,data,ui,shell} + testing + Beispiel-Spec, je mit Config-Dateien + paths, Lazy-Route, Scope-Liste."
     },
     "layer": {
       "factory": "./src/generators/layer/generator",
       "schema": "./src/generators/layer/schema.json",
-      "description": "Eine Lib in einer bestehenden Domain: libs/<d>/<layer>."
+      "description": "Eine Lib in einer bestehenden Domain: libs/<d>/<layer> mit Config-Dateien + paths."
     },
     "testing": {
       "factory": "./src/generators/testing/generator",
@@ -23,7 +23,7 @@
     "move": {
       "factory": "./src/generators/move/generator",
       "schema": "./src/generators/move/schema.json",
-      "description": "Lib, Feat oder Domain verschieben, @blueprint/...-Importe (auch import()) umschreiben."
+      "description": "Lib, Feat oder Domain verschieben, @blueprint/...-Importe (auch import()) umschreiben, Config-Dateien + paths nachziehen."
     },
     "rename": {
       "factory": "./src/generators/rename/generator",
@@ -33,22 +33,22 @@
     "remove": {
       "factory": "./src/generators/remove/generator",
       "schema": "./src/generators/remove/schema.json",
-      "description": "Lib, Feat oder Domain löschen, Routes + Scope austragen; bricht bei Importen ab (außer --force)."
+      "description": "Lib, Feat oder Domain löschen (inkl. Config-Dateien + paths), Routes + Scope austragen; bricht bei Importen ab (außer --force)."
     },
     "component": {
       "factory": "./src/generators/component/generator",
       "schema": "./src/generators/component/schema.json",
-      "description": "Standalone-OnPush-Komponente in einer Lib (Wrapper, @nx/angular:component findet Libs ohne project.json nicht)."
+      "description": "Standalone-Komponente in einer Lib: Layer-Prüfung, dann @nx/angular:component (inline, app-Präfix, ohne Spec, Export)."
     },
     "service": {
       "factory": "./src/generators/service/generator",
       "schema": "./src/generators/service/schema.json",
-      "description": "Injectable in einer Lib (Wrapper)."
+      "description": "Injectable in einer Lib: Layer-Prüfung, dann @schematics/angular:service (ohne Spec, Export)."
     },
     "store": {
       "factory": "./src/generators/store/generator",
       "schema": "./src/generators/store/schema.json",
-      "description": "Signal-Store in einer Lib (Wrapper)."
+      "description": "Signal-Store in einer Lib (eigenes Template, Nx hat keinen Store-Generator)."
     },
     "app-routes": {
       "factory": "./src/sync/app-routes/generator",

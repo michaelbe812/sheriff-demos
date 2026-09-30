@@ -1,7 +1,7 @@
 /**
- * Thin wrappers for Angular artifacts inside a lib. `@nx/angular:component` & co. cannot be used:
- * they look up the project in the Tree (project.json), and libs here have none — the plugin infers
- * them (tested: "does not exist under any project root" / 'project' is not found).
+ * Angular artifacts inside a lib: path → lib + name, with the blueprint rules (right layer, never a
+ * generated client). component/service delegate to @nx/angular:component / @schematics/angular:service
+ * (they find the lib through its project.json), store writes its own template (no Nx equivalent).
  */
 import { formatFiles, names, type Tree } from '@nx/devkit';
 import { LIBS_DIR, parseLibPath } from '@blueprint/tooling-conventions';
