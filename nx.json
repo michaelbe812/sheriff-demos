@@ -22,15 +22,14 @@
         "^default",
         "{workspaceRoot}/.eslintrc.json",
         "{workspaceRoot}/.eslintignore",
-        "{workspaceRoot}/eslint.config.mjs",
-        "{workspaceRoot}/tools/eslint-rules/**/*"
+        "{workspaceRoot}/eslint.config.mjs"
       ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",
       "cache": true
     },
-    "./tools/ng-lib:application": {
+    "@blueprint/tooling:ng-lib-application": {
       "cache": true,
       "dependsOn": [
         "^build"
@@ -39,7 +38,7 @@
         "production",
         "^production",
         "{workspaceRoot}/tsconfig.base.json",
-        "{workspaceRoot}/tools/ng-lib/**/*"
+        "{workspaceRoot}/packages/tooling/src/executors/ng-lib/**/*"
       ]
     }
   },
@@ -52,6 +51,6 @@
     }
   },
   "plugins": [
-    "./tools/nx-plugins/blueprint-libs.ts"
+    "@blueprint/tooling"
   ]
 }

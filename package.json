@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "verify:boundaries": "node tools/verify-boundaries.mjs"
+    "verify:boundaries": "node packages/tooling/scripts/verify-boundaries.mjs"
   },
   "private": true,
   "dependencies": {
@@ -23,6 +23,7 @@
     "@angular/compiler-cli": "~22.0.4",
     "@angular/language-service": "~22.0.4",
     "@berger-engineering/sheriff-blueprint": "workspace:*",
+    "@blueprint/tooling": "workspace:*",
     "@eslint/js": "^9.8.0",
     "@nx/angular": "23.1.0",
     "@nx/devkit": "23.1.0",

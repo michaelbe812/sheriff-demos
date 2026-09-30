@@ -12,7 +12,7 @@
  * a test-isolation check the non-lint layers keeping test code out of
  * production, and a client build proves the bundle carries no msw/vitest.
  *
- * Usage: node tools/verify-boundaries.mjs   (exit 1 on any mismatch)
+ * Usage: node packages/tooling/scripts/verify-boundaries.mjs   (exit 1 on any mismatch)
  */
 import { createProjectGraphAsync } from '@nx/devkit';
 import { ESLint } from 'eslint';
@@ -20,7 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const workspaceRoot = join(import.meta.dirname, '..');
+const workspaceRoot = join(import.meta.dirname, '../../..');
 process.chdir(workspaceRoot);
 process.env.NX_DAEMON ??= 'false';
 
@@ -128,7 +128,7 @@ const cases = [
 
 /**
  * Tag schema vs folder layout. The tags are inferred by
- * tools/nx-plugins/blueprint-libs.ts, so this guards the plugin:
+ * packages/tooling/src/plugin/blueprint-libs.ts, so this guards the plugin:
  * every libs/<lib>/src/index.ts must be a project and carry exactly the expected tags.
  */
 function checkTagSchema(projectGraph) {
@@ -217,7 +217,7 @@ function checkClientBundle() {
 
 /** The real config, but without `enforceBuildableLibDependency` — isolates the tag constraints. */
 async function createTagsOnlyEslint() {
-  const { blueprintDepConstraints } = await import('../eslint.config.mjs');
+  const { blueprintDepConstraints } = await import('../../../eslint.config.mjs');
   const rule = ['error', { enforceBuildableLibDependency: false, depConstraints: blueprintDepConstraints }];
   return new ESLint({
     cwd: workspaceRoot,

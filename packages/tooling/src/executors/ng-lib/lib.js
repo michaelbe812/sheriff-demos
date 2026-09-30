@@ -5,7 +5,7 @@
 // (@nx/js calculateProjectBuildableDependencies: sonst Projektname "booking-data").
 // Ohne lib-package.json würde die Lib still aus den Quellen kompiliert.
 // Hier kommt der Alias stattdessen aus tsconfig.base.json `paths`.
-const { dirname, join, relative, resolve, sep } = require('path');
+const { join, relative, resolve, sep } = require('path');
 const { mkdirSync, readFileSync, writeFileSync } = require('fs');
 const { calculateProjectBuildableDependencies } = require('@nx/js/internal');
 

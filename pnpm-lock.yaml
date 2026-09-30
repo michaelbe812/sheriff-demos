@@ -51,6 +51,9 @@ importers:
       '@berger-engineering/sheriff-blueprint':
         specifier: workspace:*
         version: link:packages/sheriff-blueprint
+      '@blueprint/tooling':
+        specifier: workspace:*
+        version: link:packages/tooling
       '@eslint/js':
         specifier: ^9.8.0
         version: 9.39.5
@@ -141,6 +144,8 @@ importers:
       '@softarc/sheriff-core':
         specifier: '>=0.19.0'
         version: 0.19.6(typescript@6.0.3)
+
+  packages/tooling: {}
 
 packages:
 

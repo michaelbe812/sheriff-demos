@@ -11,7 +11,7 @@
  *   targets    lint, typecheck, build (not for testing libs), test (only if src/ has *.spec.ts)
  *
  * The tag derivation is the single source of truth: eslint.config.mjs and
- * tools/verify-boundaries.mjs read the tags from the project graph.
+ * packages/tooling/scripts/verify-boundaries.mjs read the tags from the project graph.
  */
 // type-only: importing @nx/devkit at runtime costs ~0.5 s per graph computation in the isolated plugin worker
 import type { CreateNodesResult, CreateNodesV2, TargetConfiguration } from '@nx/devkit';
@@ -50,6 +50,15 @@ export function deriveTags(libPath: string): string[] {
   return tags;
 }
 
+/** Executors of this package (executors.json). */
+export const NG_LIB_EXECUTORS = {
+  build: '@blueprint/tooling:ng-lib-build',
+  test: '@blueprint/tooling:ng-lib-test',
+};
+const NG_LIB_INPUT = '{workspaceRoot}/packages/tooling/src/executors/ng-lib/**/*';
+const TYPECHECK_SCRIPT = 'packages/tooling/scripts/typecheck-lib.mjs';
+const TYPECHECK_SCRIPT_INPUT = `{workspaceRoot}/${TYPECHECK_SCRIPT}`;
+
 /** Shared tsconfigs every lib compiles with — they live outside the lib, so they are explicit inputs. */
 const SHARED_TS_INPUTS = ['{workspaceRoot}/tsconfig.base.json', '{workspaceRoot}/libs/tsconfig.json'];
 
@@ -68,7 +77,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         'default',
         '^default',
         '{workspaceRoot}/eslint.config.mjs',
-        '{workspaceRoot}/tools/nx-plugins/**/*',
+        '{workspaceRoot}/packages/tooling/src/plugin/**/*',
         { externalDependencies: ['eslint'] },
       ],
       options: { command: 'eslint .', cwd: '{projectRoot}' },
@@ -81,15 +90,15 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         'default',
         '^default',
         ...SHARED_TS_INPUTS,
-        '{workspaceRoot}/tools/typecheck-lib.mjs',
+        TYPECHECK_SCRIPT_INPUT,
         { externalDependencies: ['typescript'] },
       ],
-      options: { command: 'node tools/typecheck-lib.mjs {projectRoot}' },
+      options: { command: `node ${TYPECHECK_SCRIPT} {projectRoot}` },
     },
-    // ./tools/ng-lib:build generates ng-package.json, package.json and tsconfig (dist paths) in tmp/
+    // ng-lib-build generates ng-package.json, package.json and tsconfig (dist paths) in tmp/
     // and delegates to @nx/angular:ng-packagr-lite — no build files in the lib
     build: {
-      executor: './tools/ng-lib:build',
+      executor: NG_LIB_EXECUTORS.build,
       cache: true,
       dependsOn: ['^build'],
       inputs: [
@@ -97,7 +106,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '^production',
         ...SHARED_TS_INPUTS,
         '{workspaceRoot}/libs/tsconfig.lib.json',
-        '{workspaceRoot}/tools/ng-lib/**/*',
+        NG_LIB_INPUT,
         { externalDependencies: ['ng-packagr', '@angular/compiler-cli', 'typescript'] },
       ],
       outputs: ['{workspaceRoot}/dist/{projectRoot}'],
@@ -115,14 +124,14 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
     // Vitest browser mode (Chromium) via @nx/angular:unit-test; the wrapper narrows the shared
     // spec tsconfig to this lib and maps the ng-lib build target for the Angular builder
     targets['test'] = {
-      executor: './tools/ng-lib:test',
+      executor: NG_LIB_EXECUTORS.test,
       cache: true,
       inputs: [
         'default',
         '^production',
         ...SHARED_TS_INPUTS,
         '{workspaceRoot}/libs/tsconfig.spec.json',
-        '{workspaceRoot}/tools/ng-lib/**/*',
+        NG_LIB_INPUT,
         '{workspaceRoot}/vitest-base.config.mts',
         { externalDependencies: ['vitest', '@vitest/browser-playwright', 'msw', '@angular/build'] },
       ],

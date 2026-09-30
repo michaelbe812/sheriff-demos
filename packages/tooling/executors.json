@@ -1,17 +1,17 @@
 {
   "executors": {
-    "build": {
-      "implementation": "./build.js",
-      "schema": "./build.schema.json",
+    "ng-lib-build": {
+      "implementation": "./src/executors/ng-lib/build.js",
+      "schema": "./src/executors/ng-lib/build.schema.json",
       "description": "Buildable Angular-Lib ohne ng-package.json/package.json/tsconfig.lib*.json pro Lib (delegiert an @nx/angular:ng-packagr-lite)."
     },
-    "application": {
-      "implementation": "./application.js",
+    "ng-lib-application": {
+      "implementation": "./src/executors/ng-lib/application.js",
       "schema": "@nx/angular/src/executors/application/schema.json",
       "description": "@nx/angular:application gegen dist der Libs, Alias-Mapping aus tsconfig.base.json statt lib-package.json."
     },
-    "test": {
-      "implementation": "./test.js",
+    "ng-lib-test": {
+      "implementation": "./src/executors/ng-lib/test.js",
       "schema": "@nx/angular/src/executors/unit-test/schema.json",
       "description": "@nx/angular:unit-test für Libs ohne ng-package.json/tsconfig.spec.json pro Lib (tsConfig = gemeinsame spec-tsconfig, include wird auf die Lib verengt)."
     }
