@@ -14,6 +14,11 @@
       "factory": "./src/generators/testing/generator",
       "schema": "./src/generators/testing/schema.json",
       "description": "Testing-Lib einer bestehenden Domain: fixtures, handlers, scenarios."
+    },
+    "feat": {
+      "factory": "./src/generators/feat/generator",
+      "schema": "./src/generators/feat/schema.json",
+      "description": "Feat: libs/<d>/feat-<x>/feature (+ api/data/ui), Lazy-Route in den Shell-Routes."
     }
   }
 }

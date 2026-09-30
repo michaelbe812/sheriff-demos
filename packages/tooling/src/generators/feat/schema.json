@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintFeat",
+  "title": "Feat in einer Domain",
+  "description": "libs/<domain>/feat-<name>/feature (+ api/data/ui), Lazy-Route in den Shell-Routes der Domain.",
+  "type": "object",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "description": "Bestehende Domain (Scope).",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "Domain?"
+    },
+    "name": {
+      "type": "string",
+      "description": "Feat-Name (kebab-case, ohne feat-).",
+      "$default": { "$source": "argv", "index": 1 },
+      "x-prompt": "Name des Feats (kebab-case)?"
+    },
+    "api": { "type": "boolean", "description": "feat-port (api) für Geschwister-Feats.", "default": false },
+    "data": { "type": "boolean", "description": "Feat-Store (data).", "default": false },
+    "ui": { "type": "boolean", "description": "Dumb-Komponenten (ui).", "default": false },
+    "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
+  },
+  "required": ["domain", "name"]
+}
