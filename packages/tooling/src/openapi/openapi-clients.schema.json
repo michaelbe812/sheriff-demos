@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "openapi-clients.json",
+  "description": "Generated OpenAPI clients, read by the @blueprint/tooling crystal plugin. Key = client path below libs/. Each entry becomes the options of its client's generate/update-spec targets: changing it invalidates that client only.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "defaultAdapter": {
+      "type": "string",
+      "enum": ["openapi-tools", "hey-api", "nx-plugin-openapi"],
+      "default": "openapi-tools"
+    },
+    "clients": {
+      "type": "object",
+      "propertyNames": { "pattern": "^([a-z][a-z0-9-]*/)?generated/[a-z][a-z0-9-]*$" },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "adapter": { "type": "string", "enum": ["openapi-tools", "hey-api", "nx-plugin-openapi"] },
+          "url": {
+            "type": "string",
+            "description": "Source for update-spec only. generate reads the committed spec file."
+          },
+          "options": { "type": "object", "description": "Adapter options, merged over the adapter defaults." }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

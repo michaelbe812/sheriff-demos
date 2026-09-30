@@ -5,7 +5,8 @@
   "scripts": {
     "verify": "nx run tooling:verify",
     "verify:boundaries": "node packages/tooling/scripts/verify-boundaries.mjs",
-    "verify:nx-internals": "node packages/tooling/scripts/verify-nx-internals.mjs"
+    "verify:nx-internals": "node packages/tooling/scripts/verify-nx-internals.mjs",
+    "openapi:generate": "nx run-many -t generate"
   },
   "private": true,
   "dependencies": {
@@ -27,6 +28,10 @@
     "@berger-engineering/sheriff-blueprint": "workspace:*",
     "@blueprint/tooling": "workspace:*",
     "@eslint/js": "^9.8.0",
+    "@hey-api/openapi-ts": "0.83.1",
+    "@nx-plugin-openapi/core": "1.0.0",
+    "@nx-plugin-openapi/plugin-hey-api": "1.0.0",
+    "@nx-plugin-openapi/plugin-openapi": "1.0.0",
     "@nx/angular": "23.1.0",
     "@nx/devkit": "23.1.0",
     "@nx/eslint": "23.1.0",
@@ -34,6 +39,7 @@
     "@nx/js": "23.1.0",
     "@nx/web": "23.1.0",
     "@nx/workspace": "23.1.0",
+    "@openapitools/openapi-generator-cli": "2.41.0",
     "@schematics/angular": "~22.0.4",
     "@softarc/sheriff-core": "^0.19.6",
     "@swc-node/register": "^1.12.0",
@@ -53,13 +59,15 @@
     "tslib": "^2.3.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.58.0",
-    "vitest": "~4.1.11"
+    "vitest": "~4.1.11",
+    "yaml": "2.9.1"
   },
   "packageManager": "pnpm@10.12.1+sha256.889bac470ec93ccc3764488a19d6ba8f9c648ad5e50a9a6e4be3768a5de387a3",
   "pnpm": {
     "peerDependencyRules": {
       "allowedVersions": {
-        "msw": "3"
+        "msw": "3",
+        "@nx/devkit>nx": "23"
       }
     }
   }

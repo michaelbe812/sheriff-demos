@@ -1,5 +1,5 @@
 import { formatFiles, type GeneratorCallback, logger, type Tree } from '@nx/devkit';
-import { FEAT_PREFIX, SHARED_SCOPE, SLICE_LAYERS, TESTING_LAYER } from '../../plugin/lib-conventions';
+import { FEAT_PREFIX, GENERATED_FOLDER, SHARED_SCOPE, SLICE_LAYERS, TESTING_LAYER } from '../../plugin/lib-conventions';
 import { assertLayerDependencies, generateSliceLayer, generateTestingLib, registerSliceRoute } from '../shared/slice';
 import { dataStoreSpec, SLICE_LAYER_ORDER, sliceNames } from '../shared/slice-templates';
 import { addScope, APP_ROUTES_FILE, assertKebabCase, libExists, writeIfMissing } from '../shared/workspace';
@@ -25,7 +25,8 @@ export function parseLayers(layers: string | string[] | undefined, fallback: str
 export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema): Promise<GeneratorCallback> {
   const scope = options.name;
   assertKebabCase(scope, 'Domain');
-  if (scope === SHARED_SCOPE || scope.startsWith(FEAT_PREFIX)) throw new Error(`"${scope}" is reserved and cannot be a domain.`);
+  if (scope === SHARED_SCOPE || scope === GENERATED_FOLDER || scope.startsWith(FEAT_PREFIX))
+    throw new Error(`"${scope}" is reserved and cannot be a domain.`);
   const layers = parseLayers(options.layers, DEFAULT_DOMAIN_LAYERS).filter((layer) => layer !== TESTING_LAYER);
   const allowed = SLICE_LAYERS.filter((layer) => layer !== TESTING_LAYER);
   const unknown = layers.filter((layer) => !allowed.includes(layer));
@@ -36,7 +37,9 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
 
   addScope(tree, scope);
   const n = sliceNames(scope);
-  const created = SLICE_LAYER_ORDER.filter((layer) => layers.includes(layer)).filter((layer) => generateSliceLayer(tree, n, layer));
+  const created = SLICE_LAYER_ORDER.filter((layer) => layers.includes(layer)).filter((layer) =>
+    generateSliceLayer(tree, n, layer),
+  );
   if (withTesting) generateTestingLib(tree, n);
   if (created.includes('data') && libExists(tree, `${scope}/testing`)) {
     const spec = dataStoreSpec(n);
@@ -46,7 +49,9 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
 
   if (!options.skipFormat) await formatFiles(tree);
   return () => {
-    logger.info(`Domain "${scope}": libs/${scope}/{${[...layers, ...(withTesting ? [TESTING_LAYER] : [])].join(',')}}, scope in nx.json.`);
+    logger.info(
+      `Domain "${scope}": libs/${scope}/{${[...layers, ...(withTesting ? [TESTING_LAYER] : [])].join(',')}}, scope in nx.json.`,
+    );
     logger.info(`Next: nx g @blueprint/tooling:feat ${scope} <name> --api --data --ui`);
   };
 }

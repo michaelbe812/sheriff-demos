@@ -10,7 +10,11 @@
  *              (a `testing` folder = test-only lib: `type:testing`)
  *   scopes     option `scopes` (nx.json): a folder libs/<unknown scope>/… fails the graph
  *              instead of silently creating a new scope (folder typo guard)
- *   targets    lint, typecheck, build (not for testing libs), test (only if src/ has *.spec.ts)
+ *   targets    lint, typecheck, build (not for testing libs), test (only if src/ has *.spec.ts);
+ *              every target depends on `^generate` and hashes the generated code of those tasks
+ *   clients    openapi-clients.json (second marker): one client project per entry with `generate`
+ *              (+ `update-spec`), see openapi-clients.ts. Client libs libs/[<domain>/]generated/<client>/<part>
+ *              get their tags from the path and implicit edges part → client (→ sibling parts)
  *
  * Conventions (layers, tags, scope check) live in lib-conventions.ts and are shared
  * with the generators. The tag derivation is the single source of truth: eslint.config.mjs and
@@ -20,11 +24,22 @@
 import type { CreateNodesResult, CreateNodesV2, TargetConfiguration } from '@nx/devkit';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { aliasFor, type BlueprintLibsOptions, deriveTags, LIBS_DIR, projectNameFor, TESTING_LAYER } from './lib-conventions';
+import {
+  aliasFor,
+  type BlueprintLibsOptions,
+  CLIENTS_CONFIG_FILE,
+  deriveTags,
+  LIBS_DIR,
+  parseLibPath,
+  projectNameFor,
+  TESTING_LAYER,
+} from './lib-conventions';
+import { clientPartEdges, type ClientsConfig, createClientProjects, readClientsConfig } from './openapi-clients';
 
 export { deriveTags } from './lib-conventions';
 
-const LIB_MARKER = `${LIBS_DIR}/**/src/index.ts`;
+/** libs (committed src/index.ts) + the client list — one plugin, one pass */
+const MARKER = `{${LIBS_DIR}/**/src/index.ts,${CLIENTS_CONFIG_FILE}}`;
 
 /** Executors of this package (executors.json). */
 export const NG_LIB_EXECUTORS = {
@@ -38,9 +53,18 @@ const TYPECHECK_SCRIPT_INPUT = `{workspaceRoot}/${TYPECHECK_SCRIPT}`;
 /** Shared tsconfigs every lib compiles with — they live outside the lib, so they are explicit inputs. */
 const SHARED_TS_INPUTS = ['{workspaceRoot}/tsconfig.base.json', '{workspaceRoot}/libs/tsconfig.json'];
 
+/**
+ * Generated client code is gitignored — Nx neither hashes nor analyzes gitignored files, so
+ * `default`/`^production` do not see it. Without this input a changed spec regenerates the client
+ * but consumers hit a stale cache (proven in the spike: renamed property, typecheck came from cache).
+ * The outputs of the (transitive) generate tasks the target depends on are hashed instead.
+ */
+const GENERATED_CODE_INPUT = { dependentTasksOutputFiles: '**/src/generated/**/*.ts', transitive: true };
+/** Every lib target waits for the generated code of the libs it depends on (no-op without clients). */
+const GENERATE_DEPS = '^generate';
+
 const hasSpecFiles = (dir: string): boolean =>
-  existsSync(dir) &&
-  readdirSync(dir, { recursive: true }).some((file) => String(file).endsWith('.spec.ts'));
+  existsSync(dir) && readdirSync(dir, { recursive: true }).some((file) => String(file).endsWith('.spec.ts'));
 
 function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: boolean) {
   const targets: Record<string, TargetConfiguration> = {
@@ -54,8 +78,10 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '^default',
         '{workspaceRoot}/eslint.config.mjs',
         '{workspaceRoot}/packages/tooling/src/plugin/**/*',
+        GENERATED_CODE_INPUT,
         { externalDependencies: ['eslint'] },
       ],
+      dependsOn: [GENERATE_DEPS],
       options: { command: 'eslint .', cwd: '{projectRoot}' },
     },
     typecheck: {
@@ -67,8 +93,10 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '^default',
         ...SHARED_TS_INPUTS,
         TYPECHECK_SCRIPT_INPUT,
+        GENERATED_CODE_INPUT,
         { externalDependencies: ['typescript'] },
       ],
+      dependsOn: [GENERATE_DEPS],
       options: { command: `node ${TYPECHECK_SCRIPT} {projectRoot}` },
     },
     // ng-lib-build generates ng-package.json, package.json and tsconfig (dist paths) in tmp/
@@ -76,13 +104,14 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
     build: {
       executor: NG_LIB_EXECUTORS.build,
       cache: true,
-      dependsOn: ['^build'],
+      dependsOn: ['^build', GENERATE_DEPS],
       inputs: [
         'production',
         '^production',
         ...SHARED_TS_INPUTS,
         '{workspaceRoot}/libs/tsconfig.lib.json',
         NG_LIB_INPUT,
+        GENERATED_CODE_INPUT,
         { externalDependencies: ['ng-packagr', '@angular/compiler-cli', 'typescript'] },
       ],
       outputs: ['{workspaceRoot}/dist/{projectRoot}'],
@@ -109,8 +138,10 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         '{workspaceRoot}/libs/tsconfig.spec.json',
         NG_LIB_INPUT,
         '{workspaceRoot}/vitest-base.config.mts',
+        GENERATED_CODE_INPUT,
         { externalDependencies: ['vitest', '@vitest/browser-playwright', 'msw', '@angular/build'] },
       ],
+      dependsOn: [GENERATE_DEPS],
       options: {
         tsConfig: 'libs/tsconfig.spec.json',
         runnerConfig: 'vitest-base.config.mts',
@@ -122,10 +153,24 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
   return targets;
 }
 
-function createLibNode(indexFile: string, workspaceRoot: string, options: BlueprintLibsOptions): CreateNodesResult {
+function createLibNode(
+  indexFile: string,
+  workspaceRoot: string,
+  options: BlueprintLibsOptions,
+  clients: ClientsConfig,
+): CreateNodesResult {
   const projectRoot = dirname(dirname(indexFile));
   const libPath = projectRoot.slice(`${LIBS_DIR}/`.length);
   const tags = deriveTags(libPath, options);
+  const client = parseLibPath(libPath)?.client;
+  if (client && !clients.clients?.[client.path]) {
+    throw new Error(
+      `${projectRoot}: part of client "${client.path}", but ${CLIENTS_CONFIG_FILE} has no entry for it ` +
+        `(nx g @blueprint/tooling:client ${client.name} …, or remove ${LIBS_DIR}/${client.path})`,
+    );
+  }
+  // gitignored generated code is invisible to the graph: part → client (generate, affected), api → core → types
+  const implicitDependencies = client ? clientPartEdges(workspaceRoot, client) : [];
   return {
     projects: {
       [projectRoot]: {
@@ -136,14 +181,20 @@ function createLibNode(indexFile: string, workspaceRoot: string, options: Bluepr
         tags,
         metadata: { js: { packageName: aliasFor(libPath) } },
         targets: libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`)),
+        ...(implicitDependencies.length ? { implicitDependencies } : {}),
       },
     },
   };
 }
 
 export const createNodesV2: CreateNodesV2<BlueprintLibsOptions> = [
-  LIB_MARKER,
-  // same contract as devkit's createNodesFromFiles, but errors are collected per file by Nx anyway
-  (indexFiles, options, context) =>
-    indexFiles.map((indexFile) => [indexFile, createLibNode(indexFile, context.workspaceRoot, options ?? {})] as const),
+  MARKER,
+  (files, options = {}, context) => {
+    const clients = readClientsConfig(context.workspaceRoot);
+    return files.map((file) =>
+      file === CLIENTS_CONFIG_FILE
+        ? ([file, { projects: createClientProjects(context.workspaceRoot, clients, options.scopes) }] as const)
+        : ([file, createLibNode(file, context.workspaceRoot, options, clients)] as const),
+    );
+  },
 ];

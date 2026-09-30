@@ -92,7 +92,8 @@ function sameTagConstraints(tags) {
  */
 function deepImportPatterns() {
     return projectNodes
-        .filter((node) => node.data.root.startsWith("libs/"))
+        // libs only (they carry the alias) — not the OpenAPI client projects libs/**/generated/<client>
+        .filter((node) => node.data.root.startsWith("libs/") && node.data.metadata?.js?.packageName)
         .map((node) => `@blueprint/${node.data.root.slice("libs/".length)}`)
         .sort()
         .map((alias) => ({
@@ -171,6 +172,13 @@ export default [
             ],
             "no-restricted-imports": ["error", { patterns: deepImportPatterns() }]
         }
+    },
+    {
+        // generated OpenAPI client code: every file starts with `/* eslint-disable */
+        // /* eslint-enable @nx/enforce-module-boundaries, no-restricted-imports */` — only the
+        // boundary rules run. The disable directive is intentionally broad.
+        files: ["libs/**/src/generated/**"],
+        linterOptions: { reportUnusedDisableDirectives: "off" }
     },
     {
         files: specFiles,

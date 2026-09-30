@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "outputCapture": "direct-nodejs",
+  "$schema": "https://json-schema.org/schema",
+  "title": "OpenAPI client (ClientDefinition, packages/tooling/src/openapi/contract.d.ts)",
+  "description": "Set by the crystal plugin from openapi-clients.json — not meant to be written by hand.",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "description": "Client name = folder name, e.g. pet-client." },
+    "placement": {
+      "description": "'shared' → libs/generated/<name>, { domain } → libs/<domain>/generated/<name>.",
+      "oneOf": [
+        { "const": "shared" },
+        {
+          "type": "object",
+          "properties": { "domain": { "type": "string" } },
+          "required": ["domain"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Committed spec, workspace-relative. The only source for generate."
+        },
+        "url": { "type": "string", "description": "Optional: source for update-spec." }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+    "generator": {
+      "type": "object",
+      "properties": {
+        "adapter": { "type": "string" },
+        "options": { "type": "object" }
+      },
+      "required": ["adapter"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["name", "placement", "spec", "generator"],
+  "additionalProperties": false
+}

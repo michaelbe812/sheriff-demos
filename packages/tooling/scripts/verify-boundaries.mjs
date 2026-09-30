@@ -142,8 +142,9 @@ const cases = [
  */
 function checkTagSchema(projectGraph) {
   const problems = [];
+  // libs = projects with an alias; the OpenAPI client projects (libs/**/generated/<client>) have none
   const libs = Object.values(projectGraph.nodes).filter(
-    (node) => node.data.root.startsWith('libs/') && node.data.root !== UNTAGGED_LIB,
+    (node) => node.data.root.startsWith('libs/') && node.data.root !== UNTAGGED_LIB && node.data.metadata?.js?.packageName,
   );
   const markerRoots = readdirSync('libs', { recursive: true })
     .filter((f) => f.endsWith('src/index.ts'))
@@ -196,7 +197,9 @@ function checkTestIsolation(projectGraph) {
   const problems = [];
   const production = JSON.parse(readFileSync('nx.json', 'utf-8')).namedInputs.production;
   if (!production.includes('!{projectRoot}/**/*.spec.ts')) problems.push('nx.json: production input must exclude specs');
-  const libs = Object.values(projectGraph.nodes).filter(({ data }) => data.root.startsWith('libs/') && data.root !== UNTAGGED_LIB);
+  const libs = Object.values(projectGraph.nodes).filter(
+    ({ data }) => data.root.startsWith('libs/') && data.root !== UNTAGGED_LIB && data.metadata?.js?.packageName,
+  );
   for (const { data } of libs) {
     const { root, tags = [], targets = {} } = data;
     if (tags.includes('type:testing') && targets.build) problems.push(`${root}: type:testing must not have a build target`);
@@ -223,16 +226,19 @@ function checkTestIsolation(projectGraph) {
 /**
  * Libs have no config files: project, tags, targets and build files come from the plugin and the
  * ng-lib executors. Any of these below libs/ outside a src/ folder is an error — except the shared
- * libs/tsconfig*.json. Runs before the temporary libs of this script exist.
+ * libs/tsconfig*.json and a client's spec (openapi.yaml|json) in its client folder; the client options
+ * live in openapi-clients.json. Runs before the temporary libs of this script exist.
  */
-const LIB_CONFIG_FILE = /^(project\.json|package\.json|ng-package\.json|tsconfig.*\.json|eslint\.config\.[cm]?[jt]s)$/;
+const LIB_CONFIG_FILE = /^(project\.json|package\.json|ng-package\.json|tsconfig.*\.json|eslint\.config\.[cm]?[jt]s|openapi\.(ya?ml|json))$/;
 const SHARED_LIB_CONFIG = /^libs\/tsconfig[^/]*\.json$/;
+// the committed spec of an OpenAPI client lives in the client folder (libs/[<domain>/]generated/<client>/)
+const CLIENT_SPEC = /^libs\/([a-z][a-z0-9-]*\/)?generated\/[a-z][a-z0-9-]*\/openapi\.(yaml|json)$/;
 
 function checkLibConfigFiles() {
   const files = readdirSync('libs', { recursive: true }).map((file) => join('libs', String(file)));
   const problems = files
     .filter((file) => LIB_CONFIG_FILE.test(file.split('/').at(-1)))
-    .filter((file) => !SHARED_LIB_CONFIG.test(file) && !file.split('/').includes('src'))
+    .filter((file) => !SHARED_LIB_CONFIG.test(file) && !CLIENT_SPEC.test(file) && !file.split('/').includes('src'))
     .map((file) => `${file}: config file in a lib — libs have none (plugin + ng-lib executors derive them), remove it`);
   return { count: files.length, problems };
 }

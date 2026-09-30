@@ -49,3 +49,6 @@ Thumbs.db
 # vitest browser mode: screenshots/attachments of failed tests
 __screenshots__
 .vitest-attachments
+
+# generated OpenAPI clients (packages/tooling/src/openapi): per client lib only src/index.ts is committed
+**/src/generated/**

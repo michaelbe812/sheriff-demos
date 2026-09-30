@@ -14,6 +14,16 @@
       "implementation": "./src/executors/ng-lib/test.js",
       "schema": "@nx/angular/src/executors/unit-test/schema.json",
       "description": "@nx/angular:unit-test für Libs ohne ng-package.json/tsconfig.spec.json pro Lib (tsConfig = gemeinsame spec-tsconfig, include wird auf die Lib verengt)."
+    },
+    "openapi-generate": {
+      "implementation": "./src/executors/openapi/generate.js",
+      "schema": "./src/executors/openapi/client.schema.json",
+      "description": "OpenAPI client via the configured adapter (openapi-clients.json), split into the libs types/api/core (src/generated/**, gitignored)."
+    },
+    "openapi-update-spec": {
+      "implementation": "./src/executors/openapi/update-spec.js",
+      "schema": "./src/executors/openapi/client.schema.json",
+      "description": "Downloads the spec from its url (openapi-clients.json) and writes it normalized into the committed spec file."
     }
   }
 }

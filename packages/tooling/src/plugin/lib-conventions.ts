@@ -5,6 +5,12 @@
  *
  *   libs/<scope>/<layer>                  scope:<scope> type:<layer> feat:none
  *   libs/<scope>/feat-<feat>/<layer>      scope:<scope> type:<layer> feat:<feat>
+ *
+ * Generated OpenAPI clients (`generated` is a reserved folder, never a scope or layer):
+ *   libs/generated/<client>/<part>          scope:shared   ┐ type:types | type:api (api, core) | type:testing,
+ *   libs/<domain>/generated/<client>/<part> scope:<domain> ┘ feat:none, marker `generated` (never port/entry)
+ *   The client folder itself holds the committed spec (openapi.yaml|json); its options live in
+ *   openapi-clients.json (workspace root), see packages/tooling/src/openapi.
  */
 
 export const LIBS_DIR = 'libs';
@@ -23,6 +29,23 @@ export const SLICE_LAYERS = KNOWN_LAYERS.filter((layer) => layer !== 'feature');
 /** Layers inside a feat (`libs/<scope>/feat-<feat>/<layer>`): no shell, no testing. */
 export const FEAT_LAYERS = KNOWN_LAYERS.filter((layer) => layer !== 'shell' && layer !== TESTING_LAYER);
 
+/** Reserved folder of generated OpenAPI clients: `libs/generated/<client>`, `libs/<domain>/generated/<client>`. */
+export const GENERATED_FOLDER = 'generated';
+/** Marker tag of every generated client lib (and the client project). */
+export const GENERATED_TAG = 'generated';
+/** Client options, one entry per client (key = client path below libs/). Read by the plugin. */
+export const CLIENTS_CONFIG_FILE = 'openapi-clients.json';
+/** Committed spec in the client folder — exactly one of them. */
+export const CLIENT_SPEC_FILES = ['openapi.yaml', 'openapi.json'];
+/**
+ * Parts of a client = libs below its folder, part → layer. `core` is `api`, not `utils`: the
+ * generated runtime (Configuration, encoder, client) imports @angular/common/http.
+ * `testing`: MSW handlers, faker factories and the typed `<client>Http` — generated from the spec only.
+ */
+export const CLIENT_PARTS: Record<string, string> = { types: 'types', api: 'api', core: 'api', testing: TESTING_LAYER };
+/** Parts written by the code generator adapter (the facade); `testing` has its own generate target. */
+export const CLIENT_CODE_PARTS = ['types', 'api', 'core'];
+
 /** Options of the plugin entry in nx.json (`plugins[] → { plugin: '@blueprint/tooling', options }`). */
 export interface BlueprintLibsOptions {
   /** Allowed `libs/<scope>` folders. Unknown scope = graph error (folder typo guard). */
@@ -34,10 +57,34 @@ export interface LibPath {
   /** feat name without `feat-`, undefined outside a feat */
   feat?: string;
   layer: string;
+  /** generated client part: the client path below libs/ (e.g. `booking/generated/booking-client`) and its part */
+  client?: { path: string; name: string; part: string };
+}
+
+export interface ClientPath {
+  /** path below libs/, e.g. `generated/pet-client` or `booking/generated/booking-client` */
+  path: string;
+  name: string;
+  /** `shared` for libs/generated/<client>, else the domain */
+  scope: string;
+  placement: 'shared' | { domain: string };
+}
+
+/** `generated/pet-client` or `<domain>/generated/<client>` → client; undefined for any other shape. */
+export function parseClientPath(clientPath: string): ClientPath | undefined {
+  const segments = clientPath.split('/');
+  const shared = segments.length === 2 && segments[0] === GENERATED_FOLDER;
+  const domain = segments.length === 3 && segments[1] === GENERATED_FOLDER && segments[0] !== GENERATED_FOLDER;
+  const name = segments.at(-1) ?? '';
+  if ((!shared && !domain) || !name || name === GENERATED_FOLDER) return undefined;
+  return shared
+    ? { path: clientPath, name, scope: SHARED_SCOPE, placement: 'shared' }
+    : { path: clientPath, name, scope: segments[0], placement: { domain: segments[0] } };
 }
 
 /** `booking/feat-check-booking/api` → { scope, feat, layer }; undefined if the shape is wrong. */
 export function parseLibPath(libPath: string): LibPath | undefined {
+  if (libPath.split('/').includes(GENERATED_FOLDER)) return parseGeneratedLibPath(libPath);
   const [scope, ...rest] = libPath.split('/');
   const layer = rest.at(-1) ?? '';
   const featFolder = rest.find((segment) => segment.startsWith(FEAT_PREFIX));
@@ -46,9 +93,21 @@ export function parseLibPath(libPath: string): LibPath | undefined {
   return { scope, layer, feat: featFolder?.slice(FEAT_PREFIX.length) };
 }
 
+/** `generated/pet-client/api` → part `api` of the shared client; undefined if the shape is wrong. */
+function parseGeneratedLibPath(libPath: string): LibPath | undefined {
+  const segments = libPath.split('/');
+  const part = segments.pop() as string;
+  const client = parseClientPath(segments.join('/'));
+  if (!client || !(part in CLIENT_PARTS)) return undefined;
+  return { scope: client.scope, layer: CLIENT_PARTS[part], client: { path: client.path, name: client.name, part } };
+}
+
 /** Why a lib path is not allowed, or undefined if it is (shape, layer, scope list). */
 export function libPathError(libPath: string, options: BlueprintLibsOptions = {}): string | undefined {
   const parsed = parseLibPath(libPath);
+  if (!parsed && libPath.split('/').includes(GENERATED_FOLDER)) {
+    return `${LIBS_DIR}/${libPath}: not a generated client lib — expected ${LIBS_DIR}/${GENERATED_FOLDER}/<client>/<part> or ${LIBS_DIR}/<domain>/${GENERATED_FOLDER}/<client>/<part>, part one of ${Object.keys(CLIENT_PARTS).join(', ')} ("${GENERATED_FOLDER}" is reserved, no scope or layer)`;
+  }
   if (!parsed) {
     return `${LIBS_DIR}/${libPath}: not a blueprint lib path — expected ${LIBS_DIR}/<scope>/<layer> or ${LIBS_DIR}/<scope>/feat-<feat>/<layer>, layer one of ${KNOWN_LAYERS.join(', ')}`;
   }
@@ -69,7 +128,9 @@ export function deriveTags(libPath: string, options: BlueprintLibsOptions = {}):
   const error = libPathError(libPath, options);
   // fail the graph instead of silently creating an unconstrained lib (the old tag-typo problem)
   if (error) throw new Error(error);
-  const { scope, feat, layer } = parseLibPath(libPath) as LibPath;
+  const { scope, feat, layer, client } = parseLibPath(libPath) as LibPath;
+  // no port: a generated client is never a slice's public API — foreign slices only reach it via the port
+  if (client) return [`scope:${scope}`, `type:${layer}`, 'feat:none', GENERATED_TAG];
   const tags = [
     `scope:${scope}`,
     `type:${FEATURE_LAYERS.includes(layer) ? 'feature' : layer}`,

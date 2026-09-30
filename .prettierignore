@@ -4,3 +4,7 @@
 /.nx/cache
 /.nx/workspace-data
 .angular
+# OpenAPI specs: written by update-spec / the client generator, normalized there
+/libs/**/openapi.yaml
+/libs/**/openapi.json
+/openapi-clients.json

@@ -33,15 +33,28 @@ export function resolveArtifact(tree: Tree, path: string, kind: string, allowedL
   if (!lib || !libExists(tree, libPart)) {
     throw new Error(`${LIBS_DIR}/${libPart} is no lib — path must look like libs/<scope>/<layer>/src/<name>`);
   }
+  if (lib.client) {
+    throw new Error(
+      `${LIBS_DIR}/${libPart} is generated from ${lib.client.path}'s spec — wrap it in a port instead of adding a ${kind}.`,
+    );
+  }
   if (!allowedLayers.includes(lib.layer)) {
-    throw new Error(`A ${kind} belongs into a ${allowedLayers.join('/')} lib, not into "${lib.layer}" (${LIBS_DIR}/${libPart}).`);
+    throw new Error(
+      `A ${kind} belongs into a ${allowedLayers.join('/')} lib, not into "${lib.layer}" (${LIBS_DIR}/${libPart}).`,
+    );
   }
   const name = below.split('/').at(-1) as string;
   assertKebabCase(name, `${kind} name`);
   return { libPath: libPart, relative: below, name, className: names(name).className };
 }
 
-export async function writeArtifact(tree: Tree, target: ArtifactTarget, file: string, content: string, options: ArtifactSchema): Promise<void> {
+export async function writeArtifact(
+  tree: Tree,
+  target: ArtifactTarget,
+  file: string,
+  content: string,
+  options: ArtifactSchema,
+): Promise<void> {
   const created = writeIfMissing(tree, `${LIBS_DIR}/${target.libPath}/src/${file}`, content);
   if (!created) throw new Error(`${LIBS_DIR}/${target.libPath}/src/${file} exists already`);
   if (options.export !== false) addExport(tree, target.libPath, file);

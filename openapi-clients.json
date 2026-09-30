@@ -1,0 +1,5 @@
+{
+  "$schema": "./packages/tooling/src/openapi/openapi-clients.schema.json",
+  "defaultAdapter": "openapi-tools",
+  "clients": {}
+}
