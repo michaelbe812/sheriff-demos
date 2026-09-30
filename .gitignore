@@ -45,3 +45,7 @@ Thumbs.db
 .claude/settings.local.json
 
 .angular
+
+# vitest browser mode: screenshots/attachments of failed tests
+__screenshots__
+.vitest-attachments
