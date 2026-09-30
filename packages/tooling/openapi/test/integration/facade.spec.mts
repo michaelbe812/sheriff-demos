@@ -97,7 +97,7 @@ describe.each(cases)('facade with adapter $adapter $options', ({ adapter, option
     expect(hashTree(`${root}/libs`)).toEqual(before);
   });
 
-  it('compiles against the aliases (strict, like libs/tsconfig.json)', () => {
+  it('compiles against the aliases (strict, like a lib tsconfig.json)', () => {
     const indexFiles = ['types', 'api', 'core'].map((name) => `libs/${clientPath}/${name}/src/index.ts`);
     expect(typecheck(root, indexFiles)).toEqual([]);
   });

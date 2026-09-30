@@ -1,8 +1,21 @@
 import { formatFiles, type GeneratorCallback, logger, type Tree } from '@nx/devkit';
-import { FEAT_PREFIX, GENERATED_FOLDER, SHARED_SCOPE, SLICE_LAYERS, TESTING_LAYER } from '@blueprint/tooling-conventions';
+import {
+  FEAT_PREFIX,
+  GENERATED_FOLDER,
+  SHARED_SCOPE,
+  SLICE_LAYERS,
+  TESTING_LAYER,
+} from '@blueprint/tooling-conventions';
 import { assertLayerDependencies, generateSliceLayer, generateTestingLib, registerSliceRoute } from '../shared/slice';
 import { dataStoreSpec, SLICE_LAYER_ORDER, sliceNames } from '../shared/slice-templates';
-import { addScope, APP_ROUTES_FILE, assertKebabCase, libExists, writeIfMissing } from '../shared/workspace';
+import {
+  addScope,
+  addSpecConfig,
+  APP_ROUTES_FILE,
+  assertKebabCase,
+  libExists,
+  writeIfMissing,
+} from '../shared/workspace';
 
 export interface DomainGeneratorSchema {
   name: string;
@@ -43,14 +56,14 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
   if (withTesting) generateTestingLib(tree, n);
   if (created.includes('data') && libExists(tree, `${scope}/testing`)) {
     const spec = dataStoreSpec(n);
-    writeIfMissing(tree, `libs/${scope}/data/src/${spec.file}`, spec.content);
+    if (writeIfMissing(tree, `libs/${scope}/data/src/${spec.file}`, spec.content)) addSpecConfig(tree, `${scope}/data`);
   }
   if (layers.includes('shell')) registerSliceRoute(tree, scope, options.appRoutesFile ?? APP_ROUTES_FILE);
 
   if (!options.skipFormat) await formatFiles(tree);
   return () => {
     logger.info(
-      `Domain "${scope}": libs/${scope}/{${[...layers, ...(withTesting ? [TESTING_LAYER] : [])].join(',')}}, scope in nx.json.`,
+      `Domain "${scope}": libs/${scope}/{${[...layers, ...(withTesting ? [TESTING_LAYER] : [])].join(',')}} (+ config files, paths), scope in lib-scopes.json.`,
     );
     logger.info(`Next: nx g @blueprint/tooling-workspace:feat ${scope} <name> --api --data --ui`);
   };

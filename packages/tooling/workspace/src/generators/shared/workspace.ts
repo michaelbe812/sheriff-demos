@@ -4,13 +4,18 @@ import { addScope, listLibPaths, readScopes, removeScope } from '@blueprint/tool
 
 export {
   addScope,
+  addSpecConfig,
   assertKebabCase,
   assertSliceExists,
   forEachSourceFile,
   libExists,
   listLibPaths,
   readScopes,
+  relocateLibConfig,
+  removeLibPaths,
   removeScope,
+  updateImplicitDependencies,
+  writeLibConfig,
 } from '@blueprint/tooling-conventions/tree';
 
 /** Default app shell routes (lazy domain routes are registered here). */

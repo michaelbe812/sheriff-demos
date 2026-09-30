@@ -3,17 +3,23 @@ import { aliasFor, LIBS_DIR } from '@blueprint/tooling-conventions';
 import { findExportedRoutes, findLazyRoutes, insertRoute, lazyRouteSource, updateFile } from './routes';
 import { type LibFiles, SLICE_LAYER_REQUIRES, SLICE_LAYER_TEMPLATES, type SliceNames } from './slice-templates';
 import { testingFiles } from './testing-templates';
-import { addExport, APP_ROUTES_FILE, libExists, writeIfMissing } from './workspace';
+import { addExport, APP_ROUTES_FILE, libExists, writeIfMissing, writeLibConfig } from './workspace';
 
-/** Writes a new lib (sources + index.ts). An existing lib is left untouched (idempotent). */
+/**
+ * Writes a new lib: sources + index.ts, then its config files (project.json with the tags of its path,
+ * package.json with the peerDependencies of its imports, ng-package.json, tsconfig*.json) and its
+ * tsconfig.base.json paths entry. An existing lib is left untouched (idempotent).
+ */
 export function writeLib(tree: Tree, libPath: string, lib: LibFiles): boolean {
   if (libExists(tree, libPath)) {
     logger.info(`${LIBS_DIR}/${libPath} exists — skipped`);
     return false;
   }
-  for (const [file, content] of Object.entries(lib.files)) writeIfMissing(tree, `${LIBS_DIR}/${libPath}/src/${file}`, content);
+  for (const [file, content] of Object.entries(lib.files))
+    writeIfMissing(tree, `${LIBS_DIR}/${libPath}/src/${file}`, content);
   if (lib.exports.length === 0) tree.write(`${LIBS_DIR}/${libPath}/src/index.ts`, 'export {};\n');
   for (const file of lib.exports) addExport(tree, libPath, file);
+  writeLibConfig(tree, libPath);
   return true;
 }
 
@@ -63,6 +69,10 @@ export function registerSliceRoute(tree: Tree, scope: string, appRoutesFile = AP
   return updateFile(tree, appRoutesFile, (content) =>
     findLazyRoutes(content, appRoutesFile).some((route) => route.specifier === specifier)
       ? content
-      : insertRoute(content, lazyRouteSource({ path: scope, specifier, exportName: routes.name, kind: 'children' }), appRoutesFile),
+      : insertRoute(
+          content,
+          lazyRouteSource({ path: scope, specifier, exportName: routes.name, kind: 'children' }),
+          appRoutesFile,
+        ),
   );
 }

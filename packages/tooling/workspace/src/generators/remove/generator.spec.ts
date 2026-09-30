@@ -13,8 +13,10 @@ describe('remove generator', () => {
     tree = createBlueprintTree();
   });
 
-  it('removes a domain with its app route and scope; app routes are exactly as before', async () => {
+  it('removes a domain with its app route, scope, config and paths; everything exactly as before', async () => {
     const before = read(tree, APP_ROUTES);
+    const baseTsconfig = read(tree, 'tsconfig.base.json');
+    const scopes = read(tree, 'lib-scopes.json');
     // skipFormat: prettier would use its defaults in the virtual tree (no .prettierrc)
     await domainGenerator(tree, { name: 'payment', skipFormat: true });
     await featGenerator(tree, { domain: 'payment', name: 'checkout', data: true, skipFormat: true });
@@ -25,6 +27,8 @@ describe('remove generator', () => {
     expect(tree.exists('libs/payment')).toBe(false);
     expect(read(tree, APP_ROUTES)).toBe(before);
     expect(scopesOf(tree)).toEqual(['booking', 'layout', 'shared']);
+    expect(read(tree, 'tsconfig.base.json')).toBe(baseTsconfig);
+    expect(read(tree, 'lib-scopes.json')).toBe(scopes);
   });
 
   it('removes a feat and its shell route, keeps the scope', async () => {
@@ -45,8 +49,14 @@ describe('remove generator', () => {
   });
 
   it('ignores imports in comments', async () => {
-    tree.write('libs/layout/shell/src/example.ts', "// boundary-violation-example: import { X } from '@blueprint/booking/data';\nexport {};\n");
-    tree.write('libs/booking/feat-check-booking/feature/src/feat-check-booking.ts', 'export class FeatCheckBooking {}\n');
+    tree.write(
+      'libs/layout/shell/src/example.ts',
+      "// boundary-violation-example: import { X } from '@blueprint/booking/data';\nexport {};\n",
+    );
+    tree.write(
+      'libs/booking/feat-check-booking/feature/src/feat-check-booking.ts',
+      'export class FeatCheckBooking {}\n',
+    );
 
     await removeGenerator(tree, { path: 'booking/data' });
 

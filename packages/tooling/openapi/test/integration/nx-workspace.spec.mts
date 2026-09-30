@@ -1,13 +1,14 @@
 /**
- * `nx` itself in a fixture workspace with both plugins (workspace + openapi, as in nx.json of the repo):
- * the merged project configuration of a client (tags, edges, targets, inputs incl. json fields and
- * dependentTasksOutputFiles) and `nx run …:generate` through the real executors, cached on the second run.
+ * `nx` itself in a fixture workspace configured like the repo (nx.json targetDefaults, lib-scopes.json, exact
+ * tooling paths): `nx g @blueprint/tooling-openapi:client` writes the explicit config, Nx reads it (tags,
+ * edges, targets, inputs incl. json fields and dependentTasksOutputFiles from targetDefaults) and
+ * `nx run …:generate` runs through the real executors, cached on the second run.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { addClient, createWorkspace, removeWorkspace, repoRoot, write } from '../helpers.mjs';
+import { createWorkspace, removeWorkspace, repoRoot, THINGS_SPEC, write } from '../helpers.mjs';
 
 const TOOLING_PATHS = Object.fromEntries(
   Object.entries(
@@ -42,33 +43,35 @@ describe('nx in a fixture workspace', () => {
     // the repo's manifest + lockfile: Nx resolves the externalDependencies inputs (adapter versions) from them
     write(root, 'package.json', readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
     write(root, 'pnpm-lock.yaml', readFileSync(join(repoRoot, 'pnpm-lock.yaml'), 'utf-8'));
-    write(
-      root,
-      'nx.json',
-      JSON.stringify({
-        plugins: [
-          { plugin: '@blueprint/tooling-workspace', options: { scopes: ['booking', 'shared'] } },
-          '@blueprint/tooling-openapi',
-        ],
-      }),
+    // the repo's targetDefaults (lint/typecheck/build/test bodies, ^generate, dependentTasksOutputFiles)
+    write(root, 'nx.json', readFileSync(join(repoRoot, 'nx.json'), 'utf-8'));
+    write(root, 'lib-scopes.json', JSON.stringify({ scopes: ['booking', 'shared'] }));
+    // like the repo: exact paths for the tooling exports (Nx loads generators with swc + these paths)
+    write(root, 'tsconfig.base.json', JSON.stringify({ compilerOptions: { paths: TOOLING_PATHS } }));
+    // the domain must exist (a lib below libs/booking)
+    write(root, 'libs/booking/types/src/index.ts', 'export {};\n');
+    write(root, 'specs/things.yaml', THINGS_SPEC);
+    nx(
+      'g',
+      '@blueprint/tooling-openapi:client',
+      'things-client',
+      '--domain=booking',
+      '--spec=specs/things.yaml',
+      '--adapter=hey-api',
     );
-    // like the repo: exact paths for the tooling exports (Nx loads the plugins with swc + these paths), libs wildcard
-    write(
-      root,
-      'tsconfig.base.json',
-      JSON.stringify({ compilerOptions: { paths: { ...TOOLING_PATHS, '@blueprint/*': ['./libs/*/src/index.ts'] } } }),
-    );
-    addClient(root, 'booking/generated/things-client', { entry: { adapter: 'hey-api' } });
   });
   afterAll(() => removeWorkspace(root));
 
-  it('merges both plugins: the workspace plugin infers the part libs, the openapi plugin adds client, edges, generate', () => {
+  it('reads the config the generator wrote: part libs, client project, edges, generate, targetDefaults', () => {
     const testing = project('booking-generated-things-client-testing');
     expect(testing.tags).toEqual(['scope:booking', 'type:testing', 'feat:none', 'generated']);
     expect(testing.implicitDependencies).toEqual(['booking-generated-things-client']);
     expect(testing.targets.generate.executor).toBe('@blueprint/tooling-openapi:generate-testing');
     expect(testing.targets.lint.dependsOn).toEqual(['generate', '^generate']);
     expect(testing.targets.typecheck.dependsOn).toEqual(['generate', '^generate']);
+    expect(testing.targets.typecheck.options.command).toBe(
+      'tsc -p libs/booking/generated/things-client/testing/tsconfig.json',
+    );
     expect(testing.targets.lint.inputs).toContainEqual({
       dependentTasksOutputFiles: '**/src/generated/**/*.ts',
       transitive: true,
@@ -81,7 +84,9 @@ describe('nx in a fixture workspace', () => {
       'booking-generated-things-client-types',
       'booking-generated-things-client-core',
     ]);
+    expect(api.targets.build.executor).toBe('@nx/angular:ng-packagr-lite');
     expect(api.targets.build.dependsOn).toEqual(['^build', '^generate']);
+    expect(api.metadata.js.packageName).toBe('@blueprint/booking/generated/things-client/api');
 
     const client = project('booking-generated-things-client');
     expect(client.tags).toEqual(['scope:booking', 'generated']);
@@ -89,7 +94,13 @@ describe('nx in a fixture workspace', () => {
       json: '{workspaceRoot}/openapi-clients.json',
       fields: ['defaultAdapter', 'clients.booking/generated/things-client'],
     });
+    expect(client.targets.generate.inputs).toContainEqual({
+      externalDependencies: ['@hey-api/openapi-ts', 'typescript', 'yaml'],
+    });
     expect(client.targets.generate.options).toEqual({ client: 'booking/generated/things-client' });
+    expect(JSON.parse(readFileSync(join(root, 'tsconfig.base.json'), 'utf-8')).compilerOptions.paths).toHaveProperty([
+      '@blueprint/booking/generated/things-client/types',
+    ]);
   });
 
   it('nx run …:generate runs the executors; the second run comes from the cache', () => {
@@ -105,12 +116,5 @@ describe('nx in a fixture workspace', () => {
       'booking-generated-things-client-testing:',
     );
     expect(existsSync(join(root, 'libs/booking/generated/things-client/testing/src/generated/handlers.ts'))).toBe(true);
-  });
-
-  it('a part without entry fails the graph', () => {
-    write(root, 'libs/generated/orphan-client/api/src/index.ts', "export * from './generated';\n");
-    expect(() => nx('show', 'projects')).toThrow(
-      /part of client "generated\/orphan-client", but openapi-clients\.json has no entry/,
-    );
   });
 });

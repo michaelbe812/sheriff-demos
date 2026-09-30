@@ -1,10 +1,10 @@
-import { logger, readNxJson, type Tree, updateNxJson } from '@nx/devkit';
+import { logger, type Tree } from '@nx/devkit';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createBlueprintTree, read } from '@blueprint/tooling-conventions/testing';
-import { listLibPaths } from '@blueprint/tooling-conventions/tree';
+import { createBlueprintTree, pathsOf, read, readProject } from '@blueprint/tooling-conventions/testing';
+import { listLibPaths, readJsonFile } from '@blueprint/tooling-conventions/tree';
 import { clientGenerator } from './generator';
 
 const SPEC_YAML = `openapi: 3.0.3
@@ -39,6 +39,40 @@ describe('client generator', () => {
     ]);
     expect(read(tree, 'libs/generated/demo-client/api/src/index.ts')).toBe("export * from './generated';\n");
     expect(clients(tree)).toEqual({ 'generated/demo-client': {} });
+  });
+
+  it('writes the explicit config: client project.json, part configs with edges, paths entries', async () => {
+    await clientGenerator(tree, { name: 'demo-client', spec: 'specs/demo.yaml', skipFormat: true });
+
+    const client = readProject(tree, 'libs/generated/demo-client/project.json');
+    expect(client).toMatchObject({ name: 'generated-demo-client', tags: ['scope:shared', 'generated'] });
+    expect(client.targets.generate.options).toEqual({ client: 'generated/demo-client' });
+    expect(client.targets['update-spec'].executor).toBe('@blueprint/tooling-openapi:update-spec');
+
+    expect(readJsonFile(tree, 'libs/generated/demo-client/api/project.json')).toMatchObject({
+      name: 'generated-demo-client-api',
+      tags: ['scope:shared', 'type:api', 'feat:none', 'generated'],
+      implicitDependencies: ['generated-demo-client', 'generated-demo-client-types', 'generated-demo-client-core'],
+      targets: { build: {}, lint: {}, typecheck: {} },
+    });
+    // gitignored code: no peerDependencies (dist as before)
+    expect(readJsonFile(tree, 'libs/generated/demo-client/api/package.json')).toEqual({
+      name: '@blueprint/generated/demo-client/api',
+      version: '0.0.1',
+      private: true,
+      sideEffects: false,
+    });
+    const testing = readProject(tree, 'libs/generated/demo-client/testing/project.json');
+    expect(testing.targets.generate.executor).toBe('@blueprint/tooling-openapi:generate-testing');
+    expect(testing.targets.lint).toEqual({ dependsOn: ['generate', '^generate'] });
+    expect(tree.exists('libs/generated/demo-client/testing/package.json')).toBe(false);
+
+    const paths = pathsOf(tree);
+    for (const part of ['api', 'core', 'testing', 'types']) {
+      expect(paths[`@blueprint/generated/demo-client/${part}`]).toEqual([
+        `./libs/generated/demo-client/${part}/src/index.ts`,
+      ]);
+    }
   });
 
   it('creates a domain client from a JSON spec, with url and a non-default adapter', async () => {
@@ -157,8 +191,7 @@ describe('client generator', () => {
     expect(clients(tree)).toEqual({ 'generated/demo-client': {} });
 
     // without scope list any slice folder counts as domain — a nested one yields no client path
-    const nxJson = readNxJson(tree) ?? {};
-    updateNxJson(tree, { ...nxJson, plugins: [] });
+    tree.delete('lib-scopes.json');
     tree.write('libs/a/b/types/src/index.ts', 'export {};\n');
     await expect(clientGenerator(tree, { name: 'x-client', domain: 'a/b', spec: 'specs/demo.yaml' })).rejects.toThrow(
       'libs/a/b/generated/x-client: not a client path',
@@ -221,7 +254,7 @@ describe('client generator', () => {
     const callback = await clientGenerator(tree, { name: 'demo-client', domain: 'booking', spec: 'specs/demo.yaml' });
     callback();
     expect(info.mock.calls.map(([message]) => message)).toEqual([
-      'Client booking-generated-demo-client: libs/booking/generated/demo-client/{openapi.yaml,types,api,core,testing}, entry in openapi-clients.json.',
+      'Client booking-generated-demo-client: libs/booking/generated/demo-client/{openapi.yaml,project.json,types,api,core,testing}, paths in tsconfig.base.json, entry in openapi-clients.json.',
       'Generate: nx run-many -t generate (build/lint/test/typecheck do it on their own).',
       'Use: @blueprint/booking/generated/demo-client/api (services) + /types in the booking api layer (the port), specs: @blueprint/booking/generated/demo-client/testing (demoClientHandlers, demoClientHttp).',
     ]);

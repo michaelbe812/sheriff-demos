@@ -92,7 +92,7 @@ export const filesBelow = (dir: string): string[] => Object.keys(hashTree(dir));
 
 /**
  * Typechecks the given files against the lib aliases of the fixture workspace (`@blueprint/*` →
- * libs/*\/src/index.ts, as tsconfig.base.json does) with the compiler options of libs/tsconfig.json.
+ * libs/*\/src/index.ts, as tsconfig.base.json does) with the compiler options of a lib tsconfig.json.
  * Returns the formatted diagnostics (empty = compiles).
  */
 export function typecheck(root: string, files: string[]): string[] {
