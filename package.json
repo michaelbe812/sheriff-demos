@@ -4,7 +4,8 @@
   "license": "MIT",
   "scripts": {
     "verify": "nx run tooling:verify",
-    "verify:boundaries": "node packages/tooling/scripts/verify-boundaries.mjs"
+    "verify:boundaries": "node packages/tooling/scripts/verify-boundaries.mjs",
+    "verify:nx-internals": "node packages/tooling/scripts/verify-nx-internals.mjs"
   },
   "private": true,
   "dependencies": {
