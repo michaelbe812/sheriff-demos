@@ -1,0 +1,66 @@
+# Hand-written (no url): backend contract of the booking domain. Committed, the only source for generate.
+openapi: 3.0.3
+info:
+  title: Booking API
+  version: 1.0.0
+servers:
+  - url: /api
+tags:
+  - name: bookings
+paths:
+  /bookings:
+    get:
+      tags:
+        - bookings
+      operationId: listBookings
+      summary: All bookings
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        default:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Booking:
+      type: object
+      required:
+        - id
+        - guestName
+        - checkinDate
+        - status
+      properties:
+        id:
+          type: string
+          example: b-100
+        guestName:
+          type: string
+          example: Katherine Johnson
+        checkinDate:
+          type: string
+          format: date
+          example: '2026-10-01'
+        status:
+          type: string
+          enum:
+            - pending
+            - confirmed
+            - checked-in
+          example: confirmed
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: boom

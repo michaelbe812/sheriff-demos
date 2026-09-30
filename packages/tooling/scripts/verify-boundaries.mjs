@@ -163,6 +163,17 @@ function checkTagSchema(projectGraph) {
       tags.filter((t) => t.startsWith(prefix)).length === 1 || problems.push(`libs/${libPath}: needs exactly one "${prefix}*" tag`);
 
     ['scope:', 'type:', 'feat:'].forEach(expectOne);
+    const generatedAt = libPath.split('/').indexOf('generated');
+    if (generatedAt !== -1) {
+      // OpenAPI client lib: libs/generated/<client>/<part> → shared, libs/<domain>/generated/<client>/<part> → domain;
+      // core is api (HTTP runtime), testing is testing; never a port/entry
+      expectTag(`scope:${generatedAt === 0 ? 'shared' : scope}`);
+      expectTag(`type:${{ types: 'types', api: 'api', core: 'api', testing: 'testing' }[layer] ?? `unknown part ${layer}`}`);
+      expectTag('feat:none');
+      expectTag('generated');
+      if (tags.some((t) => ['port', 'entry', 'feat-port'].includes(t))) problems.push(`libs/${libPath}: generated lib must not be port/entry/feat-port`);
+      continue;
+    }
     expectTag(`scope:${scope}`);
     expectTag(`type:${['shell', 'feature'].includes(layer) ? 'feature' : layer}`);
     expectTag(featFolder ? `feat:${featFolder.slice('feat-'.length)}` : 'feat:none');

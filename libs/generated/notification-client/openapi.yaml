@@ -1,0 +1,105 @@
+# Hand-written (no url): notification backend, shared by booking and checkin (each through its port).
+openapi: 3.0.3
+info:
+  title: Notification API
+  version: 1.0.0
+servers:
+  - url: /api
+tags:
+  - name: notifications
+paths:
+  /notifications:
+    get:
+      tags:
+        - notifications
+      operationId: listNotifications
+      summary: Notifications, optionally of one topic
+      parameters:
+        - name: topic
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationTopic'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        default:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /notifications/{id}/read:
+    post:
+      tags:
+        - notifications
+      operationId: markNotificationRead
+      summary: Marks a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: n-1
+      responses:
+        '204':
+          description: Marked as read
+        '404':
+          description: Unknown notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    NotificationTopic:
+      type: string
+      enum:
+        - booking
+        - checkin
+      example: booking
+    Notification:
+      type: object
+      required:
+        - id
+        - topic
+        - message
+        - read
+        - createdAt
+      properties:
+        id:
+          type: string
+          example: n-1
+        topic:
+          $ref: '#/components/schemas/NotificationTopic'
+        message:
+          type: string
+          example: Booking b-101 confirmed
+        read:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-10-01T09:00:00Z'
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: boom

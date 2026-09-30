@@ -1,5 +1,11 @@
 {
   "$schema": "./packages/tooling/src/openapi/openapi-clients.schema.json",
   "defaultAdapter": "openapi-tools",
-  "clients": {}
+  "clients": {
+    "generated/pet-client": {
+      "url": "https://petstore3.swagger.io/api/v3/openapi.json"
+    },
+    "generated/notification-client": {},
+    "booking/generated/booking-client": {}
+  }
 }
