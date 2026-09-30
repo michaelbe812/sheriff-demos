@@ -48,7 +48,7 @@ apps/client                                type:app — nur app.ts, app.config.t
 | Sheriff (Blueprint) | Nx | Wo |
 |---|---|---|
 | Layer-Matrix `type:*` | ein `onlyDependOnLibsWithTags` pro `type:*` | `layerMatrix` |
-| `types → ∅` (`noDependencies`) | `onlyDependOnLibsWithTags: []` | `layerMatrix` |
+| `types → types` (vorher `noDependencies`) | `onlyDependOnLibsWithTags: ['type:types']`; Scope-Achse gilt weiter: eigener Slice + `scope:shared`, fremde Slice-Types rot (`port` ist `type:api`) | `layerMatrix` |
 | **api ↛ infra** (Inversion) | `type:api` ohne `type:infra` **und** Nx-Zyklus-Check (infra → api existiert immer) | `layerMatrix` |
 | Self-Providing Port (`fe846c0`, api → infra erlaubt) | **nicht abbildbar**: api ↔ infra wäre ein Projekt-Zyklus. Zurückgedreht auf harte Inversion (`f54d797`) | – |
 | data ↛ infra | `type:data` ohne `type:infra` | `layerMatrix` |
@@ -186,10 +186,10 @@ Jede Lib hat ein `build`-Target mit `@nx/angular:ng-packagr-lite` (incremental b
 ```sh
 NX_DAEMON=false pnpm exec nx run-many -t build lint test typecheck --skip-nx-cache  # 36 Projekte grün
 pnpm exec nx show projects --with-target build   # 34 Libs + client + sheriff-blueprint
-pnpm verify:boundaries                           # 47/47, Exit 0 (`-- --markdown` für die Tabelle)
+pnpm verify:boundaries                           # 52/52, Exit 0 (`-- --markdown` für die Tabelle)
 ```
 
-Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePath` in der jeweiligen Lib. Es wird nichts auf die Platte geschrieben. Geprüft wird, ob `@nx/enforce-module-boundaries` (bzw. `no-restricted-imports`) feuert. Die zweite Spalte „Tag-Entscheid" wertet die `depConstraints` direkt aus. Mutationsprobe: `sliceIsolation` entfernt und infra in `type:api` erlaubt → Fälle 3 und 27 rot, Skript Exit 1. Gegenprobe im echten Lint: `import '@blueprint/booking/infra'` in `feat-check-booking/feature` → `nx lint booking-feat-check-booking` rot, `eslint <datei>` ohne Graph-Cache ebenfalls rot.
+Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePath` in der jeweiligen Lib. Auf die Platte kommen nur zwei Wegwerf-Projekte für die Laufzeit: `tools/verify-untagged` (noTag) und `libs/booking/verify-types` (zweite types-Lib im Slice, für types → types im eigenen Scope). Geprüft wird, ob `@nx/enforce-module-boundaries` (bzw. `no-restricted-imports`) feuert. Die zweite Spalte „Tag-Entscheid" wertet die `depConstraints` direkt aus. Mutationsprobe: `sliceIsolation` entfernt und infra in `type:api` erlaubt → Fälle 3 und 32 rot, Skript Exit 1. Gegenprobe im echten Lint: `import '@blueprint/booking/infra'` in `feat-check-booking/feature` → `nx lint booking-feat-check-booking` rot, `eslint <datei>` ohne Graph-Cache ebenfalls rot.
 
 | # | Regel | von | Import | erwartet | ESLint | Tag-Entscheid |
 |---|---|---|---|---|---|---|
@@ -202,43 +202,48 @@ Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePa
 | 7 | ui -> api | `booking/ui` | `@blueprint/booking/api` | red | ✅ red — tags | blocked by type:ui |
 | 8 | ui -> data | `booking/ui` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by type:ui |
 | 9 | ui -> events | `booking/ui` | `@blueprint/booking/events` | green | ✅ green | allowed |
-| 10 | types -> anything | `booking/types` | `@blueprint/shared/types` | red | ✅ red — tags | blocked by type:types |
-| 11 | utils -> events | `booking/utils` | `@blueprint/booking/events` | red | ✅ red — tags | blocked by type:utils |
-| 12 | events -> data | `booking/events` | `@blueprint/booking/data` | red | ✅ red — cycle | blocked by type:events |
-| 13 | infra -> data | `booking/infra` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by type:infra |
-| 14 | feature -> shell | `booking/feat-manage-booking/feature` | `@blueprint/booking/shell` | red | ✅ red — cycle | blocked by type:feature |
-| 15 | feature -> data/ui/events | `booking/feat-manage-booking/feature` | `@blueprint/booking/data` | green | ✅ green | allowed |
-| 16 | cross-scope internals | `checkin/data` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin + /^type:(?!shell$)/ |
-| 17 | cross-scope infra | `checkin/feat-checkin/data` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:data, /^scope:checkin(\/.*)?$/, scope:checkin/feat-checkin |
-| 18 | cross-scope via port | `checkin/data` | `@blueprint/booking/api` | green | ✅ green | allowed |
-| 19 | shared-feature internals | `checkin/feat-checkin/feature` | `@blueprint/auth/data` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin/feat-checkin |
-| 20 | shared-feature via port | `checkin/feat-checkin/feature` | `@blueprint/auth/api` | green | ✅ green | allowed |
-| 21 | shell -> foreign shell | `checkin/shell` | `@blueprint/booking/shell` | red | ✅ red — tags | blocked by type:shell, /^scope:checkin(\/.*)?$/ |
-| 22 | sibling feat internals | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — tags | blocked by scope:booking/feat-manage-booking |
-| 23 | sibling feat root | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/feature` | red | ✅ red — tags | blocked by type:feature, scope:booking/feat-manage-booking |
-| 24 | feat -> own feat-local lib | `booking/feat-check-booking/feature` | `@blueprint/booking/feat-check-booking/data` | green | ✅ green | allowed |
-| 25 | feat-port -> own feat data | `booking/feat-check-booking/api` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — tags | blocked by type:api |
-| 26 | sibling feat via feat-port | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/api` | green | ✅ green | allowed |
-| 27 | foreign feat-port | `checkin/feat-history/feature` | `@blueprint/booking/feat-check-booking/api` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/ |
-| 28 | slice-shared -> feat lib | `booking/data` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — cycle | blocked by scope:booking + /^type:(?!shell$)/ |
-| 29 | shell -> feat (lazy) | `booking/shell` | `@blueprint/booking/feat-check-booking/feature` | green | ✅ green | allowed |
-| 30 | shared -> slice port | `shared/utils` | `@blueprint/booking/api` | red | ✅ red — tags | blocked by type:utils, scope:shared |
-| 31 | shared utils -> shared api | `shared/utils` | `@blueprint/shared/api` | red | ✅ red — tags | blocked by type:utils |
-| 32 | slice -> shared | `booking/utils` | `@blueprint/shared/utils` | green | ✅ green | allowed |
-| 33 | app -> data | `apps/client` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by type:app |
-| 34 | app -> infra | `apps/client` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:app |
-| 35 | app -> feat-port | `apps/client` | `@blueprint/booking/feat-check-booking/api` | red | ✅ red — tags | blocked by type:app |
-| 36 | app -> shell / port / shared | `apps/client` | `@blueprint/booking/shell` | green | ✅ green | allowed |
-| 37 | lib -> app | `booking/data` | `../../../../apps/client/src/app/app` | red | ✅ red — relative import | – |
-| 38 | relative import across libs | `booking/feat-manage-booking/feature` | `../../../data/src/booking.store` | red | ✅ red — relative import | – |
-| 39 | deep import into lib | `checkin/feat-history/feature` | `@blueprint/checkin/data/src/internal/checkin.mapper` | red | ✅ red — no-restricted-imports (deep) | – |
-| 40 | deep import cross-scope | `checkin/data` | `@blueprint/booking/data/src/booking.store` | red | ✅ red — no-restricted-imports (deep) | – |
-| 41 | untagged project (noTag) | `tools/verify-untagged` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked (no constraint = noTag) |
-| 42 | tooling -> lib | `packages/sheriff-blueprint` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked by type:tooling |
-| 43 | HttpClient in data | `booking/data` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
-| 44 | HttpClient in feature | `booking/feat-check-booking/feature` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
-| 45 | HttpClient in api | `booking/api` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
-| 46 | HttpClient in infra | `booking/infra` | `@angular/common/http` | green | ✅ green | – |
-| 47 | HttpClient in app | `apps/client` | `@angular/common/http` | green | ✅ green | – |
+| 10 | types -> own-scope types | `booking/verify-types` | `@blueprint/booking/types` | green | ✅ green | allowed |
+| 11 | types -> shared types | `booking/types` | `@blueprint/shared/types` | green | ✅ green | allowed |
+| 12 | types -> utils | `booking/types` | `@blueprint/booking/utils` | red | ✅ red — cycle | blocked by type:types |
+| 13 | types -> shared utils | `booking/types` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked by type:types |
+| 14 | types -> foreign types | `checkin/types` | `@blueprint/booking/types` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin + /^type:(?!shell$)/ |
+| 15 | types -> foreign port | `checkin/types` | `@blueprint/booking/api` | red | ✅ red — tags | blocked by type:types |
+| 16 | utils -> events | `booking/utils` | `@blueprint/booking/events` | red | ✅ red — tags | blocked by type:utils |
+| 17 | events -> data | `booking/events` | `@blueprint/booking/data` | red | ✅ red — cycle | blocked by type:events |
+| 18 | infra -> data | `booking/infra` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by type:infra |
+| 19 | feature -> shell | `booking/feat-manage-booking/feature` | `@blueprint/booking/shell` | red | ✅ red — cycle | blocked by type:feature |
+| 20 | feature -> data/ui/events | `booking/feat-manage-booking/feature` | `@blueprint/booking/data` | green | ✅ green | allowed |
+| 21 | cross-scope internals | `checkin/data` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin + /^type:(?!shell$)/ |
+| 22 | cross-scope infra | `checkin/feat-checkin/data` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:data, /^scope:checkin(\/.*)?$/, scope:checkin/feat-checkin |
+| 23 | cross-scope via port | `checkin/data` | `@blueprint/booking/api` | green | ✅ green | allowed |
+| 24 | shared-feature internals | `checkin/feat-checkin/feature` | `@blueprint/auth/data` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin/feat-checkin |
+| 25 | shared-feature via port | `checkin/feat-checkin/feature` | `@blueprint/auth/api` | green | ✅ green | allowed |
+| 26 | shell -> foreign shell | `checkin/shell` | `@blueprint/booking/shell` | red | ✅ red — tags | blocked by type:shell, /^scope:checkin(\/.*)?$/ |
+| 27 | sibling feat internals | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — tags | blocked by scope:booking/feat-manage-booking |
+| 28 | sibling feat root | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/feature` | red | ✅ red — tags | blocked by type:feature, scope:booking/feat-manage-booking |
+| 29 | feat -> own feat-local lib | `booking/feat-check-booking/feature` | `@blueprint/booking/feat-check-booking/data` | green | ✅ green | allowed |
+| 30 | feat-port -> own feat data | `booking/feat-check-booking/api` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — tags | blocked by type:api |
+| 31 | sibling feat via feat-port | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/api` | green | ✅ green | allowed |
+| 32 | foreign feat-port | `checkin/feat-history/feature` | `@blueprint/booking/feat-check-booking/api` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/ |
+| 33 | slice-shared -> feat lib | `booking/data` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — cycle | blocked by scope:booking + /^type:(?!shell$)/ |
+| 34 | shell -> feat (lazy) | `booking/shell` | `@blueprint/booking/feat-check-booking/feature` | green | ✅ green | allowed |
+| 35 | shared -> slice port | `shared/utils` | `@blueprint/booking/api` | red | ✅ red — tags | blocked by type:utils, scope:shared |
+| 36 | shared utils -> shared api | `shared/utils` | `@blueprint/shared/api` | red | ✅ red — tags | blocked by type:utils |
+| 37 | slice -> shared | `booking/utils` | `@blueprint/shared/utils` | green | ✅ green | allowed |
+| 38 | app -> data | `apps/client` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by type:app |
+| 39 | app -> infra | `apps/client` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:app |
+| 40 | app -> feat-port | `apps/client` | `@blueprint/booking/feat-check-booking/api` | red | ✅ red — tags | blocked by type:app |
+| 41 | app -> shell / port / shared | `apps/client` | `@blueprint/booking/shell` | green | ✅ green | allowed |
+| 42 | lib -> app | `booking/data` | `../../../../apps/client/src/app/app` | red | ✅ red — relative import | – |
+| 43 | relative import across libs | `booking/feat-manage-booking/feature` | `../../../data/src/booking.store` | red | ✅ red — relative import | – |
+| 44 | deep import into lib | `checkin/feat-history/feature` | `@blueprint/checkin/data/src/internal/checkin.mapper` | red | ✅ red — no-restricted-imports (deep) | – |
+| 45 | deep import cross-scope | `checkin/data` | `@blueprint/booking/data/src/booking.store` | red | ✅ red — no-restricted-imports (deep) | – |
+| 46 | untagged project (noTag) | `tools/verify-untagged` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked (no constraint = noTag) |
+| 47 | tooling -> lib | `packages/sheriff-blueprint` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked by type:tooling |
+| 48 | HttpClient in data | `booking/data` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
+| 49 | HttpClient in feature | `booking/feat-check-booking/feature` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
+| 50 | HttpClient in api | `booking/api` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
+| 51 | HttpClient in infra | `booking/infra` | `@angular/common/http` | green | ✅ green | – |
+| 52 | HttpClient in app | `apps/client` | `@angular/common/http` | green | ✅ green | – |
 
 Dazu im Code: auskommentierte `// nx-violation-example:`-Zeilen (z. B. `apps/client/src/app/app.ts`). Einkommentieren ⇒ Lint-Fehler.

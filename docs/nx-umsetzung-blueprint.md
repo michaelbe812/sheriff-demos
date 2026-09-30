@@ -61,7 +61,7 @@ Nx wendet **alle** Constraints an, die auf die Tags der Quelle passen, und verkn
 
 ```js
 // Layer-Matrix
-type:types   -> []                         + bannedExternalImports ['*']
+type:types   -> types                      + bannedExternalImports ['*']
 type:utils   -> types, utils
 type:events  -> types, utils, events
 type:api     -> types, utils, api
@@ -153,7 +153,7 @@ Die 4 Lint-Warnungen in `sheriff-blueprint` (`no-non-null-assertion` in Tests) g
 |---|---|---|
 | layer: ui → data / ui → api | blockiert | ✅ `type:ui` |
 | layer: utils → api (shared) | blockiert | ✅ `type:utils` |
-| layer: types → irgendwas | blockiert | ✅ `type:types` |
+| layer: types → alles außer types | blockiert | ✅ `type:types` |
 | layer: events → data / api → data | blockiert | ✅ als Zyklus; ohne Zyklus `type:events`/`type:api` |
 | layer: data → ui | blockiert | ✅ `type:data` |
 | layer: ui → events, data → api, feature → ui | erlaubt | ✅ |

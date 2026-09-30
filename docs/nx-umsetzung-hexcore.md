@@ -2,7 +2,7 @@
 
 Branch `feat/nx-hexagonal-core` (abgezweigt von `feat/hexagonal-framework-core`). Jede Sheriff-Regel aus dem fwcore-Ansatz ist jetzt eine Nx-Lib-Grenze plus `@nx/enforce-module-boundaries`. **Sheriff ist entfernt**: es bleibt keine Regel *innerhalb* einer Lib übrig (siehe [Intra-Lib](#intra-lib--warum-kein-sheriff-mehr)).
 
-Stand: alle 19 Libs **buildable**; `nx run-many -t build lint typecheck` grün (21 Projekte), `pnpm verify:boundaries` 53/53 Fälle ok.
+Stand: alle 19 Libs **buildable**; `nx run-many -t build lint typecheck` grün (21 Projekte), `pnpm verify:boundaries` 60/60 Fälle ok.
 
 ---
 
@@ -55,7 +55,7 @@ Jede Lib hat genau einen `scope:*` und einen `type:*`-Tag — das prüft `tools/
 | `type:adapter-driven` → domain, port-out, util, types | 1:1 | |
 | `type:providers: startsWith('type:')` | `onlyDependOnLibsWithTags: ['type:*']` (Scope hält es im eigenen Hexagon) | Glob-Tag |
 | Slice-Root `<slice>.routes.ts` (`entry`) | Lib `shell`, `type:shell` → `type:*` | |
-| `type:ui` / `util` / `types` | 1:1; `type:types` zusätzlich `allowedExternalImports: []` | |
+| `type:ui` / `util` / `types` | 1:1; `type:types` → nur `type:types` (eigener Scope + `scope:shared`; fremde Slice-Types rot, auch über `port` — Port ist kein `type:types`), zusätzlich `allowedExternalImports: []` | |
 | — (kein Pendant) | `allSourceTags: ['scope:shared','type:ui']` → nur `@angular/core`, `@angular/common` | Combo |
 | „kein `'*'`"-Workaround | entfällt (siehe unten) | — |
 | Kommentar „kein `new Date()`/`fetch` im Kern" | nicht erzwungen — weder Sheriff noch Nx (Limitierung 6) | — |
@@ -74,7 +74,7 @@ Belegt im installierten Code (`@nx/eslint-plugin@23.1.0`):
 
 Folge: `{ sourceTag: '*', onlyDependOnLibsWithTags: ['*'] }` ist in Nx ein No-op. Sheriff 0.19.6 ODER-verknüpft dagegen alle passenden `depRules`-Keys, weshalb fwcore den Catch-all weglassen musste und die `shared`-Freigabe auf der Type-Achse huckepack reiten ließ. Der Fork löst das mit `denyRules`; Nx braucht dafür nichts.
 
-**Beleg:** das Verify-Skript lintet jeden Fall zusätzlich mit angehängtem `'*'`-Catch-all (Spalte `catch-all`) — Ergebnis identisch, 53/53.
+**Beleg:** das Verify-Skript lintet jeden Fall zusätzlich mit angehängtem `'*'`-Catch-all (Spalte `catch-all`) — Ergebnis identisch, 60/60.
 
 Außerdem hat Nx echte Verbote: `notDependOnLibsWithTags` (**transitiv**, `findDependenciesWithTags` prüft alle von der Ziel-Lib erreichbaren Projekte) und `bannedExternalImports`.
 
@@ -196,12 +196,12 @@ Optionen:
 ```bash
 NX_DAEMON=false pnpm exec nx run-many -t build lint typecheck --skip-nx-cache   # 21 Projekte grün
 NX_DAEMON=false pnpm exec nx show projects --with-target build                  # 19 Libs + 2 Apps
-pnpm verify:boundaries                                                          # 53/53, 0 Hygiene-Probleme
+pnpm verify:boundaries                                                          # 60/60, 0 Hygiene-Probleme
 ```
 
 Baseline vorher (Sheriff-Stand): `nx run-many -t build lint` grün, 2 Projekte, keine Warnungen.
 
-`tools/verify-boundaries.mjs` lintet je Fall eine virtuelle Datei in der echten Lib (`ESLint#lintText` mit `filePath`, gleiche Flat-Config wie `nx lint`) in drei Varianten: `real`, `tags-only` (Zyklus-Check aus), `catch-all` (+ `'*'`-Constraint). `V#` = Fall aus `libs/booking/domain/src/lib/__violations.example.ts`. Mutationsprobe: `type:*` in die adapter-driving-Constraint eingefügt → Fälle 5 und 6 FAIL.
+`tools/verify-boundaries.mjs` lintet je Fall eine virtuelle Datei in der echten Lib (`ESLint#lintText` mit `filePath`, gleiche Flat-Config wie `nx lint`) in drei Varianten: `real`, `tags-only` (Zyklus-Check aus), `catch-all` (+ `'*'`-Constraint). `V#` = Fall aus `libs/booking/domain/src/lib/__violations.example.ts`. Mutationsprobe: `type:*` in die adapter-driving-Constraint eingefügt → Fälle 5 und 6 FAIL. Fälle 54–59: nur eine echte types-Lib (`shared/types`), daher legt das Skript für die Laufzeit zwei Wegwerf-Libs an (nur `project.json`, danach gelöscht). Mutationsprobe: `type:types` → `[]` → Fälle 54 und 55 FAIL.
 
 | # | Fall | erwartet | real | tags-only | catch-all |
 |---|---|---|---|---|---|
@@ -258,6 +258,13 @@ Baseline vorher (Sheriff-Stand): `nx run-many -t build lint` grün, 2 Projekte, 
 | 51 | model → domain | rot | rot | rot | rot |
 | 52 | model → `@angular/core` (frameworkfrei) | rot | rot | rot | rot |
 | 53 | cross-slice: domain → fremdes model | rot | rot | rot | rot |
+| 54 | types → types im eigenen Scope (Wegwerf-Lib `shared/verify-types`) | grün | grün | grün | grün |
+| 55 | slice-types → shared-types (Wegwerf-Lib `booking/verify-types`) | grün | grün | grün | grün |
+| 56 | slice-types → shared-util | rot | rot | rot | rot |
+| 57 | slice-types → eigenes model | rot | rot | rot | rot |
+| 58 | slice-types → fremdes model (Domain-Types) | rot | rot | rot | rot |
+| 59 | slice-types → fremder port-in | rot | rot | rot | rot |
+| 60 | model → shared-types | grün | grün | grün | grün |
 
 Beispielmeldungen: `A project tagged with "scope:booking" can only depend on libs tagged with "scope:booking", "port", "scope:shared"` (12) · `A project tagged with "type:domain" is not allowed to import "@angular/common/http"` (22) · `A project tagged with "scope:shared" and "type:ui" is not allowed to import "@angular/router"` (37) · `Static imports of lazy-loaded libraries are forbidden.` (39).
 

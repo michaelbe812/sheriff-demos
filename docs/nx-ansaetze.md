@@ -9,11 +9,12 @@ Alle Angaben stammen aus tatsächlich ausgeführten Läufen (Stand 30. September
 | Branch | Basis | Libs (alle buildable) | `nx run-many` | Boundary-Tests | App-Build | Sheriff |
 |---|---|---|---|---|---|---|
 | `feat/nx-blueprint` | `feat/sheriff-config-blueprint` | 32 | ✅ build, lint, test, typecheck (34 Projekte) | ✅ 38/38 | gegen `dist/` | entfernt |
-| `feat/nx-inverted-domain-ports` | `feat/inverted-domain-ports` | 34 | ✅ build, lint, test, typecheck (36 Projekte) | ✅ 47/47 | aus Source (`dist/` getestet, Option) | entfernt |
-| `feat/nx-hexagonal-core` | `feat/hexagonal-framework-core` | 19 | ✅ build, lint, typecheck (21 Projekte) | ✅ 53/53 | gegen `dist/` | entfernt |
+| `feat/nx-inverted-domain-ports` | `feat/inverted-domain-ports` | 34 | ✅ build, lint, test, typecheck (36 Projekte) | ✅ 52/52 | aus Source (`dist/` getestet, Option) | entfernt |
+| `feat/nx-hexagonal-core` | `feat/hexagonal-framework-core` | 19 | ✅ build, lint, typecheck (21 Projekte) | ✅ 60/60 | gegen `dist/` | entfernt |
 
 - Die Boundary-Tests laufen je Branch mit `pnpm verify:boundaries` (`tools/verify-boundaries.mjs`). Das Skript lintet echte Verstöße und erlaubte Imports über die ESLint-API und prüft dazu das Tag-Schema.
 - Mit einer Mutationsprobe ist belegt, dass die Tests rot werden, wenn man eine Regel abschwächt.
+- `type:types` darf in allen drei Ansätzen andere `type:types`-Libs importieren, sonst nichts (vorher Blueprint/Inverted: types → nichts). Die Scope-Regeln gelten weiter: eigener Scope + `scope:shared` ja, fremde Slice-Types nein, auch nicht über `port`.
 
 ## Grundmuster
 
