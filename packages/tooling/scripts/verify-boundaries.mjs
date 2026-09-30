@@ -11,14 +11,16 @@
  * the plugin must infer as a tagged, constrained project.
  * On top, a tag-schema check guards the plugin's tags against the folder layout,
  * a test-isolation check the non-lint layers keeping test code out of
- * production, and a client build proves the bundle carries no msw/vitest.
+ * production, a client check the generated OpenAPI clients (openapi-clients.json ↔
+ * folders ↔ specs ↔ libs, graph edges, targets, nothing committed), and a client
+ * build proves the bundle carries no msw/vitest/faker.
  *
  * Usage: node packages/tooling/scripts/verify-boundaries.mjs   (exit 1 on any mismatch)
  */
 import { createProjectGraphAsync } from '@nx/devkit';
 import { ESLint } from 'eslint';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const workspaceRoot = join(import.meta.dirname, '../../..');
@@ -36,11 +38,21 @@ const NEW_TYPES_LIB = 'libs/booking/feat-tmpverify/types';
 const NEW_LIB_EXPECTED = { name: 'booking-feat-tmpverify-ui', tags: ['scope:booking', 'type:ui', 'feat:tmpverify'], targets: ['build', 'lint', 'typecheck'] };
 const CYCLE = 'Circular dependency';
 
+// generated OpenAPI clients (packages/tooling/src/openapi): two shared, one domain-owned
+const PET = '@blueprint/generated/pet-client';
+const NOTIFICATION = '@blueprint/generated/notification-client';
+const BOOKING_CLIENT = '@blueprint/booking/generated/booking-client';
+/** Lint header the facade writes into every generated file — only the boundary rules stay on. */
+const GENERATED_HEADER = '/* eslint-disable */\n/* eslint-enable @nx/enforce-module-boundaries, no-restricted-imports */\n';
+
 const blocked = (rule, from, importPath, expectedText) => ({ rule, from, importPath, expectedText, allowed: false });
 const allowed = (rule, from, importPath) => ({ rule, from, importPath, allowed: true });
 // same, but the virtual file is a spec (`tmp-verify.spec.ts`) → spec override applies
 const blockedInSpec = (...args) => ({ ...blocked(...args), spec: true });
 const allowedInSpec = (...args) => ({ ...allowed(...args), spec: true });
+// same, but the virtual file lives in <lib>/src/generated/ and carries the facade's lint header
+const blockedInGenerated = (...args) => ({ ...blocked(...args), generated: true });
+const allowedInGenerated = (...args) => ({ ...allowed(...args), generated: true });
 
 const cases = [
   // layer matrix (type axis)
@@ -125,6 +137,56 @@ const cases = [
   blocked('testing: @vitest/* in app', 'apps/client/src/app', '@vitest/browser-playwright', '@vitest/browser-playwright'),
   allowed('testing: msw in testing lib', 'libs/booking/testing', 'msw'),
   allowedInSpec('testing: msw + vitest in spec', 'libs/booking/data', 'msw'),
+
+  // generated clients: services + core = type:api, models = type:types, testing = type:testing; scope from the folder
+  allowed('generated: domain port -> own client api', 'libs/booking/api', `${BOOKING_CLIENT}/api`),
+  allowed('generated: domain port -> own client types', 'libs/booking/api', `${BOOKING_CLIENT}/types`),
+  allowed('generated: domain port -> own client core', 'libs/booking/api', `${BOOKING_CLIENT}/core`),
+  allowed('generated: domain port -> shared client api', 'libs/checkin/api', `${NOTIFICATION}/api`),
+  allowed('generated: shared api -> shared client api', 'libs/shared/api', `${PET}/api`),
+  blocked('generated: foreign domain -> domain client api', 'libs/checkin/api', `${BOOKING_CLIENT}/api`, 'scope:checkin'),
+  blocked('generated: foreign domain -> domain client types', 'libs/checkin/types', `${BOOKING_CLIENT}/types`, 'scope:checkin'),
+  blocked('generated: foreign feat -> domain client', 'libs/checkin/feat-checkin/data', `${BOOKING_CLIENT}/api`, 'scope:checkin'),
+  blocked('generated: shared -> domain client', 'libs/shared/api', `${BOOKING_CLIENT}/api`, 'scope:shared'),
+  blocked('generated: ui -> client api', 'libs/booking/ui', `${BOOKING_CLIENT}/api`, 'type:ui'),
+  blocked('generated: ui -> client core', 'libs/booking/ui', `${BOOKING_CLIENT}/core`, 'type:ui'),
+  blocked('generated: shared ui -> shared client api', 'libs/shared/ui', `${PET}/api`, 'type:ui'),
+  allowed('generated: ui -> client types', 'libs/booking/ui', `${BOOKING_CLIENT}/types`),
+  allowed('generated: data -> client api (matrix)', 'libs/booking/data', `${BOOKING_CLIENT}/api`),
+  allowed('generated: feature -> client api (matrix)', 'libs/booking/feat-check-booking/feature', `${BOOKING_CLIENT}/api`),
+  blocked('generated: utils -> client api', 'libs/booking/utils', `${BOOKING_CLIENT}/api`, 'type:utils'),
+  blocked('generated: domain types -> client api', 'libs/booking/types', `${BOOKING_CLIENT}/api`, 'type:types'),
+  allowed('generated: domain types -> own client types (types -> types)', 'libs/booking/types', `${BOOKING_CLIENT}/types`),
+  allowed('generated: domain types -> shared client types', 'libs/booking/types', `${PET}/types`),
+  blocked('generated: shared types -> domain client types', 'libs/shared/types', `${BOOKING_CLIENT}/types`, 'scope:shared'),
+  blocked('generated: app -> domain client (no port)', 'apps/client/src/app', `${BOOKING_CLIENT}/api`, 'type:app'),
+  blocked('generated: deep import into client lib', 'libs/booking/api', `${BOOKING_CLIENT}/types/src/generated/model/booking`, 'Deep import'),
+  // generated testing libs: specs only, never production
+  blocked('generated testing: production -> client testing', 'libs/booking/api', `${BOOKING_CLIENT}/testing`, 'non-buildable'),
+  { ...blocked('generated testing: production -> client testing (tags only)', 'libs/booking/api', `${BOOKING_CLIENT}/testing`, 'type:api'), tagsOnly: true },
+  blocked('generated testing: app -> shared client testing', 'apps/client/src/app', `${PET}/testing`, 'type:app'),
+  allowedInSpec('generated testing: spec -> own client testing', 'libs/booking/api', `${BOOKING_CLIENT}/testing`),
+  allowedInSpec('generated testing: spec -> shared client testing', 'libs/checkin/api', `${NOTIFICATION}/testing`),
+  blockedInSpec('generated testing: shared spec -> domain client testing', 'libs/shared/api', `${BOOKING_CLIENT}/testing`, 'scope:shared'),
+  allowed('generated testing: domain testing -> own client testing', 'libs/booking/testing', `${BOOKING_CLIENT}/testing`),
+  blocked('generated testing: foreign testing -> domain client testing', 'libs/checkin/testing', `${BOOKING_CLIENT}/testing`, 'scope:checkin'),
+  blocked('generated testing: testing -> client api', 'libs/booking/testing', `${BOOKING_CLIENT}/api`, 'type:testing'),
+  blocked('generated testing: openapi-msw in production', 'libs/booking/api', 'openapi-msw', 'openapi-msw'),
+  blocked('generated testing: faker in production', 'libs/shared/api', '@faker-js/faker', '@faker-js/faker'),
+  // ... and FROM generated code (lint header: everything off except the boundary rules)
+  blockedInGenerated('generated code: types -> api (same client)', 'libs/booking/generated/booking-client/types', `${BOOKING_CLIENT}/api`, [CYCLE, 'type:types']),
+  blockedInGenerated('generated code: types -> core (same client)', 'libs/booking/generated/booking-client/types', `${BOOKING_CLIENT}/core`, [CYCLE, 'type:types']),
+  blockedInGenerated('generated code: types -> other client api (no cycle)', 'libs/booking/generated/booking-client/types', `${PET}/api`, 'type:types'),
+  blockedInGenerated('generated code: types -> @angular/core', 'libs/generated/pet-client/types', '@angular/core', '@angular/core'),
+  blockedInGenerated('generated code: shared client -> domain client', 'libs/generated/pet-client/api', `${BOOKING_CLIENT}/types`, 'scope:shared'),
+  blockedInGenerated('generated code: client api -> domain data', 'libs/booking/generated/booking-client/api', '@blueprint/booking/data', [CYCLE, 'type:api']),
+  blockedInGenerated('generated code: client api -> events (no cycle)', 'libs/booking/generated/booking-client/api', '@blueprint/booking/events', 'type:api'),
+  blockedInGenerated('generated code: deep import', 'libs/booking/generated/booking-client/api', `${BOOKING_CLIENT}/types/src/generated/model/booking`, 'Deep import'),
+  blockedInGenerated('generated code: testing -> client api', 'libs/booking/generated/booking-client/testing', `${BOOKING_CLIENT}/api`, 'type:testing'),
+  allowedInGenerated('generated code: api -> core', 'libs/booking/generated/booking-client/api', `${BOOKING_CLIENT}/core`),
+  allowedInGenerated('generated code: api -> @angular/common/http', 'libs/generated/pet-client/api', '@angular/common/http'),
+  allowedInGenerated('generated code: core -> @angular/common/http', 'libs/generated/pet-client/core', '@angular/common/http'),
+  allowedInGenerated('generated code: testing -> msw, faker, openapi-msw', 'libs/generated/pet-client/testing', 'openapi-msw'),
 
   // new lib (only src/index.ts, created for this run): tags + constraints apply without any config
   blocked('new lib: layer rules (ui -> api)', NEW_LIB, '@blueprint/shared/api', 'type:ui'),
@@ -255,6 +317,96 @@ function checkLibConfigFiles() {
 }
 
 /**
+ * Generated OpenAPI clients, from the project graph + openapi-clients.json + git:
+ *   consistency  every entry ↔ client folder ↔ exactly one spec ↔ the four libs (committed index.ts =
+ *                `export * from './generated'`), every client folder has an entry, the entry is the
+ *                generate target's options (= part of its hash)
+ *   graph        every part has an edge to its client project; every lib target waits for `^generate` and
+ *                hashes the generated code (dependentTasksOutputFiles, transitive); generate is cached with
+ *                the spec as input and src/generated as outputs; the testing lib generates before lint/typecheck
+ *   git          nothing below src/generated/ is committed, every generated file is gitignored
+ */
+const CLIENT_PARTS = ['types', 'api', 'core', 'testing'];
+const COMMITTED_INDEX = "export * from './generated';\n";
+
+function checkGeneratedClients(projectGraph) {
+  const problems = [];
+  const config = JSON.parse(readFileSync('openapi-clients.json', 'utf-8'));
+  const entries = config.clients ?? {};
+  const nodes = Object.values(projectGraph.nodes).filter(({ data }) => data.root.startsWith('libs/'));
+  const clientNodes = nodes.filter(({ data }) => data.tags?.includes('generated') && !data.metadata?.js?.packageName);
+  const parts = nodes.filter(({ data }) => data.tags?.includes('generated') && data.metadata?.js?.packageName);
+  const clientFolders = readdirSync('libs', { recursive: true })
+    .map(String)
+    .filter((path) => /^([a-z][a-z0-9-]*\/)?generated\/[a-z][a-z0-9-]*$/.test(path) && statSync(join('libs', path)).isDirectory());
+
+  for (const folder of clientFolders) if (!entries[folder]) problems.push(`libs/${folder}: client folder without entry in openapi-clients.json`);
+  for (const [clientPath, entry] of Object.entries(entries)) {
+    const root = `libs/${clientPath}`;
+    const specs = ['openapi.yaml', 'openapi.json'].filter((file) => existsSync(join(root, file)));
+    if (specs.length !== 1) problems.push(`${root}: needs exactly one spec (openapi.yaml|json), found ${specs.length}`);
+    for (const part of CLIENT_PARTS) {
+      const index = join(root, part, 'src/index.ts');
+      if (!existsSync(index)) problems.push(`${index}: missing`);
+      else if (readFileSync(index, 'utf-8') !== COMMITTED_INDEX) problems.push(`${index}: must be exactly "${COMMITTED_INDEX.trim()}"`);
+    }
+    const node = clientNodes.find(({ data }) => data.root === root);
+    const generate = node?.data.targets?.generate;
+    if (!node) {
+      problems.push(`${root}: entry in openapi-clients.json, but no client project`);
+      continue;
+    }
+    const adapter = entry.adapter ?? config.defaultAdapter ?? 'openapi-tools';
+    if (generate?.options?.generator?.adapter !== adapter || JSON.stringify(generate?.options?.generator?.options ?? {}) !== JSON.stringify(entry.options ?? {})) {
+      problems.push(`${node.name}: generate options must be the openapi-clients.json entry (adapter ${adapter})`);
+    }
+    if (!generate?.cache) problems.push(`${node.name}: generate must be cached`);
+    if (!generate?.inputs?.includes(`{workspaceRoot}/${root}/${specs[0]}`)) problems.push(`${node.name}: spec must be a generate input`);
+    if (!generate?.outputs?.every((output) => output.endsWith('/src/generated'))) problems.push(`${node.name}: outputs must be the src/generated folders`);
+    if (Boolean(entry.url) !== Boolean(node.data.targets?.['update-spec'])) problems.push(`${node.name}: update-spec exactly when the entry has a url`);
+  }
+  for (const { name, data } of parts) {
+    const client = data.root.split('/').slice(0, -1).join('/');
+    const clientNode = clientNodes.find((node) => node.data.root === client);
+    if (!clientNode) problems.push(`${name}: no client project at ${client}`);
+    // edge part → client: `^generate` reaches the client's generate, `affected` follows a spec change
+    else if (!data.implicitDependencies?.includes(clientNode.name)) problems.push(`${name}: needs implicit dependency on ${clientNode.name}`);
+    if (data.root.endsWith('/testing')) {
+      const generate = data.targets?.generate;
+      if (!generate?.cache || !generate.outputs?.includes('{projectRoot}/src/generated')) problems.push(`${name}: testing lib needs a cached generate → src/generated`);
+      for (const target of ['lint', 'typecheck']) {
+        if (!data.targets?.[target]?.dependsOn?.includes('generate')) problems.push(`${name}: ${target} must depend on its own generate`);
+      }
+    }
+  }
+  for (const { name, data } of nodes.filter(({ data }) => data.metadata?.js?.packageName && data.root !== UNTAGGED_LIB)) {
+    for (const [target, config] of Object.entries(data.targets ?? {})) {
+      if (target === 'generate') continue;
+      if (!config.dependsOn?.includes('^generate')) problems.push(`${name}: ${target} must depend on ^generate`);
+      // gitignored generated code is invisible to Nx hashing — the generate outputs must be an input
+      if (!config.inputs?.some((input) => input.dependentTasksOutputFiles?.includes('src/generated') && input.transitive)) {
+        problems.push(`${name}: ${target} must hash the generated code (dependentTasksOutputFiles, transitive)`);
+      }
+    }
+  }
+  const committed = execFileSync('git', ['ls-files', 'libs'], { encoding: 'utf-8' }).split('\n').filter((file) => file.includes('/src/generated/'));
+  committed.forEach((file) => problems.push(`${file}: generated code is committed`));
+  const generatedFiles = readdirSync('libs', { recursive: true })
+    .map((file) => join('libs', String(file)))
+    .filter((file) => file.includes('/src/generated/') && statSync(file).isFile());
+  const notIgnored = generatedFiles.filter((file) => {
+    try {
+      execFileSync('git', ['check-ignore', '-q', file]);
+      return false;
+    } catch {
+      return true;
+    }
+  });
+  notIgnored.forEach((file) => problems.push(`${file}: generated but not gitignored`));
+  return { clients: clientNodes.length, entries: Object.keys(entries).length, parts: parts.length, generatedFiles: generatedFiles.length, problems };
+}
+
+/**
  * Scans the client bundle for any trace of MSW, Vitest or faker. As Nx target (`tooling:verify`) the
  * build is a dependsOn task; run directly, the script builds the client itself.
  */
@@ -309,10 +461,10 @@ function createUntaggedLib() {
   writeFileSync(join(UNTAGGED_LIB, 'project.json'), JSON.stringify({ name: 'tmp-verify-untagged', tags: [] }));
 }
 
-async function lintCase({ from, importPath, spec }, eslint) {
+async function lintCase({ from, importPath, spec, generated }, eslint) {
   const fileName = spec ? 'tmp-verify.spec.ts' : 'tmp-verify.ts';
-  const filePath = join(workspaceRoot, from, from.startsWith('apps/') ? '' : 'src', fileName);
-  const code = `import { probe } from '${importPath}';\nexport const used = probe;\n`;
+  const filePath = join(workspaceRoot, from, from.startsWith('apps/') ? '' : 'src', generated ? 'generated' : '', fileName);
+  const code = `${generated ? GENERATED_HEADER : ''}import { probe } from '${importPath}';\nexport const used = probe;\n`;
   const [result] = await eslint.lintText(code, { filePath });
   return result.messages.filter((m) => BOUNDARY_RULES.includes(m.ruleId));
 }
@@ -339,9 +491,10 @@ async function main() {
         : findings.length > 0 && [testCase.expectedText].flat().some((expected) => text.includes(expected));
       rows.push({ ...testCase, pass, text });
     }
+    const clients = checkGeneratedClients(projectGraph);
     const bundle = checkClientBundle();
-    report(rows, libConfigs, schema, isolation, newLib, bundle);
-    const problems = [libConfigs, schema, isolation, newLib, bundle].flatMap((check) => check.problems);
+    report(rows, libConfigs, schema, isolation, newLib, clients, bundle);
+    const problems = [libConfigs, schema, isolation, newLib, clients, bundle].flatMap((check) => check.problems);
     process.exitCode = rows.every((r) => r.pass) && problems.length === 0 ? 0 : 1;
   } finally {
     rmSync(UNTAGGED_LIB, { recursive: true, force: true });
@@ -349,7 +502,7 @@ async function main() {
   }
 }
 
-function report(rows, libConfigs, schema, isolation, newLib, bundle) {
+function report(rows, libConfigs, schema, isolation, newLib, clients, bundle) {
   console.log('| Regel | von | Import | erwartet | Ergebnis |');
   console.log('|---|---|---|---|---|');
   for (const r of rows) {
@@ -368,6 +521,11 @@ function report(rows, libConfigs, schema, isolation, newLib, bundle) {
   isolation.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Neue Lib (nur ${NEW_LIB}/src/index.ts): ${newLib.problems.length ? 'NICHT ' : ''}automatisch Projekt ${JSON.stringify(newLib.actual ?? {})}`);
   newLib.problems.forEach((p) => console.log(`  - ${p}`));
+  console.log(
+    `Generierte Clients: ${clients.entries} Einträge in openapi-clients.json, ${clients.clients} Client-Projekte, ${clients.parts} Libs, ` +
+      `${clients.generatedFiles} generierte Dateien (alle gitignored, keine committet); Konsistenz Eintrag ↔ Ordner ↔ Spec ↔ Libs, Kanten, Targets: ${clients.problems.length} Probleme`,
+  );
+  clients.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`client-Bundle: ${bundle.files} Dateien auf msw/vitest/faker geprüft, ${bundle.problems.length} Treffer`);
   bundle.problems.forEach((p) => console.log(`  - ${p}`));
 }
