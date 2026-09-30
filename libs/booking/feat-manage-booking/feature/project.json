@@ -9,6 +9,7 @@
     "feat:manage-booking"
   ],
   "targets": {
+    "build": {},
     "lint": {},
     "typecheck": {}
   }

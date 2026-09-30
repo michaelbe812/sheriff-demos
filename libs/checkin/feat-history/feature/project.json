@@ -9,6 +9,7 @@
     "feat:history"
   ],
   "targets": {
+    "build": {},
     "lint": {},
     "typecheck": {}
   }

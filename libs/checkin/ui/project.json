@@ -9,6 +9,7 @@
     "feat:none"
   ],
   "targets": {
+    "build": {},
     "lint": {},
     "typecheck": {}
   }

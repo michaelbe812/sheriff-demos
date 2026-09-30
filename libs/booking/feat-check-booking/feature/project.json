@@ -9,6 +9,7 @@
     "feat:check-booking"
   ],
   "targets": {
+    "build": {},
     "lint": {},
     "typecheck": {}
   }

@@ -9,6 +9,7 @@
     "feat:checkin"
   ],
   "targets": {
+    "build": {},
     "lint": {},
     "typecheck": {}
   }

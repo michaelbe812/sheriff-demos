@@ -10,6 +10,7 @@
     "feat-port"
   ],
   "targets": {
+    "build": {},
     "lint": {},
     "typecheck": {}
   }
