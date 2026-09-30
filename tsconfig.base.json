@@ -54,6 +54,9 @@
       "@blueprint/booking/shell": [
         "./libs/booking/shell/src/index.ts"
       ],
+      "@blueprint/booking/testing": [
+        "./libs/booking/testing/src/index.ts"
+      ],
       "@blueprint/booking/types": [
         "./libs/booking/types/src/index.ts"
       ],
@@ -87,6 +90,9 @@
       "@blueprint/checkin/shell": [
         "./libs/checkin/shell/src/index.ts"
       ],
+      "@blueprint/checkin/testing": [
+        "./libs/checkin/testing/src/index.ts"
+      ],
       "@blueprint/checkin/types": [
         "./libs/checkin/types/src/index.ts"
       ],
@@ -104,6 +110,9 @@
       ],
       "@blueprint/shared/api": [
         "./libs/shared/api/src/index.ts"
+      ],
+      "@blueprint/shared/testing": [
+        "./libs/shared/testing/src/index.ts"
       ],
       "@blueprint/shared/types": [
         "./libs/shared/types/src/index.ts"
