@@ -26,10 +26,11 @@ process.env.NX_DAEMON ??= 'false';
 
 const BOUNDARY_RULES = ['@nx/enforce-module-boundaries', 'no-restricted-imports'];
 const UNTAGGED_LIB = 'libs/tmp-verify-untagged';
-// a brand-new lib: only a folder + src/index.ts — the plugin must turn it into a tagged, constrained project
-const NEW_LIB = 'libs/tmpverify/utils';
-const NEW_LIB_ALIAS = '@blueprint/tmpverify/utils';
-const NEW_LIB_EXPECTED = { name: 'tmpverify-utils', tags: ['scope:tmpverify', 'type:utils', 'feat:none'], targets: ['build', 'lint', 'typecheck'] };
+// a brand-new lib: only a folder + src/index.ts — the plugin must turn it into a tagged, constrained project.
+// It lives in a new feat of a known scope: a new scope would need an entry in the scope list (nx.json).
+const NEW_LIB = 'libs/booking/feat-tmpverify/ui';
+const NEW_LIB_ALIAS = '@blueprint/booking/feat-tmpverify/ui';
+const NEW_LIB_EXPECTED = { name: 'booking-feat-tmpverify-ui', tags: ['scope:booking', 'type:ui', 'feat:tmpverify'], targets: ['build', 'lint', 'typecheck'] };
 const CYCLE = 'Circular dependency';
 
 const blocked = (rule, from, importPath, expectedText) => ({ rule, from, importPath, expectedText, allowed: false });
@@ -119,10 +120,11 @@ const cases = [
   allowedInSpec('testing: msw + vitest in spec', 'libs/booking/data', 'msw'),
 
   // new lib (only src/index.ts, created for this run): tags + constraints apply without any config
-  blocked('new lib: layer rules (utils -> api)', NEW_LIB, '@blueprint/shared/api', 'type:utils'),
-  blocked('new lib: own scope constraint generated', NEW_LIB, '@blueprint/booking/utils', 'scope:tmpverify'),
-  allowed('new lib: -> shared', NEW_LIB, '@blueprint/shared/utils'),
-  blocked('new lib: foreign slice only via port', 'libs/booking/data', NEW_LIB_ALIAS, 'scope:booking'),
+  blocked('new lib: layer rules (ui -> api)', NEW_LIB, '@blueprint/shared/api', 'type:ui'),
+  blocked('new lib: own feat constraint generated', NEW_LIB, '@blueprint/booking/feat-check-booking/ui', 'feat:tmpverify'),
+  allowed('new lib: -> shared', NEW_LIB, '@blueprint/shared/ui'),
+  blocked('new lib: sibling feat only via feat-port', 'libs/booking/feat-check-booking/ui', NEW_LIB_ALIAS, 'feat:check-booking'),
+  blocked('new lib: foreign slice only via port', 'libs/checkin/ui', NEW_LIB_ALIAS, 'scope:checkin'),
   blocked('new lib: deep alias import', 'libs/booking/utils', `${NEW_LIB_ALIAS}/src/internal`, 'Deep import'),
 ];
 
@@ -159,7 +161,21 @@ function checkTagSchema(projectGraph) {
     if (layer === 'shell') expectTag('entry');
     if (layer === 'api' && scope !== 'shared') expectTag(featFolder ? 'feat-port' : 'port');
   }
+  problems.push(...checkScopeList(libs));
   return { count: libs.length, problems };
+}
+
+/**
+ * Scope list (nx.json → plugins → @blueprint/tooling → options.scopes): the plugin rejects libs
+ * outside the list, so here only the other direction — no stale entry without any lib.
+ */
+function checkScopeList(libs) {
+  const nxJson = JSON.parse(readFileSync('nx.json', 'utf-8'));
+  const entry = nxJson.plugins?.find((plugin) => (plugin.plugin ?? plugin) === '@blueprint/tooling');
+  const scopes = entry?.options?.scopes;
+  if (!scopes) return ['nx.json: plugin @blueprint/tooling needs options.scopes (scope list)'];
+  const usedScopes = new Set(libs.map(({ data }) => data.root.split('/')[1]));
+  return scopes.filter((scope) => !usedScopes.has(scope)).map((scope) => `nx.json scopes: "${scope}" has no lib (stale entry)`);
 }
 
 /**
@@ -294,7 +310,7 @@ function report(rows, schema, isolation, newLib, bundle) {
   }
   const passed = rows.filter((r) => r.pass).length;
   console.log(`\n${passed}/${rows.length} Fälle ok`);
-  console.log(`Tag-Schema: ${schema.count} Libs geprüft, ${schema.problems.length} Probleme`);
+  console.log(`Tag-Schema + Scope-Liste: ${schema.count} Libs geprüft, ${schema.problems.length} Probleme`);
   schema.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test nur mit Specs, Worker nicht in apps): ${isolation.problems.length} Probleme`);
   isolation.problems.forEach((p) => console.log(`  - ${p}`));

@@ -51,6 +51,11 @@
     }
   },
   "plugins": [
-    "@blueprint/tooling"
+    {
+      "plugin": "@blueprint/tooling",
+      "options": {
+        "scopes": ["auth", "booking", "checkin", "layout", "shared"]
+      }
+    }
   ]
 }

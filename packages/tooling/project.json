@@ -7,6 +7,18 @@
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default", { "externalDependencies": ["typescript", "@nx/devkit"] }],
+      "options": { "command": "tsc -p packages/tooling/tsconfig.json" }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default", { "externalDependencies": ["vitest", "@nx/devkit", "typescript"] }],
+      "options": { "command": "vitest run --config packages/tooling/vitest.config.mts" }
     }
   }
 }

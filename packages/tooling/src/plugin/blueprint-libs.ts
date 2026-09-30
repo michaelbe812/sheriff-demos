@@ -8,47 +8,23 @@
  *   alias      @blueprint/<path below libs/>      (resolved by the tsconfig.base.json wildcard)
  *   tags       derived from the path — a typo in a tag can no longer happen
  *              (a `testing` folder = test-only lib: `type:testing`)
+ *   scopes     option `scopes` (nx.json): a folder libs/<unknown scope>/… fails the graph
+ *              instead of silently creating a new scope (folder typo guard)
  *   targets    lint, typecheck, build (not for testing libs), test (only if src/ has *.spec.ts)
  *
- * The tag derivation is the single source of truth: eslint.config.mjs and
+ * Conventions (layers, tags, scope check) live in lib-conventions.ts and are shared
+ * with the generators. The tag derivation is the single source of truth: eslint.config.mjs and
  * packages/tooling/scripts/verify-boundaries.mjs read the tags from the project graph.
  */
 // type-only: importing @nx/devkit at runtime costs ~0.5 s per graph computation in the isolated plugin worker
 import type { CreateNodesResult, CreateNodesV2, TargetConfiguration } from '@nx/devkit';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { aliasFor, type BlueprintLibsOptions, deriveTags, LIBS_DIR, projectNameFor, TESTING_LAYER } from './lib-conventions';
 
-const LIB_MARKER = 'libs/**/src/index.ts';
-const ALIAS_PREFIX = '@blueprint/';
+export { deriveTags } from './lib-conventions';
 
-/** Layer folders that are a `type:feature` lib (slice root shell + feat container). */
-const FEATURE_LAYERS = ['shell', 'feature'];
-/** Test-only libs (MSW handlers, fixtures): never built, never shipped. */
-const TESTING_LAYER = 'testing';
-/** Every layer folder the depConstraints know. Anything else would get an unconstrained `type:` tag. */
-const KNOWN_LAYERS = ['types', 'utils', 'events', 'api', 'data', 'ui', ...FEATURE_LAYERS, TESTING_LAYER];
-
-/** Tags of a lib, derived purely from its path below `libs/` (e.g. `booking/feat-check-booking/api`). */
-export function deriveTags(libPath: string): string[] {
-  const [scope, ...rest] = libPath.split('/');
-  const layer = rest.at(-1) ?? '';
-  const featFolder = rest.find((segment) => segment.startsWith('feat-'));
-  const validShape = rest.length === 1 || (rest.length === 2 && featFolder === rest[0]);
-  if (!validShape || !KNOWN_LAYERS.includes(layer)) {
-    // fail the graph instead of silently creating an unconstrained lib (the old tag-typo problem)
-    throw new Error(
-      `libs/${libPath}: not a blueprint lib path — expected libs/<scope>/<layer> or libs/<scope>/feat-<feat>/<layer>, layer one of ${KNOWN_LAYERS.join(', ')}`,
-    );
-  }
-  const tags = [
-    `scope:${scope}`,
-    `type:${FEATURE_LAYERS.includes(layer) ? 'feature' : layer}`,
-    featFolder ? `feat:${featFolder.slice('feat-'.length)}` : 'feat:none',
-  ];
-  if (layer === 'shell') tags.push('entry');
-  if (layer === 'api' && scope !== 'shared') tags.push(featFolder ? 'feat-port' : 'port');
-  return tags;
-}
+const LIB_MARKER = `${LIBS_DIR}/**/src/index.ts`;
 
 /** Executors of this package (executors.json). */
 export const NG_LIB_EXECUTORS = {
@@ -146,28 +122,28 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
   return targets;
 }
 
-function createLibNode(indexFile: string, workspaceRoot: string): CreateNodesResult {
+function createLibNode(indexFile: string, workspaceRoot: string, options: BlueprintLibsOptions): CreateNodesResult {
   const projectRoot = dirname(dirname(indexFile));
-  const libPath = projectRoot.slice('libs/'.length);
-  const tags = deriveTags(libPath);
+  const libPath = projectRoot.slice(`${LIBS_DIR}/`.length);
+  const tags = deriveTags(libPath, options);
   return {
     projects: {
       [projectRoot]: {
-        name: libPath.replaceAll('/', '-'),
+        name: projectNameFor(libPath),
         root: projectRoot,
         sourceRoot: `${projectRoot}/src`,
         projectType: 'library',
         tags,
-        metadata: { js: { packageName: `${ALIAS_PREFIX}${libPath}` } },
+        metadata: { js: { packageName: aliasFor(libPath) } },
         targets: libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`)),
       },
     },
   };
 }
 
-export const createNodesV2: CreateNodesV2 = [
+export const createNodesV2: CreateNodesV2<BlueprintLibsOptions> = [
   LIB_MARKER,
   // same contract as devkit's createNodesFromFiles, but errors are collected per file by Nx anyway
-  (indexFiles, _options, context) =>
-    indexFiles.map((indexFile) => [indexFile, createLibNode(indexFile, context.workspaceRoot)] as const),
+  (indexFiles, options, context) =>
+    indexFiles.map((indexFile) => [indexFile, createLibNode(indexFile, context.workspaceRoot, options ?? {})] as const),
 ];
