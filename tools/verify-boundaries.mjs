@@ -6,13 +6,16 @@
  * a real lib) through the real eslint.config.mjs and asserts whether a
  * boundary rule fires. Nothing is written to the source tree except one
  * temporary untagged lib for the "noTag" case, removed in `finally`.
- * On top, a tag-schema check guards the conventions Nx itself cannot see.
+ * On top, a tag-schema check guards the conventions Nx itself cannot see,
+ * a test-isolation check the non-lint layers keeping test code out of
+ * production, and a client build proves the bundle carries no msw/vitest.
  *
  * Usage: node tools/verify-boundaries.mjs   (exit 1 on any mismatch)
  */
 import { createProjectGraphAsync } from '@nx/devkit';
 import { ESLint } from 'eslint';
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 const workspaceRoot = join(import.meta.dirname, '..');
@@ -25,6 +28,9 @@ const CYCLE = 'Circular dependency';
 
 const blocked = (rule, from, importPath, expectedText) => ({ rule, from, importPath, expectedText, allowed: false });
 const allowed = (rule, from, importPath) => ({ rule, from, importPath, allowed: true });
+// same, but the virtual file is a spec (`tmp-verify.spec.ts`) → spec override applies
+const blockedInSpec = (...args) => ({ ...blocked(...args), spec: true });
+const allowedInSpec = (...args) => ({ ...allowed(...args), spec: true });
 
 const cases = [
   // layer matrix (type axis)
@@ -77,6 +83,34 @@ const cases = [
   blocked('nx: types framework-free', 'libs/booking/types', '@angular/core', '@angular/core'),
   blocked('nx: no cycles', 'libs/booking/data', '@blueprint/booking/feat-check-booking/data', CYCLE),
   blocked('nx: untagged lib (noTag)', UNTAGGED_LIB, '@blueprint/shared/utils', 'without tags'),
+
+  // testing: test-only libs never reach production code
+  // buildable lib -> non-buildable testing lib: `enforceBuildableLibDependency` answers first ...
+  blocked('testing: production -> testing', 'libs/booking/data', '@blueprint/booking/testing', 'non-buildable'),
+  blocked('testing: feature -> testing', 'libs/booking/feat-check-booking/feature', '@blueprint/booking/testing', 'non-buildable'),
+  // ... the tag constraints block it on their own, too (buildable check switched off)
+  { ...blocked('testing: production -> testing (tags only)', 'libs/booking/data', '@blueprint/booking/testing', 'type:data'), tagsOnly: true },
+  { ...blocked('testing: feature -> testing (tags only)', 'libs/booking/feat-check-booking/feature', '@blueprint/booking/testing', 'type:feature'), tagsOnly: true },
+  blocked('testing: app -> shared/testing', 'apps/client/src/app', '@blueprint/shared/testing', 'type:app'),
+  allowedInSpec('testing: spec -> own testing', 'libs/booking/data', '@blueprint/booking/testing'),
+  allowedInSpec('testing: spec -> foreign domain testing', 'libs/checkin/feat-checkin/feature', '@blueprint/booking/testing'),
+  allowedInSpec('testing: spec -> shared/testing', 'libs/shared/api', '@blueprint/shared/testing'),
+  blockedInSpec('testing: shared spec -> domain testing', 'libs/shared/api', '@blueprint/booking/testing', 'scope:shared'),
+  blockedInSpec('testing: spec keeps layer rules (ui -> data)', 'libs/booking/ui', '@blueprint/booking/data', 'type:ui'),
+  blockedInSpec('testing: types spec -> testing (cycle)', 'libs/booking/types', '@blueprint/booking/testing', [CYCLE, 'type:types']),
+  // booking/data has specs against booking/testing: the edge back is a cycle
+  blocked('testing: testing -> data', 'libs/booking/testing', '@blueprint/booking/data', [CYCLE, 'type:testing']),
+  blocked('testing: testing -> data (no cycle)', 'libs/booking/testing', '@blueprint/auth/data', 'type:testing'),
+  blocked('testing: testing -> api (port)', 'libs/booking/testing', '@blueprint/booking/api', 'type:testing'),
+  blocked('testing: testing -> foreign domain testing', 'libs/checkin/testing', '@blueprint/booking/testing', 'scope:checkin'),
+  allowed('testing: testing -> types', 'libs/booking/testing', '@blueprint/booking/types'),
+  allowed('testing: testing -> shared/testing', 'libs/booking/testing', '@blueprint/shared/testing'),
+  blocked('testing: msw in production', 'libs/booking/api', 'msw', 'msw'),
+  blocked('testing: msw/browser in production', 'libs/booking/data', 'msw/browser', 'msw/browser'),
+  blocked('testing: vitest in production', 'libs/booking/ui', 'vitest', 'vitest'),
+  blocked('testing: @vitest/* in app', 'apps/client/src/app', '@vitest/browser-playwright', '@vitest/browser-playwright'),
+  allowed('testing: msw in testing lib', 'libs/booking/testing', 'msw'),
+  allowedInSpec('testing: msw + vitest in spec', 'libs/booking/data', 'msw'),
 ];
 
 /** Conventions Nx cannot enforce: tag schema must match the folder layout. */
@@ -103,13 +137,72 @@ function checkTagSchema() {
   return { count: projectFiles.length, problems };
 }
 
+/**
+ * Test-only code never ships — the static layers besides the lint rules:
+ * no build target for testing libs, specs excluded from lib builds and the
+ * `production` inputs, the MSW worker nowhere near the app.
+ */
+function checkTestIsolation() {
+  const problems = [];
+  const projectFiles = readdirSync('libs', { recursive: true }).filter((f) => f.endsWith('project.json'));
+  for (const file of projectFiles) {
+    const libPath = join('libs', dirname(file));
+    const { tags = [], targets = {} } = JSON.parse(readFileSync(join('libs', file), 'utf-8'));
+    if (tags.includes('type:testing') && 'build' in targets) problems.push(`${libPath}: type:testing must not have a build target`);
+    if ('build' in targets) {
+      const { exclude = [] } = JSON.parse(readFileSync(join(libPath, 'tsconfig.lib.json'), 'utf-8'));
+      if (!exclude.includes('src/**/*.spec.ts')) problems.push(`${libPath}/tsconfig.lib.json: must exclude src/**/*.spec.ts`);
+    }
+  }
+  const production = JSON.parse(readFileSync('nx.json', 'utf-8')).namedInputs.production;
+  if (!production.includes('!{projectRoot}/**/*.spec.ts')) problems.push('nx.json: production input must exclude specs');
+  const workerInApps = readdirSync('apps', { recursive: true }).filter((f) => f.endsWith('mockServiceWorker.js'));
+  workerInApps.forEach((f) => problems.push(`apps/${f}: MSW worker must only live in libs/shared/testing/public`));
+  const appProjects = readdirSync('apps', { recursive: true }).filter((f) => f.endsWith('project.json'));
+  for (const file of appProjects) {
+    const text = readFileSync(join('apps', file), 'utf-8');
+    if (/testing|msw/i.test(text)) problems.push(`apps/${file}: references testing/msw (assets?)`);
+  }
+  return { problems };
+}
+
+/** Builds the client and scans the bundle for any trace of MSW or Vitest. */
+function checkClientBundle() {
+  const problems = [];
+  try {
+    execFileSync('pnpm', ['exec', 'nx', 'run', 'client:build', '--skip-nx-cache'], { stdio: 'pipe' });
+  } catch (error) {
+    return { problems: [`client:build failed: ${error.stderr?.toString().slice(0, 300) ?? error.message}`], files: 0 };
+  }
+  const distDir = 'dist/apps/client';
+  const files = readdirSync(distDir, { recursive: true }).filter((f) => statSync(join(distDir, f)).isFile());
+  const testOnlyMarkers = /\bmsw\b|mockServiceWorker|setupWorker|vitest/i;
+  for (const file of files) {
+    if (testOnlyMarkers.test(file) || testOnlyMarkers.test(readFileSync(join(distDir, file), 'latin1'))) {
+      problems.push(`${distDir}/${file}: contains msw/vitest`);
+    }
+  }
+  return { problems, files: files.length };
+}
+
+/** The real config, but without `enforceBuildableLibDependency` — isolates the tag constraints. */
+async function createTagsOnlyEslint() {
+  const { blueprintDepConstraints } = await import('../eslint.config.mjs');
+  const rule = ['error', { enforceBuildableLibDependency: false, depConstraints: blueprintDepConstraints }];
+  return new ESLint({
+    cwd: workspaceRoot,
+    overrideConfig: { files: ['**/*.ts'], rules: { '@nx/enforce-module-boundaries': rule } },
+  });
+}
+
 function createUntaggedLib() {
   mkdirSync(join(UNTAGGED_LIB, 'src'), { recursive: true });
   writeFileSync(join(UNTAGGED_LIB, 'project.json'), JSON.stringify({ name: 'tmp-verify-untagged', tags: [] }));
 }
 
-async function lintCase({ from, importPath }, eslint) {
-  const filePath = join(workspaceRoot, from, from.startsWith('apps/') ? '' : 'src', 'tmp-verify.ts');
+async function lintCase({ from, importPath, spec }, eslint) {
+  const fileName = spec ? 'tmp-verify.spec.ts' : 'tmp-verify.ts';
+  const filePath = join(workspaceRoot, from, from.startsWith('apps/') ? '' : 'src', fileName);
   const code = `import { probe } from '${importPath}';\nexport const used = probe;\n`;
   const [result] = await eslint.lintText(code, { filePath });
   return result.messages.filter((m) => BOUNDARY_RULES.includes(m.ruleId));
@@ -117,29 +210,33 @@ async function lintCase({ from, importPath }, eslint) {
 
 async function main() {
   const schema = checkTagSchema();
+  const isolation = checkTestIsolation();
   createUntaggedLib();
   try {
     // the Nx rule silently skips without a cached graph — build it first
     await createProjectGraphAsync({ exitOnError: true });
     const eslint = new ESLint({ cwd: workspaceRoot });
+    const eslintTagsOnly = await createTagsOnlyEslint();
 
     const rows = [];
     for (const testCase of cases) {
-      const findings = await lintCase(testCase, eslint);
+      const findings = await lintCase(testCase, testCase.tagsOnly ? eslintTagsOnly : eslint);
       const text = findings.map((f) => f.message).join(' | ');
       const pass = testCase.allowed
         ? findings.length === 0
         : findings.length > 0 && [testCase.expectedText].flat().some((expected) => text.includes(expected));
       rows.push({ ...testCase, pass, text });
     }
-    report(rows, schema);
-    process.exitCode = rows.every((r) => r.pass) && schema.problems.length === 0 ? 0 : 1;
+    const bundle = checkClientBundle();
+    report(rows, schema, isolation, bundle);
+    const problems = [schema, isolation, bundle].flatMap((check) => check.problems);
+    process.exitCode = rows.every((r) => r.pass) && problems.length === 0 ? 0 : 1;
   } finally {
     rmSync(UNTAGGED_LIB, { recursive: true, force: true });
   }
 }
 
-function report(rows, schema) {
+function report(rows, schema, isolation, bundle) {
   console.log('| Regel | von | Import | erwartet | Ergebnis |');
   console.log('|---|---|---|---|---|');
   for (const r of rows) {
@@ -152,6 +249,10 @@ function report(rows, schema) {
   console.log(`\n${passed}/${rows.length} Fälle ok`);
   console.log(`Tag-Schema: ${schema.count} Libs geprüft, ${schema.problems.length} Probleme`);
   schema.problems.forEach((p) => console.log(`  - ${p}`));
+  console.log(`Test-Isolation (kein build für testing, Specs aus Build/production, Worker nicht in apps): ${isolation.problems.length} Probleme`);
+  isolation.problems.forEach((p) => console.log(`  - ${p}`));
+  console.log(`client-Bundle: ${bundle.files} Dateien auf msw/vitest geprüft, ${bundle.problems.length} Treffer`);
+  bundle.problems.forEach((p) => console.log(`  - ${p}`));
 }
 
 await main();
