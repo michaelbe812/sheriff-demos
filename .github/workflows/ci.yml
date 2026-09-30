@@ -10,8 +10,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Blueprint on pure Nx: every project's build/lint/test/typecheck, the
-  # app-routes sync check and the boundary proof (tooling:verify).
+  # Blueprint on pure Nx: every project's build/lint/test/typecheck (generated OpenAPI clients
+  # included — the targets generate them via ^generate), the app-routes sync check and the
+  # boundary proof (tooling:verify).
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -29,6 +30,17 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # generated OpenAPI clients: adapter openapi-tools runs the openapi-generator jar (JRE 11+)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      # the jar (openapitools.json → generator-cli.version) is downloaded on the first generate —
+      # cached per jar version (storageDir in openapitools.json)
+      - uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/openapi-generator-cli
+          key: openapi-generator-${{ hashFiles('openapitools.json') }}
       # unit/component tests run in Vitest browser mode (Chromium) with MSW
       - run: pnpm exec playwright install --with-deps chromium
       # slice shells <-> app.routes.ts (sync generator @blueprint/tooling:app-routes)
