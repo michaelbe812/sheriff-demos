@@ -48,7 +48,7 @@ describe('layer generator', () => {
     expect(read(tree, 'libs/booking/api/src/booking-api.ts')).toContain('export class BookingApi {}');
   });
 
-  it('validates domain and layer (layer list from the plugin)', async () => {
+  it('validates domain and layer (layer list from the conventions)', async () => {
     await expect(layerGenerator(tree, { domain: 'payment', layer: 'ui' })).rejects.toThrow('Unknown scope "payment"');
     await expect(layerGenerator(tree, { domain: 'booking', layer: 'widgets' })).rejects.toThrow(
       'allowed: types, utils, events, api, data, ui, shell, testing',

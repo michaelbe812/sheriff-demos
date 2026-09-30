@@ -3,7 +3,7 @@
   "outputCapture": "direct-nodejs",
   "$schema": "https://json-schema.org/schema",
   "title": "OpenAPI client",
-  "description": "Set by the crystal plugin. Only the client path: adapter, options and url are read from openapi-clients.json at run time (a json input of generate), so an entry change never touches the project config.",
+  "description": "Written into project.json by the client generator. Only the client path: adapter, options and url are read from openapi-clients.json at run time (a json input of generate), so an entry change never touches the project config.",
   "type": "object",
   "properties": {
     "client": {

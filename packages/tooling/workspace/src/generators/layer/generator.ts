@@ -11,7 +11,7 @@ export interface LayerGeneratorSchema {
   skipFormat?: boolean;
 }
 
-/** One more lib in an existing slice: libs/<domain>/<layer>. Layer list comes from the plugin. */
+/** One more lib in an existing slice: libs/<domain>/<layer> (+ config files, paths). Layer list from the conventions. */
 export async function layerGenerator(tree: Tree, options: LayerGeneratorSchema): Promise<void> {
   const { domain, layer } = options;
   if (layer === 'feature') throw new Error('"feature" only exists inside a feat: nx g @blueprint/tooling-workspace:feat <domain> <name>');
