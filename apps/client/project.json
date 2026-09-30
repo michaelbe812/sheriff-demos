@@ -9,7 +9,7 @@
   ],
   "targets": {
     "build": {
-      "executor": "@angular/build:application",
+      "executor": "@nx/angular:application",
       "outputs": [
         "{options.outputPath}"
       ],
@@ -26,7 +26,8 @@
         ],
         "styles": [
           "apps/client/src/styles.css"
-        ]
+        ],
+        "buildLibsFromSource": false
       },
       "configurations": {
         "production": {

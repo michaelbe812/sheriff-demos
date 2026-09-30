@@ -14,7 +14,7 @@
     "sharedGlobals": []
   },
   "targetDefaults": {
-    "@angular/build:application": {
+    "@nx/angular:application": {
       "cache": true,
       "dependsOn": [
         "^build"
@@ -78,7 +78,7 @@
     }
   },
   "generators": {
-    "@angular/build:application": {
+    "@nx/angular:application": {
       "e2eTestRunner": "none",
       "linter": "eslint",
       "style": "css",
