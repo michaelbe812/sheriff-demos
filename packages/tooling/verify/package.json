@@ -1,0 +1,6 @@
+{
+  "name": "@blueprint/tooling-verify",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Beweise des Blueprints: verify-boundaries (Target verify), verify-nx-internals (nach nx migrate) mit dist-Snapshot."
+}

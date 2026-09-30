@@ -15,7 +15,7 @@
  * folders ↔ specs ↔ libs, graph edges, targets, nothing committed), and a client
  * build proves the bundle carries no msw/vitest/faker.
  *
- * Usage: node packages/tooling/scripts/verify-boundaries.mjs   (exit 1 on any mismatch)
+ * Usage: node packages/tooling/verify/scripts/verify-boundaries.mjs   (exit 1 on any mismatch)
  */
 import { createProjectGraphAsync } from '@nx/devkit';
 import { ESLint } from 'eslint';
@@ -23,7 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const workspaceRoot = join(import.meta.dirname, '../../..');
+const workspaceRoot = join(import.meta.dirname, '../../../..');
 process.chdir(workspaceRoot);
 process.env.NX_DAEMON ??= 'false';
 
@@ -414,7 +414,7 @@ function checkGeneratedClients(projectGraph) {
 }
 
 /**
- * Scans the client bundle for any trace of MSW, Vitest or faker. As Nx target (`tooling:verify`) the
+ * Scans the client bundle for any trace of MSW, Vitest or faker. As Nx target (`tooling-verify:verify`) the
  * build is a dependsOn task; run directly, the script builds the client itself.
  */
 function checkClientBundle() {
@@ -439,7 +439,7 @@ function checkClientBundle() {
 
 /** The real config, but without `enforceBuildableLibDependency` — isolates the tag constraints. */
 async function createTagsOnlyEslint() {
-  const { blueprintDepConstraints } = await import('../../../eslint.config.mjs');
+  const { blueprintDepConstraints } = await import('../../../../eslint.config.mjs');
   const rule = ['error', { enforceBuildableLibDependency: false, depConstraints: blueprintDepConstraints }];
   return new ESLint({
     cwd: workspaceRoot,

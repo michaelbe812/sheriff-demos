@@ -12,7 +12,7 @@ concurrency:
 jobs:
   # Blueprint on pure Nx: every project's build/lint/test/typecheck (generated OpenAPI clients
   # included — the targets generate them via ^generate), the app-routes sync check and the
-  # boundary proof (tooling:verify).
+  # boundary proof (tooling-verify:verify).
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -63,4 +63,4 @@ jobs:
         run: pnpm exec nx run-many -t build lint test typecheck
 
       # boundaries (depConstraints cases), tag schema + scope list, no config files in libs/, bundle scan
-      - run: pnpm exec nx run tooling:verify
+      - run: pnpm exec nx run tooling-verify:verify

@@ -185,6 +185,8 @@ importers:
 
   packages/tooling/ng-lib: {}
 
+  packages/tooling/verify: {}
+
 packages:
 
   '@algolia/abtesting@1.18.0':

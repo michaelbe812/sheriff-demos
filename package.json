@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "verify": "nx run tooling:verify",
-    "verify:boundaries": "node packages/tooling/scripts/verify-boundaries.mjs",
-    "verify:nx-internals": "node packages/tooling/scripts/verify-nx-internals.mjs",
+    "verify": "nx run tooling-verify:verify",
+    "verify:boundaries": "node packages/tooling/verify/scripts/verify-boundaries.mjs",
+    "verify:nx-internals": "node packages/tooling/verify/scripts/verify-nx-internals.mjs",
     "openapi:generate": "nx run-many -t generate"
   },
   "private": true,

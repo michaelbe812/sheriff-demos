@@ -1,0 +1,50 @@
+{
+  "name": "tooling-verify",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/tooling/verify/scripts",
+  "tags": [
+    "type:tooling",
+    "tooling:verify"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "verify": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": [
+        {
+          "projects": [
+            "client"
+          ],
+          "target": "build"
+        }
+      ],
+      "inputs": [
+        "{workspaceRoot}/libs/**/*",
+        "{workspaceRoot}/apps/**/*",
+        "{workspaceRoot}/eslint.config.mjs",
+        "{workspaceRoot}/nx.json",
+        "{workspaceRoot}/openapi-clients.json",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{projectRoot}/scripts/verify-boundaries.mjs",
+        "{workspaceRoot}/packages/tooling/src/plugin/**/*",
+        {
+          "dependentTasksOutputFiles": "**/*"
+        },
+        {
+          "externalDependencies": [
+            "eslint",
+            "@nx/eslint-plugin",
+            "nx"
+          ]
+        }
+      ],
+      "options": {
+        "command": "node packages/tooling/verify/scripts/verify-boundaries.mjs"
+      }
+    }
+  }
+}

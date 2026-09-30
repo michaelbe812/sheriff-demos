@@ -11,25 +11,25 @@
  * Steps (exit 1 if any fails):
  *   1. run-many build lint test typecheck --skip-nx-cache (into a fresh dist/)
  *   2. dist equivalence: sha256 of every file in dist/ vs. the committed snapshot
- *      (packages/tooling/nx-internals/dist-hashes.json) or `diff -r` against --reference
+ *      (packages/tooling/verify/nx-internals/dist-hashes.json) or `diff -r` against --reference
  *   3. marker: a text in dist/libs/layout/ui is replaced, client:build without task dependencies
  *      must bundle the marker → the app is built against dist, not silently from source
  *   4. MSW: without the default handlers (`beforeEach(() => worker.use(...))`) booking-data:test must fail
  *   5. MSW worker: the browser gets `/mockServiceWorker.js` of the installed msw package, served by
  *      Vitest itself (`vitest:browser:resolve-virtual`, no publicDir, no committed copy) — a Vitest
  *      internal, so checked here: version + integrity checksum of the served script
- *   6. tooling:verify (boundaries, tag schema, config guard, bundle scan)
+ *   6. tooling-verify:verify (boundaries, tag schema, config guard, bundle scan)
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const workspaceRoot = join(import.meta.dirname, '../../..');
+const workspaceRoot = join(import.meta.dirname, '../../../..');
 process.chdir(workspaceRoot);
 process.env.NX_DAEMON ??= 'false';
 
-const SNAPSHOT = 'packages/tooling/nx-internals/dist-hashes.json';
+const SNAPSHOT = 'packages/tooling/verify/nx-internals/dist-hashes.json';
 const MARKER_FILE = 'dist/libs/layout/ui/esm2022/nav-bar.js';
 const MARKER_TEXT = 'Bookings';
 const SPEC_FILE = 'libs/booking/data/src/booking.store.spec.ts';
@@ -174,8 +174,8 @@ step('dist equivalence', compareDist);
 step('marker: app builds against dist', markerAppBuildsAgainstDist);
 step('MSW: missing handler turns the test red', missingHandlerFailsTest);
 step('MSW worker: served by Vitest from the msw package', mswWorkerServedByVitest);
-step('tooling:verify', () => {
-  nx('run', 'tooling:verify', '--skip-nx-cache');
+step('tooling-verify:verify', () => {
+  nx('run', 'tooling-verify:verify', '--skip-nx-cache');
   return 'green';
 });
 
