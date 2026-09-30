@@ -1,3 +1,4 @@
+import { createProjectGraphAsync } from "@nx/devkit";
 import nx from "@nx/eslint-plugin";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -23,6 +24,13 @@ import { join } from "node:path";
  */
 
 const workspaceRoot = import.meta.dirname;
+
+// `@nx/enforce-module-boundaries` only reads the CACHED project graph. Without
+// one (fresh clone, plain `eslint`, IDE) it skips silently with a warning;
+// with a stale one it does not know new libs and skips their imports. Build /
+// refresh the graph once per ESLint process, before the rule runs. Throws
+// (config load fails) instead of skipping when the graph cannot be built.
+await createProjectGraphAsync({ exitOnError: false });
 
 // ---------------------------------------------------------------------------
 // type axis — the layer matrix (X may depend on Y)
