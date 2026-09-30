@@ -12,7 +12,7 @@ export const defaultCheckinDtos: CheckinDto[] = [
 /** Happy path: the backend returns the default check-ins. */
 export const checkinHandlers = [http.get(checkinsUrl, () => HttpResponse.json(defaultCheckinDtos))];
 
-/** Deviations for a single test: `network.use(checkinScenarios.empty())`. */
+/** Deviations for a single test: `worker.use(checkinScenarios.empty())`. */
 export const checkinScenarios = {
   withCheckins: (dtos: CheckinDto[]) => http.get(checkinsUrl, () => HttpResponse.json(dtos)),
   empty: () => http.get(checkinsUrl, () => HttpResponse.json([])),

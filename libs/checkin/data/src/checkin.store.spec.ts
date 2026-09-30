@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { aCheckinDto, checkinHandlers, checkinScenarios } from '@blueprint/checkin/testing';
-import { test } from '@blueprint/shared/testing';
-import { describe, expect } from 'vitest';
+import { test, worker } from '@blueprint/shared/testing';
+import { beforeEach, describe, expect } from 'vitest';
 import { CheckinStore } from './checkin.store';
 
 describe('CheckinStore', () => {
-  test.override('handlers', () => checkinHandlers);
+  beforeEach(() => worker.use(...checkinHandlers));
 
   test('maps backend DTOs (snake_case) to CheckinRecords', async () => {
     const store = TestBed.inject(CheckinStore);
@@ -17,8 +17,8 @@ describe('CheckinStore', () => {
     ]);
   });
 
-  test('counts every mapped record', async ({ network }) => {
-    network.use(checkinScenarios.withCheckins([aCheckinDto(), aCheckinDto(), aCheckinDto()]));
+  test('counts every mapped record', async ({ worker }) => {
+    worker.use(checkinScenarios.withCheckins([aCheckinDto(), aCheckinDto(), aCheckinDto()]));
     const store = TestBed.inject(CheckinStore);
 
     await store.load();
@@ -26,8 +26,8 @@ describe('CheckinStore', () => {
     expect(store.count()).toBe(3);
   });
 
-  test('stays empty when the backend has no check-ins', async ({ network }) => {
-    network.use(checkinScenarios.empty());
+  test('stays empty when the backend has no check-ins', async ({ worker }) => {
+    worker.use(checkinScenarios.empty());
     const store = TestBed.inject(CheckinStore);
 
     await store.load();

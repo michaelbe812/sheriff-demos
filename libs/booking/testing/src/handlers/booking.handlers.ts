@@ -13,7 +13,7 @@ export const defaultBookings: Booking[] = [
 /** Happy path: the backend returns the default bookings. */
 export const bookingHandlers = [http.get(bookingsUrl, () => HttpResponse.json(defaultBookings))];
 
-/** Deviations for a single test: `network.use(bookingScenarios.serverError())`. */
+/** Deviations for a single test: `worker.use(bookingScenarios.serverError())`. */
 export const bookingScenarios = {
   withBookings: (bookings: Booking[]) => http.get(bookingsUrl, () => HttpResponse.json(bookings)),
   empty: () => http.get(bookingsUrl, () => HttpResponse.json([])),

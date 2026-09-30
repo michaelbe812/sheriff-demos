@@ -153,7 +153,7 @@ Unit- und Komponententests laufen **nur im Vitest Browser Mode** (Chromium headl
 ```
 libs/shared/testing/          scope:shared  type:testing  feat:none   kein build-Target
   public/mockServiceWorker.js   per `msw init` (package.json → msw.workerDirectory hält ihn bei Updates aktuell)
-  src/network.ts                setupWorker (msw/browser), `test` mit Fixtures `handlers` + `network`
+  src/network.ts                `worker` (setupWorker aus msw/browser) + `test` mit Auto-Fixture `worker`
 libs/<domain>/testing/        scope:<domain> type:testing feat:none   kein build-Target
   src/fixtures/                 Builder: aBooking(), aCheckinDto()
   src/handlers/                 <domain>Handlers (Normalfall), <domain>Scenarios (empty, serverError, with…)
@@ -167,12 +167,15 @@ vitest-base.config.mts        runnerConfig: publicDir = shared/testing/public, m
 
 ### So sieht ein Test aus
 
+Nah am [MSW-Rezept für Vitest Browser Mode](https://mswjs.io/docs/recipes/vitest-browser-mode/): Fixture `worker`, Default-Handler per `beforeEach`, Abweichungen im Test.
+
 ```ts
 import { bookingHandlers, bookingScenarios } from '@blueprint/booking/testing';
-import { test } from '@blueprint/shared/testing';
+import { test, worker } from '@blueprint/shared/testing';
+import { beforeEach, describe, expect } from 'vitest';
 
 describe('BookingStore', () => {
-  test.override('handlers', () => bookingHandlers);          // Standard-Handler der Spec
+  beforeEach(() => worker.use(...bookingHandlers));          // Default-Handler der Spec
 
   test('lädt über die echte BookingApi', async () => {
     const store = TestBed.inject(BookingStore);
@@ -180,17 +183,19 @@ describe('BookingStore', () => {
     expect(store.all()).toEqual(defaultBookings);
   });
 
-  test('Fehlerfall', async ({ network }) => {
-    network.use(bookingScenarios.serverError());             // nur für diesen Test
+  test('Fehlerfall', async ({ worker }) => {
+    worker.use(bookingScenarios.serverError());             // nur für diesen Test
     await expect(TestBed.inject(BookingStore).load()).rejects.toThrow('500');
   });
 });
 ```
 
-- **Standard-Handler: explizit im Spec** per `test.override('handlers', …)`. Das Fixture `network` (`auto: true`) startet den Worker einmal (`onUnhandledRequest: 'error'`, kein `stop`), wendet `handlers` an und ruft nach jedem Test `resetHandlers()`. Kein globales Setup-File: Welche Handler gelten, steht in der Spec.
-- Ohne Override gibt es keine Handler. Ein nicht gemockter Request wird von MSW geloggt und mit 500 beantwortet, der Test wird rot (`booking-api.spec.ts` prüft genau das).
+- **Fixture `worker`** (`auto: true`): startet den Worker einmal (`onUnhandledRequest: 'error'`, Promise-Guard), `use(worker)`, danach `worker.resetHandlers()`. Kein `stop`, wie im Rezept. Abweichungen vom Rezept: `start` nur beim ersten Test (Rezept: `await worker.start()` pro Test; hier teilen sich alle Specs einer Lib die Seite, `isolate: false`) und `setupWorker()` ohne Happy-Path-Handler, die Defaults setzt jede Spec selbst.
+- **Default-Handler: explizit im Spec** per `beforeEach(() => worker.use(...))`, `worker` kommt dafür als Modul-Export. Kein globales Setup-File: Welche Handler gelten, steht in der Spec.
+- **Reihenfolge** (Vitest 4 löst Fixtures auch für `beforeEach` auf, Auto-Fixtures immer): Fixture-Setup (Worker läuft) → `beforeEach` (Defaults) → Test (`worker.use` wird vorangestellt, neuester Handler gewinnt) → Fixture-Teardown (`resetHandlers` entfernt Defaults und Overrides). Belegt per Probe-Spec (nicht eingecheckt): `fetch` im ersten `beforeEach` wird schon von MSW beantwortet; im Folgetest nach einem Override gilt wieder nur der Default (`listHandlers().length === 1`); ohne `resetHandlers` wird dieser Test rot (3 statt 1 Handler).
+- Ohne `beforeEach` gibt es keine Handler. Ein nicht gemockter Request wird von MSW geloggt und mit 500 beantwortet, der Test wird rot (`booking-api.spec.ts` prüft genau das).
 - Komponententest `feat-checkin.spec.ts`: rendert `FeatCheckin` per TestBed in Chromium, klickt über `page` aus `vitest/browser` und prüft das DOM (`expect.element`). Die Buchungen kommen dabei cross-domain aus `@blueprint/booking/testing`.
-- Mutationsprobe: `bookingHandlers = []` → `booking-data:test` rot (`[MSW] Error: intercepted a request without a matching request handler`).
+- Mutationsproben: `beforeEach` mit den Default-Handlern in `booking.store.spec.ts` entfernt → `booking-data:test` rot (1 failed, `[MSW] Error: intercepted a request without a matching request handler`). Override gewinnt: die Tests mit `worker.use(...)` laufen trotz aktiver Defaults grün (`serverError` → 500, `withBookings` → nur `b-1`).
 
 ### Schutzschichten gegen Production-Leaks
 

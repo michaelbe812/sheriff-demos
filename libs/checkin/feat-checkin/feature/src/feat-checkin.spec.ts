@@ -2,8 +2,8 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AUTH_API, AuthApi } from '@blueprint/auth/api';
 import { aBooking, bookingScenarios } from '@blueprint/booking/testing';
-import { test } from '@blueprint/shared/testing';
-import { describe, expect } from 'vitest';
+import { test, worker } from '@blueprint/shared/testing';
+import { beforeEach, describe, expect } from 'vitest';
 import { page } from 'vitest/browser';
 import { FeatCheckin } from './feat-checkin';
 
@@ -19,12 +19,14 @@ function renderDesk(): void {
 
 describe('FeatCheckin (rendered in Chromium, backend via MSW)', () => {
   // cross-domain: the desk loads arrivals through the booking port (BookingApi)
-  test.override('handlers', () => [
-    bookingScenarios.withBookings([
-      aBooking({ id: 'b-7', guestName: 'Grace Hopper' }),
-      aBooking({ id: 'b-8', guestName: 'Ada Lovelace' }),
-    ]),
-  ]);
+  beforeEach(() =>
+    worker.use(
+      bookingScenarios.withBookings([
+        aBooking({ id: 'b-7', guestName: 'Grace Hopper' }),
+        aBooking({ id: 'b-8', guestName: 'Ada Lovelace' }),
+      ]),
+    ),
+  );
 
   test('loads arrivals on click and renders one check-in button per guest', async () => {
     renderDesk();
@@ -47,8 +49,8 @@ describe('FeatCheckin (rendered in Chromium, backend via MSW)', () => {
     await expect.element(page.getByRole('button', { name: 'Check in Grace Hopper' })).not.toBeInTheDocument();
   });
 
-  test('shows no arrivals when the backend has none', async ({ network }) => {
-    network.use(bookingScenarios.empty());
+  test('shows no arrivals when the backend has none', async ({ worker }) => {
+    worker.use(bookingScenarios.empty());
     renderDesk();
 
     await page.getByRole('button', { name: 'Load arrivals' }).click();
