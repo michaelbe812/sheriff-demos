@@ -165,7 +165,9 @@ export function libPathError(libPath: string, options: BlueprintLibsOptions = {}
     );
   }
   // folder names become project names, aliases and tags: a feat/client `CheckIn` or `check_in` would slip through
-  const notKebab = [parsed.scope, parsed.feat, parsed.client?.name].find((name) => name !== undefined && !KEBAB_CASE.test(name));
+  const notKebab = [parsed.scope, parsed.feat, parsed.client?.name].find(
+    (name) => name !== undefined && !KEBAB_CASE.test(name),
+  );
   if (notKebab !== undefined) {
     return `${LIBS_DIR}/${libPath}: folder "${notKebab}" must be kebab-case (e.g. "check-booking")`;
   }
