@@ -25,7 +25,7 @@ describe('deriveTags', () => {
 
   it('rejects a scope outside the scope list with a typo hint', () => {
     expect(() => deriveTags('bokking/ui', { scopes })).toThrow('unknown scope "bokking" (did you mean "booking"?)');
-    expect(libPathError('payment/ui', { scopes })).toContain('nx g @blueprint/tooling:domain payment');
+    expect(libPathError('payment/ui', { scopes })).toContain('nx g @blueprint/tooling-workspace:domain payment');
   });
 
   it('accepts every scope without a list (backwards compatible)', () => {

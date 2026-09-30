@@ -14,7 +14,7 @@ export interface LayerGeneratorSchema {
 /** One more lib in an existing slice: libs/<domain>/<layer>. Layer list comes from the plugin. */
 export async function layerGenerator(tree: Tree, options: LayerGeneratorSchema): Promise<void> {
   const { domain, layer } = options;
-  if (layer === 'feature') throw new Error('"feature" only exists inside a feat: nx g @blueprint/tooling:feat <domain> <name>');
+  if (layer === 'feature') throw new Error('"feature" only exists inside a feat: nx g @blueprint/tooling-workspace:feat <domain> <name>');
   if (!SLICE_LAYERS.includes(layer)) throw new Error(`Unknown layer "${layer}" — allowed: ${SLICE_LAYERS.join(', ')}`);
   assertSliceExists(tree, domain);
   assertLayerDependencies(tree, domain, layer);

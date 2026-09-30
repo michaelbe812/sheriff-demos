@@ -1,0 +1,17 @@
+{
+  "name": "@blueprint/tooling-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Crystal-Plugin der Libs (ohne Config-Dateien), Generatoren domain/layer/feat/testing/move/rename/remove/component/service/store, Sync-Generator app-routes.",
+  "main": "./src/plugin/blueprint-libs.ts",
+  "exports": {
+    ".": "./src/plugin/blueprint-libs.ts",
+    "./package.json": "./package.json"
+  },
+  "generators": "./generators.json",
+  "dependencies": {
+    "@blueprint/tooling-conventions": "workspace:*",
+    "@blueprint/tooling-ng-lib": "workspace:*",
+    "@blueprint/tooling-openapi": "workspace:*"
+  }
+}

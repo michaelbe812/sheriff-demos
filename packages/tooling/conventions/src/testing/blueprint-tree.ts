@@ -4,6 +4,7 @@
  */
 import { type Tree, updateNxJson, readNxJson } from '@nx/devkit';
 import { createTreeWithEmptyWorkspace } from '@nx/devkit/testing';
+import { WORKSPACE_PLUGIN } from '../lib-conventions';
 
 export const APP_ROUTES = 'apps/client/src/app/app.routes.ts';
 
@@ -59,7 +60,7 @@ export function createBlueprintTree(): Tree {
   const nxJson = readNxJson(tree) ?? {};
   updateNxJson(tree, {
     ...nxJson,
-    plugins: [{ plugin: '@blueprint/tooling', options: { scopes: ['booking', 'layout', 'shared'] } }],
+    plugins: [{ plugin: WORKSPACE_PLUGIN, options: { scopes: ['booking', 'layout', 'shared'] } }],
   });
   for (const [path, content] of Object.entries(files)) tree.write(path, content);
   return tree;

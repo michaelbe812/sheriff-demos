@@ -51,15 +51,15 @@ importers:
       '@berger-engineering/sheriff-blueprint':
         specifier: workspace:*
         version: link:packages/sheriff-blueprint
-      '@blueprint/tooling':
-        specifier: workspace:*
-        version: link:packages/tooling
       '@blueprint/tooling-ng-lib':
         specifier: workspace:*
         version: link:packages/tooling/ng-lib
       '@blueprint/tooling-openapi':
         specifier: workspace:*
         version: link:packages/tooling/openapi
+      '@blueprint/tooling-workspace':
+        specifier: workspace:*
+        version: link:packages/tooling/workspace
       '@eslint/js':
         specifier: ^9.8.0
         version: 9.39.5
@@ -184,15 +184,6 @@ importers:
         specifier: '>=0.19.0'
         version: 0.19.6(typescript@6.0.3)
 
-  packages/tooling:
-    dependencies:
-      '@blueprint/tooling-conventions':
-        specifier: workspace:*
-        version: link:conventions
-      '@blueprint/tooling-openapi':
-        specifier: workspace:*
-        version: link:openapi
-
   packages/tooling/conventions: {}
 
   packages/tooling/ng-lib: {}
@@ -204,6 +195,18 @@ importers:
         version: link:../conventions
 
   packages/tooling/verify: {}
+
+  packages/tooling/workspace:
+    dependencies:
+      '@blueprint/tooling-conventions':
+        specifier: workspace:*
+        version: link:../conventions
+      '@blueprint/tooling-ng-lib':
+        specifier: workspace:*
+        version: link:../ng-lib
+      '@blueprint/tooling-openapi':
+        specifier: workspace:*
+        version: link:../openapi
 
 packages:
 

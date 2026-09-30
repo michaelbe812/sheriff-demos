@@ -52,7 +52,7 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
     logger.info(
       `Domain "${scope}": libs/${scope}/{${[...layers, ...(withTesting ? [TESTING_LAYER] : [])].join(',')}}, scope in nx.json.`,
     );
-    logger.info(`Next: nx g @blueprint/tooling:feat ${scope} <name> --api --data --ui`);
+    logger.info(`Next: nx g @blueprint/tooling-workspace:feat ${scope} <name> --api --data --ui`);
   };
 }
 

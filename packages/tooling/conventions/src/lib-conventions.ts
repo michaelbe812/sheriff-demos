@@ -15,7 +15,7 @@
  */
 
 /** nx.json → plugins entry that owns the scope list (options.scopes); its generators create slices. */
-export const WORKSPACE_PLUGIN = '@blueprint/tooling';
+export const WORKSPACE_PLUGIN = '@blueprint/tooling-workspace';
 
 export const LIBS_DIR = 'libs';
 export const ALIAS_PREFIX = '@blueprint/';

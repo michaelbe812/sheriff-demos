@@ -51,7 +51,7 @@
   },
   "plugins": [
     {
-      "plugin": "@blueprint/tooling",
+      "plugin": "@blueprint/tooling-workspace",
       "options": {
         "scopes": ["auth", "booking", "checkin", "layout", "shared"]
       }
@@ -61,6 +61,6 @@
     }
   ],
   "sync": {
-    "globalGenerators": ["@blueprint/tooling:app-routes"]
+    "globalGenerators": ["@blueprint/tooling-workspace:app-routes"]
   }
 }

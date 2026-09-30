@@ -1,10 +1,11 @@
 {
-  "name": "tooling",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "tooling-workspace",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "packages/tooling/src",
+  "sourceRoot": "packages/tooling/workspace/src",
   "tags": [
-    "type:tooling"
+    "type:tooling",
+    "tooling:workspace"
   ],
   "targets": {
     "lint": {
@@ -23,7 +24,7 @@
         }
       ],
       "options": {
-        "command": "tsc -p packages/tooling/tsconfig.json"
+        "command": "tsc -p packages/tooling/workspace/tsconfig.json"
       }
     },
     "test": {
@@ -40,7 +41,7 @@
         }
       ],
       "options": {
-        "command": "vitest run --config packages/tooling/vitest.config.mts"
+        "command": "vitest run --config packages/tooling/workspace/vitest.config.mts"
       }
     }
   }

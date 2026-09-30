@@ -74,7 +74,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         'default',
         '^default',
         '{workspaceRoot}/eslint.config.mjs',
-        '{workspaceRoot}/packages/tooling/src/plugin/**/*',
+        '{workspaceRoot}/packages/tooling/workspace/src/plugin/**/*',
         '{workspaceRoot}/packages/tooling/openapi/src/plugin/**/*',
         '{workspaceRoot}/packages/tooling/conventions/src/lib-conventions.ts',
         GENERATED_CODE_INPUT,

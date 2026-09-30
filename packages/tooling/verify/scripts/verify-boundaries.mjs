@@ -38,7 +38,7 @@ const NEW_TYPES_LIB = 'libs/booking/feat-tmpverify/types';
 const NEW_LIB_EXPECTED = { name: 'booking-feat-tmpverify-ui', tags: ['scope:booking', 'type:ui', 'feat:tmpverify'], targets: ['build', 'lint', 'typecheck'] };
 const CYCLE = 'Circular dependency';
 
-// generated OpenAPI clients (packages/tooling/src/openapi): two shared, one domain-owned
+// generated OpenAPI clients (packages/tooling/openapi): two shared, one domain-owned
 const PET = '@blueprint/generated/pet-client';
 const NOTIFICATION = '@blueprint/generated/notification-client';
 const BOOKING_CLIENT = '@blueprint/booking/generated/booking-client';
@@ -199,7 +199,7 @@ const cases = [
 
 /**
  * Tag schema vs folder layout. The tags are inferred by
- * packages/tooling/src/plugin/blueprint-libs.ts, so this guards the plugin:
+ * packages/tooling/workspace/src/plugin/blueprint-libs.ts, so this guards the plugin:
  * every libs/<lib>/src/index.ts must be a project and carry exactly the expected tags.
  */
 function checkTagSchema(projectGraph) {
@@ -247,14 +247,14 @@ function checkTagSchema(projectGraph) {
 }
 
 /**
- * Scope list (nx.json → plugins → @blueprint/tooling → options.scopes): the plugin rejects libs
+ * Scope list (nx.json → plugins → @blueprint/tooling-workspace → options.scopes): the plugin rejects libs
  * outside the list, so here only the other direction — no stale entry without any lib.
  */
 function checkScopeList(libs) {
   const nxJson = JSON.parse(readFileSync('nx.json', 'utf-8'));
-  const entry = nxJson.plugins?.find((plugin) => (plugin.plugin ?? plugin) === '@blueprint/tooling');
+  const entry = nxJson.plugins?.find((plugin) => (plugin.plugin ?? plugin) === '@blueprint/tooling-workspace');
   const scopes = entry?.options?.scopes;
-  if (!scopes) return ['nx.json: plugin @blueprint/tooling needs options.scopes (scope list)'];
+  if (!scopes) return ['nx.json: plugin @blueprint/tooling-workspace needs options.scopes (scope list)'];
   const usedScopes = new Set(libs.map(({ data }) => data.root.split('/')[1]));
   return scopes.filter((scope) => !usedScopes.has(scope)).map((scope) => `nx.json scopes: "${scope}" has no lib (stale entry)`);
 }
