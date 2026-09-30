@@ -23,8 +23,8 @@ libs/
 apps/client                                type:app — nur app.ts, app.config.ts, app.routes.ts, main.ts
 ```
 
-- Jede Lib: `project.json` (Tags), `tsconfig.json`, `src/index.ts` (Public API), **ein** exakter Path in `tsconfig.base.json` → `index.ts`. Kein Wildcard.
-- Alias = Pfad ohne `libs/` und ohne `/feature`: `@blueprint/booking/data`, `@blueprint/booking/feat-check-booking`, `@blueprint/booking/feat-check-booking/api`.
+- Jede Lib: `project.json` (Tags, `build`), `src/index.ts` (Public API), **ein** exakter Path in `tsconfig.base.json` → `index.ts`. Kein Wildcard. Dazu die Build-Dateien (siehe [Buildable](#buildable)).
+- Alias = Pfad ohne `libs/`: `@blueprint/booking/data`, `@blueprint/booking/feat-check-booking/feature`, `@blueprint/booking/feat-check-booking/api`. Das `/feature` bleibt im Alias, sonst baut ng-packagr nicht (siehe [Buildable](#buildable)).
 - Die **Shell-Lib** ist der Slice-Root: Sie verdrahtet Port → Impl (`provideX()`) und lädt die Feats lazy (`loadComponent`). Die App importiert Shells statisch. Die Lazy-Grenze ist die Feat-Lib.
 
 ## Tag-Schema
@@ -36,6 +36,8 @@ apps/client                                type:app — nur app.ts, app.config.t
 | `scope:shared` | `libs/shared/*` | dummer Shared-Bereich |
 | `type:<layer>` | jede Lib genau einer | types, utils, events, api, infra, data, ui, feature, shell |
 | `type:app` | Apps | Composition Root der App |
+| `type:tooling` | `packages/*` | außerhalb der App-Architektur, darf nur `type:tooling` |
+| `npm:private` / `npm:public` | automatisch von Nx aus `package.json` | ohne Constraint, wirkungslos |
 | `port` | `<slice>/api` | einzige Lib, die fremde Scopes nutzen dürfen |
 | `feat-port` | `<slice>/feat-<f>/api` | einzige Feat-Lib, die Geschwister-Feats nutzen dürfen |
 
@@ -82,7 +84,7 @@ Vollständig in `eslint.config.mjs`. Drei Achsen, alle AND-verknüpft:
 ```js
 typeAxis     // 9 Constraints: layerMatrix
 scopeAxis    // generiert aus Tags: sliceIsolation + featPrivacy pro Slice,
-             // featIsolation pro Feat, shared, app
+             // featIsolation pro Feat, shared, app, tooling
 externalAxis // { sourceTag: '/^type:(?!infra$|app$)/', bannedExternalImports: ['@angular/common/http*'] }
 ```
 
@@ -144,7 +146,8 @@ Gelöscht: `sheriff.config.ts`, `@softarc/eslint-plugin-sheriff`, `packages/sher
 | **Deep Imports** (`@blueprint/x/data/src/…`) matchen keinen Path. Nx findet kein Zielprojekt und prüft **gar nicht** (nur tsc scheitert später) | ESLint-Core `no-restricted-imports` mit `@blueprint/**/src/**` |
 | `bannedExternalImports` sieht nur Imports: `fetch()` im data-Layer fällt nicht auf | Konvention/Review. HTTP-Clients gehören in infra |
 | Fehlermeldungen listen Tags statt Regelnamen | Kommentare in `eslint.config.mjs`; Tag-Namen sprechend gewählt |
-| `enforceBuildableLibDependency` meldet beim untagged `sheriff-blueprint` zuerst „buildable → non-buildable" statt noTag | Beides rot. Der Tag-Entscheid im Skript zeigt den noTag-Fall separat |
+| Regel liest **nur den gecachten Projektgraph**. Ohne Cache (frischer Clone, `eslint` direkt, IDE) überspringt sie still mit Warnung (Exit 0). Mit veraltetem Cache kennt sie neue Libs nicht | `eslint.config.mjs` ruft beim Laden `await createProjectGraphAsync()` auf: Graph wird pro ESLint-Prozess gebaut/aktualisiert, Fehler brechen die Config ab statt zu überspringen. Kosten ≈0,4 s pro ESLint-Start ohne Daemon |
+| noTag-Fall braucht ein Projekt ohne Tags, alle echten Projekte sind getaggt | `verify-boundaries.mjs` legt `tools/verify-untagged/project.json` nur für den Lauf an und räumt danach auf |
 | **Viele Libs** (s. Kosten) | Generator nötig (offen) |
 
 ## Kosten
@@ -153,21 +156,40 @@ Gelöscht: `sheriff.config.ts`, `@softarc/eslint-plugin-sheriff`, `packages/sher
 |---|---|---|
 | Libs | 2 (`domain-booking`, `shared-utils`) + App-intern | **34** + App + Tooling-Package |
 | Quell-Dateien in libs | – | 39, davon viele Libs mit **einer** Datei |
-| Boilerplate pro Lib | – | `project.json`, `tsconfig.json`, `index.ts`, 1 Path = 4 Artefakte → **136** |
+| Boilerplate pro Lib | – | `project.json`, `tsconfig.json`, `index.ts`, 1 Path, dazu buildable `tsconfig.lib.json`, `tsconfig.lib.prod.json`, `ng-package.json`, `package.json` = 8 Artefakte → **272** |
 | Regel-Config | `sheriff.config.ts` + Package (≈250 Z.) | `eslint.config.mjs` ≈190 Z. inkl. Helfer |
-| Tests | 12 e2e über Sheriff CLI + ESLint | 46 Fälle in `tools/verify-boundaries.mjs` |
+| Tests | 12 e2e über Sheriff CLI + ESLint | 47 Fälle in `tools/verify-boundaries.mjs` |
 
 Die Boilerplate ist mechanisch. Wer sie ernsthaft betreibt, braucht einen Nx-Generator (`slice`, `layer`, `feat`). Die vorhandenen Generatoren in `packages/sheriff-blueprint` erzeugen noch das Sheriff-Layout.
+
+## Buildable
+
+Jede Lib hat ein `build`-Target mit `@nx/angular:ng-packagr-lite` (incremental buildable, wie `nx g @nx/angular:library --buildable`). Die Lib baut einzeln gegen den `dist/`-Output ihrer Abhängigkeiten.
+
+- `project.json` bleibt schlank: `"build": { "executor": "@nx/angular:ng-packagr-lite" }`. Optionen, `dependsOn: ["^build"]`, `cache`, `inputs`, `outputs` stehen in `nx.json` unter `targetDefaults.build` (Array-Eintrag mit `filter.executor`, damit App- und Package-Builds unberührt bleiben). `{projectRoot}` wird aufgelöst.
+- Pro Lib: `ng-package.json` (`dest` → `dist/<projectRoot>`), `package.json` (Name = Import-Alias, `private: true`, Angular/rxjs als `peerDependencies`), `tsconfig.json` (Solution-Style) + `tsconfig.lib.json` + `tsconfig.lib.prod.json`. `ng-packagr` ist devDep (`~22.0.2`).
+- Erzeugt per `node tools/make-libs-buildable.mjs` (idempotent, liest Alias aus `tsconfig.base.json`, Peer-Deps aus den Imports). Nach einer neuen Lib erneut ausführen.
+- `tsconfig.base.json` bleibt Source-Alias. ng-packagr-lite biegt die Pfade der Abhängigkeiten nur für den Lib-Build auf `dist/` um.
+- `enforceBuildableLibDependency` ist an. Da jetzt alle Libs buildable sind, feuert es nur noch bei einer neuen Lib ohne `build`.
+- Output (`dist/libs/booking/shell`): `esm2022/*.js`, `*.d.ts`, `package.json` mit `exports`. Full-Compilation-Mode, kein FESM: für den Workspace, **nicht publizierbar** (`prepublishOnly` bricht ab, dazu `private`).
+
+**Alias-Änderung `…/feat-x` → `…/feat-x/feature`.** ng-packagr hält jeden Import `<eigener Paketname>/…` für einen Secondary Entry Point des eigenen Pakets. `@blueprint/booking/feat-check-booking` importiert `@blueprint/booking/feat-check-booking/data` → Build-Fehler „Entry point … doesn't exist". Kein Paketname darf Präfix eines anderen sein. Deshalb heißen alle vier Feat-Root-Libs jetzt wie ihr Pfad. Geändert: 4 Paths, die `loadComponent`-Imports in den Shells, 2 Import-Strings im Verify-Skript. depConstraints und Erwartungswerte unverändert.
+
+**Kosten:** 4 Dateien mehr pro Lib (136 zusätzlich), `run-many -t build` für 34 Libs + App ≈17 s kalt (ohne Cache), danach aus dem Nx-Cache. Einzelne Lib: ≈0,4–2 s.
+
+**Lazy-Loading** unverändert: Die App baut weiter aus Source (`@angular/build:application`), die Feats bleiben eigene Lazy-Chunks. Die Shell-Libs behalten die dynamischen `import()`s im `dist`-Output.
+
+**Option: App incremental gegen `dist/`.** Getestet: `client:build` auf `@nx/angular:application` mit `buildLibsFromSource: false` baut grün, die Feats bleiben Lazy-Chunks (Chunk-Namen `blueprint-…-feature` aus `dist`). Nicht umgesetzt: `serve` müsste auf `@nx/angular:dev-server` wechseln, die `targetDefaults` für den App-Build hängen am Executor-Key, und bei 34 Mini-Libs bringt es kaum Zeit.
 
 ## Verifikation
 
 ```sh
-pnpm exec nx run-many -t build lint test   # 36 Projekte grün (nur 5 vorbestehende Warnings in sheriff-blueprint/tests)
-pnpm exec nx build client                  # grün, Feats als eigene Lazy-Chunks
-pnpm verify:boundaries                     # 46/46, Exit 0 (`-- --markdown` für die Tabelle)
+NX_DAEMON=false pnpm exec nx run-many -t build lint test typecheck --skip-nx-cache  # 36 Projekte grün
+pnpm exec nx show projects --with-target build   # 34 Libs + client + sheriff-blueprint
+pnpm verify:boundaries                           # 47/47, Exit 0 (`-- --markdown` für die Tabelle)
 ```
 
-Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePath` in der jeweiligen Lib. Es wird nichts auf die Platte geschrieben. Geprüft wird, ob `@nx/enforce-module-boundaries` (bzw. `no-restricted-imports`) feuert. Die zweite Spalte „Tag-Entscheid" wertet die `depConstraints` direkt aus. Mutationsprobe: `sliceIsolation` entfernt und infra in `type:api` erlaubt → Fälle 3 und 27 rot, Skript Exit 1.
+Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePath` in der jeweiligen Lib. Es wird nichts auf die Platte geschrieben. Geprüft wird, ob `@nx/enforce-module-boundaries` (bzw. `no-restricted-imports`) feuert. Die zweite Spalte „Tag-Entscheid" wertet die `depConstraints` direkt aus. Mutationsprobe: `sliceIsolation` entfernt und infra in `type:api` erlaubt → Fälle 3 und 27 rot, Skript Exit 1. Gegenprobe im echten Lint: `import '@blueprint/booking/infra'` in `feat-check-booking/feature` → `nx lint booking-feat-check-booking` rot, `eslint <datei>` ohne Graph-Cache ebenfalls rot.
 
 | # | Regel | von | Import | erwartet | ESLint | Tag-Entscheid |
 |---|---|---|---|---|---|---|
@@ -193,13 +215,13 @@ Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePa
 | 20 | shared-feature via port | `checkin/feat-checkin/feature` | `@blueprint/auth/api` | green | ✅ green | allowed |
 | 21 | shell -> foreign shell | `checkin/shell` | `@blueprint/booking/shell` | red | ✅ red — tags | blocked by type:shell, /^scope:checkin(\/.*)?$/ |
 | 22 | sibling feat internals | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — tags | blocked by scope:booking/feat-manage-booking |
-| 23 | sibling feat root | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking` | red | ✅ red — tags | blocked by type:feature, scope:booking/feat-manage-booking |
+| 23 | sibling feat root | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/feature` | red | ✅ red — tags | blocked by type:feature, scope:booking/feat-manage-booking |
 | 24 | feat -> own feat-local lib | `booking/feat-check-booking/feature` | `@blueprint/booking/feat-check-booking/data` | green | ✅ green | allowed |
 | 25 | feat-port -> own feat data | `booking/feat-check-booking/api` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — tags | blocked by type:api |
 | 26 | sibling feat via feat-port | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/api` | green | ✅ green | allowed |
 | 27 | foreign feat-port | `checkin/feat-history/feature` | `@blueprint/booking/feat-check-booking/api` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/ |
 | 28 | slice-shared -> feat lib | `booking/data` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — cycle | blocked by scope:booking + /^type:(?!shell$)/ |
-| 29 | shell -> feat (lazy) | `booking/shell` | `@blueprint/booking/feat-check-booking` | green | ✅ green | allowed |
+| 29 | shell -> feat (lazy) | `booking/shell` | `@blueprint/booking/feat-check-booking/feature` | green | ✅ green | allowed |
 | 30 | shared -> slice port | `shared/utils` | `@blueprint/booking/api` | red | ✅ red — tags | blocked by type:utils, scope:shared |
 | 31 | shared utils -> shared api | `shared/utils` | `@blueprint/shared/api` | red | ✅ red — tags | blocked by type:utils |
 | 32 | slice -> shared | `booking/utils` | `@blueprint/shared/utils` | green | ✅ green | allowed |
@@ -211,11 +233,12 @@ Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePa
 | 38 | relative import across libs | `booking/feat-manage-booking/feature` | `../../../data/src/booking.store` | red | ✅ red — relative import | – |
 | 39 | deep import into lib | `checkin/feat-history/feature` | `@blueprint/checkin/data/src/internal/checkin.mapper` | red | ✅ red — no-restricted-imports (deep) | – |
 | 40 | deep import cross-scope | `checkin/data` | `@blueprint/booking/data/src/booking.store` | red | ✅ red — no-restricted-imports (deep) | – |
-| 41 | untagged project (noTag) | `packages/sheriff-blueprint` | `@blueprint/shared/utils` | red | ✅ red — buildable -> non-buildable | blocked (no constraint = noTag) |
-| 42 | HttpClient in data | `booking/data` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
-| 43 | HttpClient in feature | `booking/feat-check-booking/feature` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
-| 44 | HttpClient in api | `booking/api` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
-| 45 | HttpClient in infra | `booking/infra` | `@angular/common/http` | green | ✅ green | – |
-| 46 | HttpClient in app | `apps/client` | `@angular/common/http` | green | ✅ green | – |
+| 41 | untagged project (noTag) | `tools/verify-untagged` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked (no constraint = noTag) |
+| 42 | tooling -> lib | `packages/sheriff-blueprint` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked by type:tooling |
+| 43 | HttpClient in data | `booking/data` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
+| 44 | HttpClient in feature | `booking/feat-check-booking/feature` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
+| 45 | HttpClient in api | `booking/api` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
+| 46 | HttpClient in infra | `booking/infra` | `@angular/common/http` | green | ✅ green | – |
+| 47 | HttpClient in app | `apps/client` | `@angular/common/http` | green | ✅ green | – |
 
 Dazu im Code: auskommentierte `// nx-violation-example:`-Zeilen (z. B. `apps/client/src/app/app.ts`). Einkommentieren ⇒ Lint-Fehler.
