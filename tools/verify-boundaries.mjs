@@ -4,9 +4,11 @@
  *
  * Every case lints ONE virtual file (ESLint `lintText` with a filePath inside
  * a real lib) through the real eslint.config.mjs and asserts whether a
- * boundary rule fires. Nothing is written to the source tree except one
- * temporary untagged lib for the "noTag" case, removed in `finally`.
- * On top, a tag-schema check guards the conventions Nx itself cannot see,
+ * boundary rule fires. Nothing is written to the source tree except two
+ * temporary libs, removed in `finally`: an untagged one (project.json with
+ * no tags) for the "noTag" case and a new one with only src/index.ts, which
+ * the plugin must infer as a tagged, constrained project.
+ * On top, a tag-schema check guards the plugin's tags against the folder layout,
  * a test-isolation check the non-lint layers keeping test code out of
  * production, and a client build proves the bundle carries no msw/vitest.
  *
@@ -24,6 +26,10 @@ process.env.NX_DAEMON ??= 'false';
 
 const BOUNDARY_RULES = ['@nx/enforce-module-boundaries', 'no-restricted-imports'];
 const UNTAGGED_LIB = 'libs/tmp-verify-untagged';
+// a brand-new lib: only a folder + src/index.ts — the plugin must turn it into a tagged, constrained project
+const NEW_LIB = 'libs/tmpverify/utils';
+const NEW_LIB_ALIAS = '@blueprint/tmpverify/utils';
+const NEW_LIB_EXPECTED = { name: 'tmpverify-utils', tags: ['scope:tmpverify', 'type:utils', 'feat:none'], targets: ['build', 'lint', 'typecheck'] };
 const CYCLE = 'Circular dependency';
 
 const blocked = (rule, from, importPath, expectedText) => ({ rule, from, importPath, expectedText, allowed: false });
@@ -111,6 +117,13 @@ const cases = [
   blocked('testing: @vitest/* in app', 'apps/client/src/app', '@vitest/browser-playwright', '@vitest/browser-playwright'),
   allowed('testing: msw in testing lib', 'libs/booking/testing', 'msw'),
   allowedInSpec('testing: msw + vitest in spec', 'libs/booking/data', 'msw'),
+
+  // new lib (only src/index.ts, created for this run): tags + constraints apply without any config
+  blocked('new lib: layer rules (utils -> api)', NEW_LIB, '@blueprint/shared/api', 'type:utils'),
+  blocked('new lib: own scope constraint generated', NEW_LIB, '@blueprint/booking/utils', 'scope:tmpverify'),
+  allowed('new lib: -> shared', NEW_LIB, '@blueprint/shared/utils'),
+  blocked('new lib: foreign slice only via port', 'libs/booking/data', NEW_LIB_ALIAS, 'scope:booking'),
+  blocked('new lib: deep alias import', 'libs/booking/utils', `${NEW_LIB_ALIAS}/src/internal`, 'Deep import'),
 ];
 
 /**
@@ -212,6 +225,20 @@ async function createTagsOnlyEslint() {
   });
 }
 
+/** The new lib must come out of the plugin exactly like a hand-written project.json would have it. */
+function checkNewLib(projectGraph) {
+  const node = Object.values(projectGraph.nodes).find(({ data }) => data.root === NEW_LIB);
+  if (!node) return { problems: [`${NEW_LIB}: not inferred as project`] };
+  const actual = { name: node.name, tags: node.data.tags, targets: Object.keys(node.data.targets).sort() };
+  const same = JSON.stringify(actual) === JSON.stringify(NEW_LIB_EXPECTED);
+  return { actual, problems: same ? [] : [`${NEW_LIB}: expected ${JSON.stringify(NEW_LIB_EXPECTED)}, got ${JSON.stringify(actual)}`] };
+}
+
+function createNewLib() {
+  mkdirSync(join(NEW_LIB, 'src'), { recursive: true });
+  writeFileSync(join(NEW_LIB, 'src/index.ts'), 'export const probe = 1;\n');
+}
+
 function createUntaggedLib() {
   mkdirSync(join(UNTAGGED_LIB, 'src'), { recursive: true });
   writeFileSync(join(UNTAGGED_LIB, 'project.json'), JSON.stringify({ name: 'tmp-verify-untagged', tags: [] }));
@@ -227,11 +254,13 @@ async function lintCase({ from, importPath, spec }, eslint) {
 
 async function main() {
   createUntaggedLib();
+  createNewLib();
   try {
     // the Nx rule silently skips without a cached graph — build it first
     const projectGraph = await createProjectGraphAsync({ exitOnError: true });
     const schema = checkTagSchema(projectGraph);
     const isolation = checkTestIsolation(projectGraph);
+    const newLib = checkNewLib(projectGraph);
     const eslint = new ESLint({ cwd: workspaceRoot });
     const eslintTagsOnly = await createTagsOnlyEslint();
 
@@ -245,15 +274,16 @@ async function main() {
       rows.push({ ...testCase, pass, text });
     }
     const bundle = checkClientBundle();
-    report(rows, schema, isolation, bundle);
-    const problems = [schema, isolation, bundle].flatMap((check) => check.problems);
+    report(rows, schema, isolation, newLib, bundle);
+    const problems = [schema, isolation, newLib, bundle].flatMap((check) => check.problems);
     process.exitCode = rows.every((r) => r.pass) && problems.length === 0 ? 0 : 1;
   } finally {
     rmSync(UNTAGGED_LIB, { recursive: true, force: true });
+    rmSync(dirname(NEW_LIB), { recursive: true, force: true });
   }
 }
 
-function report(rows, schema, isolation, bundle) {
+function report(rows, schema, isolation, newLib, bundle) {
   console.log('| Regel | von | Import | erwartet | Ergebnis |');
   console.log('|---|---|---|---|---|');
   for (const r of rows) {
@@ -268,6 +298,8 @@ function report(rows, schema, isolation, bundle) {
   schema.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`Test-Isolation (${isolation.count} Libs aus dem Graph: kein build für testing, Specs aus Build-tsconfig/production, test nur mit Specs, Worker nicht in apps): ${isolation.problems.length} Probleme`);
   isolation.problems.forEach((p) => console.log(`  - ${p}`));
+  console.log(`Neue Lib (nur ${NEW_LIB}/src/index.ts): ${newLib.problems.length ? 'NICHT ' : ''}automatisch Projekt ${JSON.stringify(newLib.actual ?? {})}`);
+  newLib.problems.forEach((p) => console.log(`  - ${p}`));
   console.log(`client-Bundle: ${bundle.files} Dateien auf msw/vitest geprüft, ${bundle.problems.length} Treffer`);
   bundle.problems.forEach((p) => console.log(`  - ${p}`));
 }
