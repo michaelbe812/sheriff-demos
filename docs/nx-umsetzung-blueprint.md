@@ -18,13 +18,33 @@ libs/
   shared/types|utils|api|ui                 scope:shared type:<layer> feat:none
 ```
 
-- Jede Lib: `project.json` (Tags, `lint` + `typecheck`), `tsconfig.json`, `src/index.ts` als **einzige** öffentliche API.
+- Jede Lib: `project.json` (Tags, `build` + `lint` + `typecheck`), `tsconfig.json`, `src/index.ts` als **einzige** öffentliche API, dazu die Build-Dateien (siehe [Buildable Libs](#buildable-libs)).
 - Alias: `@blueprint/<pfad-unter-libs>`, z.B. `@blueprint/booking/api` oder `@blueprint/checkin/feat-checkin/api`. Er zeigt direkt auf `index.ts`. Einen Wildcard-Alias gibt es nicht mehr.
 - Projektname = Pfad mit `-` (`booking-feat-check-booking-data`).
 - `booking.routes.ts`/`checkin.routes.ts` exportieren jetzt benannt (`bookingRoutes`), weil `export *` keinen Default re-exportiert.
 - Ein lib-privater Ordner `internal/` (z.B. `checkin/data/src/internal/checkin.mapper.ts`) ist bloße Konvention. Privat ist die Datei, weil `index.ts` sie nicht exportiert.
 
-**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2. Das sind 96 Boilerplate-Dateien (`project.json`, `tsconfig.json`, `index.ts`) und 32 `paths`-Einträge. Ein neuer Bucket bedeutet eine neue Lib, nicht einen neuen Ordner.
+**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2. Das sind 224 Boilerplate-Dateien (7 pro Lib: `project.json`, `tsconfig.json`, `index.ts` + für den Build `package.json`, `ng-package.json`, `tsconfig.lib.json`, `tsconfig.lib.prod.json`) und 32 `paths`-Einträge. Ein neuer Bucket bedeutet eine neue Lib, nicht einen neuen Ordner.
+
+## Buildable Libs
+
+Jede Lib hat ein `build`-Target mit `@nx/angular:ng-packagr-lite` (incremental buildable, `ng-packagr` ~22.0). Die komplette Target-Config steht in `nx.json` → `targetDefaults.build` (`dependsOn: ["^build"]`, cache, `production`-Inputs, Output `dist/{projectRoot}`, Optionen mit `{projectRoot}`). In der `project.json` steht nur `"build": {}`.
+
+Pro Lib zusätzlich:
+
+| Datei | Inhalt |
+|---|---|
+| `package.json` | `name` = Import-Alias (`@blueprint/booking/data`), `private: true`, `peerDependencies` = tatsächlich importierte `@angular/*` |
+| `ng-package.json` | `dest: dist/libs/<pfad>`, `entryFile: src/index.ts` |
+| `tsconfig.lib.json` | erweitert `tsconfig.json` (`noEmit: false`, Declarations) |
+| `tsconfig.lib.prod.json` | ohne `declarationMap` |
+
+- **Incremental:** Beim Lib-Build schreibt Nx die Pfade abhängiger Libs auf `dist/` um. Ohne gebaute Abhängigkeit schlägt der Build fehl (`TS2307`), `dependsOn: ^build` sorgt für die Reihenfolge.
+- **App:** `client:build` nutzt `@nx/angular:application` mit `buildLibsFromSource: false`, bündelt also die gebauten Libs aus `dist/`. Die Chunks sind identisch zum Source-Build (main ~217 kB, 8 Lazy-Chunks, `bookingRoutes`/`checkinRoutes` lazy). `serve` (`@angular/build:dev-server`) baut weiterhin aus den Sources. Für `serve` gegen `dist/` bräuchte es `@nx/angular:dev-server` und damit `@angular-devkit/build-angular`, deshalb bewusst nicht umgesetzt.
+- **Source-Aliase bleiben:** `tsconfig.base.json` zeigt weiter auf `src/index.ts` (IDE, `typecheck`, Lint).
+- **Output:** `ng-packagr-lite` erzeugt `esm2022/` (eine Datei pro Quelldatei) + `.d.ts`, in *full compilation mode*, ohne FESM-Bundle. Das reicht für das App-Bundling, ist aber nicht publizierbar (deshalb `private: true`). Publizierbar wäre `@nx/angular:package` (FESM2022 + partial compilation).
+- **`enforceBuildableLibDependency`** bleibt an. Da alle Libs buildable sind, greift es nur bei neuen Libs ohne `build`.
+- Nx leitet aus der lib-`package.json` das Tag `npm:private` ab. Keine Constraint nutzt es, die depConstraints sind unverändert.
 
 ## Tag-Schema
 
@@ -109,7 +129,7 @@ Alternative, falls die Lib-Anzahl stört: eine Lib pro Feat, dazu Sheriff nur mi
 | Tag-Tippfehler (`scope:bookng`) würde still einen neuen Scope erzeugen; Nx prüft Tags nicht gegen Ordner | `tools/verify-boundaries.mjs` prüft das Tag-Schema gegen den Pfad (Scope, Type, Feat, `entry`/`port`/`feat-port`) |
 | Die Regel erkennt Deep-Imports über einen Alias nicht (`@blueprint/checkin/data/src/…` passiert die Tag-Prüfung) | `no-restricted-imports` generiert aus den Paths; TS löst den Import ohnehin nicht auf |
 | Zyklen werden **vor** Tags geprüft: ein Aufwärts-Import im Slice (api→data) meldet sich oft als „Circular dependency“ statt als Layer-Verstoß | geblockt ist er trotzdem, nur mit anderer Meldung. Das Verify-Skript testet beide Varianten |
-| Ohne gecachten Projekt-Graph **überspringt** die Nx-Regel still (nur eine Warnung) | `nx lint` baut den Graph selbst. Das Verify-Skript ruft vorher `createProjectGraphAsync` auf, und die Negativfälle beweisen, dass die Regel aktiv ist |
+| Ohne gecachten Projekt-Graph **überspringt** die Nx-Regel still (nur eine Warnung), z.B. bei `eslint` direkt oder in der IDE nach frischem Clone/`nx reset` | `nx lint` baut den Graph selbst. Für alle anderen Aufrufer baut `eslint.config.mjs` ihn per `ensureProjectGraph()` (top-level `await`), falls er fehlt. Geprüft: echter Verstoß in `booking-ui`, leeres `workspace-data`, `eslint <datei>` → Fehler statt Skip |
 | App-interne Slices (Phase 1 des Sheriff-Blueprints) sind nicht prüfbar: eine App ist ein Projekt | alles, was Regeln braucht, lebt in Libs, die App ist dünne Shell (Konvention) |
 | Domain-shared → Feat-Lib (z.B. `booking/data` → `feat-check-booking/data`) ist erlaubt, wie bei Sheriff | bewusst 1:1 übernommen. Härtung wäre möglich per `allSourceTags: ['feat:none', 'type:data']` → `feat:none` |
 | Die Generatoren des `sheriff-blueprint`-Packages erzeugen das Sheriff-Layout (Ordner statt Libs) | offen: ein Nx-Generator für „Slice/Feat als Lib-Set“ ist nötig |
@@ -121,7 +141,7 @@ Das Paket bleibt unverändert, samt `createSheriffConfig`, `nxModuleBoundariesOp
 ## Verifikation
 
 ```sh
-pnpm exec nx run-many -t build lint test typecheck   # 34 Projekte grün
+pnpm exec nx run-many -t build lint test typecheck   # 34 Projekte grün (build 34, lint 34, typecheck 32, test 1)
 pnpm verify:boundaries                                # 38/38 Fälle + Tag-Schema
 ```
 
