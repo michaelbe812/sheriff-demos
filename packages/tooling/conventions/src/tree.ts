@@ -6,7 +6,7 @@
  */
 import type { Tree } from '@nx/devkit';
 import * as ts from 'typescript';
-import { LIBS_DIR, SCOPES_FILE, scopesOfFile, WORKSPACE_PACKAGE } from './lib-conventions';
+import { KEBAB_CASE, LIBS_DIR, SCOPES_FILE, scopesOfFile, WORKSPACE_PACKAGE } from './lib-conventions';
 import {
   type JsonObject,
   LIB_CONFIG_FILES,
@@ -19,8 +19,6 @@ import {
 } from './lib-files';
 
 export * from './lib-files';
-
-const KEBAB_CASE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 export function assertKebabCase(value: string, what: string): void {
   if (!KEBAB_CASE.test(value)) throw new Error(`${what} "${value}" must be kebab-case (e.g. "check-booking").`);

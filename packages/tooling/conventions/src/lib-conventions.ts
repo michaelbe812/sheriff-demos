@@ -55,6 +55,41 @@ export const CLIENT_PARTS: Record<string, string> = { types: 'types', api: 'api'
 /** Parts written by the code generator adapter (the facade); `testing` has its own generate target. */
 export const CLIENT_CODE_PARTS = ['types', 'api', 'core'];
 
+/** kebab-case: scope, feat, client, folder and file names (`check-booking`). */
+export const KEBAB_CASE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+
+/**
+ * File names inside a lib (below `src/`, checked by the ESLint rule `blueprint/lib-file-naming`):
+ *   `<name>.ts`           plain file: component, service, class, port — named after its main symbol
+ *   `<name>.<kind>.ts`    kind file, the kind belongs to the listed layers only
+ *   `<name>[.<kind>].spec.ts`  spec of such a file
+ * `<name>` is kebab-case. `src/index.ts` is the public API, `src/generated/**` is excluded.
+ */
+export const FILE_KINDS: Record<string, string[]> = {
+  model: ['types'],
+  dto: ['types'],
+  utils: ['utils'],
+  events: ['events'],
+  mapper: ['data'],
+  store: ['data', 'ui', 'feature'],
+  routes: ['shell'],
+  providers: ['shell'],
+  shell: ['shell'],
+  fixture: ['testing'],
+  handlers: ['testing'],
+};
+/**
+ * Layers of a slice whose files all carry a kind (`booking.model.ts`, no plain `booking.ts`).
+ * Shared buckets are exempt: one helper per file, named after it (`shared/utils/src/format-date.ts`).
+ */
+export const KIND_ONLY_LAYERS = ['types', 'utils', 'events'];
+/** Folder below `src/` a kind lives in (testing libs: `fixtures/booking.fixture.ts`, `handlers/booking.handlers.ts`). */
+export const KIND_FOLDERS: Record<string, string> = { fixture: 'fixtures', handlers: 'handlers' };
+/** Lib-private folder below `src/`: never exported from `index.ts`. */
+export const INTERNAL_FOLDER = 'internal';
+/** The only public API of a lib: `src/index.ts`. */
+export const PUBLIC_API_FILE = 'index.ts';
+
 /** Scope list (lib-scopes.json). */
 export interface BlueprintLibsOptions {
   /** Allowed `libs/<scope>` folders. Unknown scope = error (folder typo guard). */
@@ -128,6 +163,11 @@ export function libPathError(libPath: string, options: BlueprintLibsOptions = {}
       `Allowed scopes (${SCOPES_FILE}): ${scopes.join(', ')}. ` +
       `New slice: nx g ${WORKSPACE_PACKAGE}:domain ${parsed.scope}`
     );
+  }
+  // folder names become project names, aliases and tags: a feat/client `CheckIn` or `check_in` would slip through
+  const notKebab = [parsed.scope, parsed.feat, parsed.client?.name].find((name) => name !== undefined && !KEBAB_CASE.test(name));
+  if (notKebab !== undefined) {
+    return `${LIBS_DIR}/${libPath}: folder "${notKebab}" must be kebab-case (e.g. "check-booking")`;
   }
   return undefined;
 }
