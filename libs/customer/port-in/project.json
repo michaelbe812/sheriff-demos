@@ -10,6 +10,23 @@
     "port"
   ],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite",
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "project": "libs/customer/port-in/ng-package.json",
+        "tsConfig": "libs/customer/port-in/tsconfig.lib.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "libs/customer/port-in/tsconfig.lib.prod.json"
+        },
+        "development": {}
+      }
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     },

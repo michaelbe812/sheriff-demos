@@ -10,6 +10,23 @@
     "entry"
   ],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite",
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "project": "libs/booking/shell/ng-package.json",
+        "tsConfig": "libs/booking/shell/tsconfig.lib.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "libs/booking/shell/tsconfig.lib.prod.json"
+        },
+        "development": {}
+      }
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     },

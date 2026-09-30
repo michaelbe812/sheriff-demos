@@ -14,7 +14,7 @@
     "sharedGlobals": []
   },
   "targetDefaults": {
-    "@angular/build:application": {
+    "build": {
       "cache": true,
       "dependsOn": [
         "^build"
@@ -43,7 +43,7 @@
         "default",
         "^default",
         "{workspaceRoot}/tsconfig.base.json",
-        "{workspaceRoot}/libs/tsconfig.lib.json"
+        "{workspaceRoot}/libs/tsconfig.lib.base.json"
       ],
       "options": {
         "command": "tsc -p {projectRoot}/tsconfig.json"

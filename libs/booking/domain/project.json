@@ -9,6 +9,23 @@
     "type:domain"
   ],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite",
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "project": "libs/booking/domain/ng-package.json",
+        "tsConfig": "libs/booking/domain/tsconfig.lib.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "libs/booking/domain/tsconfig.lib.prod.json"
+        },
+        "development": {}
+      }
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     },

@@ -9,6 +9,23 @@
     "type:adapter-driven"
   ],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite",
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "project": "libs/customer/adapter-driven/ng-package.json",
+        "tsConfig": "libs/customer/adapter-driven/tsconfig.lib.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "libs/customer/adapter-driven/tsconfig.lib.prod.json"
+        },
+        "development": {}
+      }
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     },

@@ -9,6 +9,23 @@
     "type:model"
   ],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:ng-packagr-lite",
+      "outputs": [
+        "{workspaceRoot}/dist/{projectRoot}"
+      ],
+      "defaultConfiguration": "production",
+      "options": {
+        "project": "libs/booking/model/ng-package.json",
+        "tsConfig": "libs/booking/model/tsconfig.lib.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "libs/booking/model/tsconfig.lib.prod.json"
+        },
+        "development": {}
+      }
+    },
     "lint": {
       "executor": "@nx/eslint:lint"
     },
