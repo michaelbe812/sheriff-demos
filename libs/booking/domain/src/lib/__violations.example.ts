@@ -26,9 +26,9 @@
 
 // ---------------------------------------------------------------------------
 // 3. THE CORE REACHING ITS OWN DRIVEN ADAPTER. Same scope, but type:domain
-//    may not depend on /^type:adapter-/ — not even transitively. Nx reports
-//    it as a circular dependency first (the adapter already imports the
-//    domain); with the cycle check off, the tag constraint fires.
+//    may not depend on /^type:adapter-/ — not even transitively. (The
+//    adapter speaks the model lib, not the domain, so this is no cycle: the
+//    tag constraint fires directly.)
 //
 // import { InMemoryBookingRepository } from '@hex/booking/adapter-driven';
 

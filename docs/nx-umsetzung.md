@@ -2,7 +2,7 @@
 
 Branch `feat/nx-hexagonal-core` (abgezweigt von `feat/hexagonal-framework-core`). Jede Sheriff-Regel aus dem fwcore-Ansatz ist jetzt eine Nx-Lib-Grenze plus `@nx/enforce-module-boundaries`. **Sheriff ist entfernt**: es bleibt keine Regel *innerhalb* einer Lib übrig (siehe [Intra-Lib](#intra-lib--warum-kein-sheriff-mehr)).
 
-Stand: `nx run-many -t build lint typecheck` grün (19 Projekte), `pnpm verify:boundaries` 47/47 Fälle ok.
+Stand: alle 19 Libs **buildable**; `nx run-many -t build lint typecheck` grün (21 Projekte), `pnpm verify:boundaries` 53/53 Fälle ok.
 
 ---
 
@@ -11,6 +11,7 @@ Stand: `nx run-many -t build lint typecheck` grün (19 Projekte), `pnpm verify:b
 ```
 apps/hexagonal-demo            dünne Shell: app.ts, app.config.ts, app.routes.ts
 libs/<slice>/                  slice ∈ {booking, customer}
+  model            Entitäten + IDs (reines TS, frameworkfrei) — Vokabular von domain und Ports
   domain           Modelle, Regeln, Use-Cases, Signal-Store (Angular ja, I/O nein)
   port-in          öffentliche Fläche (einzige cross-slice Tür)
   port-out         was der Kern braucht (Repo, Clock) — privat
@@ -28,7 +29,7 @@ Public API = `src/index.ts`, Alias `@hex/<slice>/<teil>` bzw. `@hex/shared/<teil
 | Achse | Werte | Sheriff-Pendant |
 |---|---|---|
 | Scope | `scope:booking`, `scope:customer`, `scope:shared`; Apps: `app:<name>` | `domain:<slice>`, `shared`, `app:<app>` |
-| Type | `type:domain`, `port-in`, `port-out`, `adapter-driving`, `adapter-driven`, `providers`, `shell`, `ui`, `util`, `types` | gleich (`shell` = Slice-Root-Modul) |
+| Type | `type:model`, `type:domain`, `port-in`, `port-out`, `adapter-driving`, `adapter-driven`, `providers`, `shell`, `ui`, `util`, `types` | gleich (`shell` = Slice-Root-Modul) |
 | Marker | `port` (port-in), `entry` (shell, providers) | gleich |
 
 Jede Lib hat genau einen `scope:*` und einen `type:*`-Tag — das prüft `tools/verify-boundaries.mjs` (Hygiene-Check).
@@ -47,7 +48,9 @@ Jede Lib hat genau einen `scope:*` und einen `type:*`-Tag — das prüft `tools/
 | `'domain:*': [sameTag, port/shared]` | eine Constraint pro Slice, generiert: `sliceIsolation(slice)` | Helfer |
 | `shared: to === 'shared'` | `scope:shared` → nur `scope:shared` **+ transitiv** `notDependOnLibsWithTags: ['/^scope:(?!shared$)/']` | Regex-Tag |
 | `type:domain` → domain, port-in, port-out, util, types | `onlyDependOnLibsWithTags` wie Sheriff **+ transitiv** `notDependOnLibsWithTags: ['/^type:adapter-/','entry']` **+** `allowedExternalImports` | Regex + Externals |
-| `type:port-in` / `type:port-out` → domain, types | 1:1 + `allowedExternalImports` | |
+| `type:port-in` → domain, types | + `type:model` (Entitäten liegen jetzt dort) | |
+| `type:port-out` → domain, types | **enger:** nur `type:model`, `type:types` — Zyklus-Kante port-out → domain ist verboten | |
+| — (Modelle lagen in domain) | `type:model` → nur `type:model`/`types`, `allowedExternalImports: []` | neu |
 | `type:adapter-driving` → domain, port-in, ui, util, types | 1:1 + `bannedExternalImports: ['@angular/common/http','rxjs/ajax','rxjs/fetch','rxjs/webSocket']` | |
 | `type:adapter-driven` → domain, port-out, util, types | 1:1 | |
 | `type:providers: startsWith('type:')` | `onlyDependOnLibsWithTags: ['type:*']` (Scope hält es im eigenen Hexagon) | Glob-Tag |
@@ -71,7 +74,7 @@ Belegt im installierten Code (`@nx/eslint-plugin@23.1.0`):
 
 Folge: `{ sourceTag: '*', onlyDependOnLibsWithTags: ['*'] }` ist in Nx ein No-op. Sheriff 0.19.6 ODER-verknüpft dagegen alle passenden `depRules`-Keys, weshalb fwcore den Catch-all weglassen musste und die `shared`-Freigabe auf der Type-Achse huckepack reiten ließ. Der Fork löst das mit `denyRules`; Nx braucht dafür nichts.
 
-**Beleg:** das Verify-Skript lintet jeden Fall zusätzlich mit angehängtem `'*'`-Catch-all (Spalte `catch-all`) — Ergebnis identisch, 47/47.
+**Beleg:** das Verify-Skript lintet jeden Fall zusätzlich mit angehängtem `'*'`-Catch-all (Spalte `catch-all`) — Ergebnis identisch, 53/53.
 
 Außerdem hat Nx echte Verbote: `notDependOnLibsWithTags` (**transitiv**, `findDependenciesWithTags` prüft alle von der Ziel-Lib erreichbaren Projekte) und `bannedExternalImports`.
 
@@ -110,8 +113,8 @@ Risiko „Slice ohne Constraint" (dann gälte nur die Type-Achse, still): der Hy
 ## Limitierungen + Lösung
 
 1. **Kein `sameTag`.** → Helfer + Hygiene-Check (oben).
-2. **Zyklus `domain ↔ port-out`.** Der Kern injiziert das Port-Token, der Port spricht Domain-Typen. Als eine Lib pro Teil ist das ein Lib-Zyklus, den Nx (ohne Unterscheidung von `import type`) meldet. → `ignoredCircularDependencies` exakt für die Paare `<slice>-domain`/`<slice>-port-out` (generiert). Damit der Zyklus zur Laufzeit nicht existiert, erlaubt `@typescript-eslint/no-restricted-imports` in `port-out` nur `import type` aus der Domain (Fall 46/47). Das Skript prüft außerdem, dass das Ignore nötig ist (ohne → `noCircularDependencies`). Alternative ohne Ignore: Modelle in eine eigene `model`-Lib — führt aber faktisch die `domain/application`-Trennung wieder ein, die fwcore gerade abgeschafft hat.
-3. **Zyklus-Check vor Tag-Check.** „domain → eigener Adapter" meldet Nx zuerst als *Circular dependency* (der Adapter importiert die Domain ja schon). Rot ist es trotzdem; dass auch die Tag-Constraint greift, zeigt die Spalte `tags-only` (Zyklus-Check neutralisiert).
+2. **Zyklus `domain ↔ port-out` — aufgelöst durch `model`-Lib.** Früher: Kern injiziert Port-Token, Port spricht Domain-Typen → Lib-Zyklus, per `ignoredCircularDependencies` + „nur `import type`" geduldet. Mit buildable Libs geht das nicht mehr (siehe [Buildable](#buildable-libs)). Jetzt: `model` (Entitäten, IDs, reine Werte-Funktionen wie `totalPrice`) ← `port-out` ← `domain`. Graph ist ein DAG, `ignoredCircularDependencies` und der `no-restricted-imports`-Block sind weg. Siehe Begründung unten.
+3. **Zyklus-Check vor Tag-Check.** „domain → eigener adapter-driving" meldet Nx zuerst als *Circular dependency* (der Adapter importiert die Domain ja schon). Rot ist es trotzdem; dass auch die Tag-Constraint greift, zeigt die Spalte `tags-only` (Zyklus-Check neutralisiert).
 4. **Lazy-Loading-Granularität = Lib.** Nx verbietet statischen + dynamischen Import derselben Lib. Deshalb sind `providers` und `shell` getrennt: die App importiert `customer-providers` statisch (Port app-weit) und `customer-shell` lazy. Folge: Customer-Seite landet im Initial-Bundle (über providers → adapter-driving); Booking bleibt ein echter Lazy-Chunk. Sheriff/Datei-Ebene war hier feiner.
 5. **`notDependOnLibsWithTags` ist transitiv.** Gut für Kern und shared, unbrauchbar für „adapter-driving ↛ port-out": adapter-driving → domain → port-out wäre dann immer rot. Dort daher nur `onlyDependOnLibsWithTags` (direkt).
 6. **I/O über Globals** (`new Date()`, `fetch`, `localStorage`) im Kern erkennt weder Sheriff noch Nx — nur Imports. → optional ESLint `no-restricted-globals`/`no-restricted-syntax` auf `**/domain/**` (nicht umgesetzt).
@@ -127,20 +130,73 @@ Jedes Sheriff-Modul ist jetzt eine Lib; Sheriff hatte keine Regel *innerhalb* ei
 | | Sheriff (fwcore) | Nx |
 |---|---|---|
 | Einheiten | 1 App, 17 Module in einer `sheriff.config.ts` | 17 Libs + 2 Apps |
-| Dateien pro Lib | — | `project.json`, `tsconfig.json`, `src/index.ts` |
-| Neuer Slice | Einzeiler `hexSlice(...)` | 7 Libs anlegen (→ Generator empfohlen); Constraints entstehen automatisch |
-| Gemeinsame Configs | — | `libs/eslint.config.mjs`, `libs/tsconfig.lib.json`, `typecheck` via `targetDefaults` |
+| Dateien pro Lib | — | `project.json`, `tsconfig.json`, `src/index.ts` + buildable: `package.json`, `ng-package.json`, `tsconfig.lib.json`, `tsconfig.lib.prod.json` (7) |
+| Neuer Slice | Einzeiler `hexSlice(...)` | 8 Libs anlegen (→ Generator empfohlen), dann `node tools/make-libs-buildable.mjs`; Constraints entstehen automatisch |
+| Gemeinsame Configs | — | `libs/eslint.config.mjs`, `libs/tsconfig.lib.base.json`, `typecheck` + `build` via `targetDefaults` |
+| Build | 1 App-Build | 19 ng-packagr-Builds (~0,4–1,5 s je Lib, kalt ~10 s gesamt, parallel), danach Cache/affected pro Lib; `dist/libs` ≈ 0,9 MB |
 
 Gewinn: Caching/affected pro Lib, `typecheck` pro Lib, Externals-Regeln, transitive Verbote, Zyklus-Erkennung — ohne Fork.
+
+---
+
+## Buildable Libs
+
+Jede Lib hat ein `build`-Target mit `@nx/angular:ng-packagr-lite` (incremental buildable, nur ESM2022, full compilation — nicht publishbar, `private: true`). Aufbau wie `nx g @nx/angular:library --buildable`, generiert per `node tools/make-libs-buildable.mjs` (idempotent):
+
+| Datei | Inhalt |
+|---|---|
+| `project.json` | `build`: `ng-packagr-lite`, `outputs: {workspaceRoot}/dist/{projectRoot}`, `production` → `tsconfig.lib.prod.json` |
+| `ng-package.json` | `dest: dist/libs/<slice>/<teil>`, `entryFile: src/index.ts` |
+| `package.json` | `name` = Import-Alias `@hex/...`, `private`, `peerDependencies` = importierte Externals (aus Quellen ermittelt) |
+| `tsconfig.lib.json` / `.prod.json` | erbt `tsconfig.json` (→ `libs/tsconfig.lib.base.json`), `noEmit: false`, `declaration` |
+
+- `nx.json › targetDefaults.build`: `cache`, `dependsOn: ["^build"]`, `inputs: ["production","^production"]` (gilt auch für App-Builds, ersetzt den alten Executor-Key).
+- `enforceBuildableLibDependency: true` (war schon an): buildable Lib darf keine nicht-buildable Lib importieren.
+- Pfad-Aliase in `tsconfig.base.json` bleiben **Source**-Aliase; ng-packagr-lite biegt sie beim Build auf `dist/` um. `typecheck`/`lint`/IDE arbeiten weiter gegen Quellen.
+- Nebeneffekt lib-`package.json`: Nx' package-json-Plugin mergt sie ins gleiche Projekt (keine neuen Projekte) und setzt Tag `npm:private` — von keiner Constraint erfasst, harmlos.
+- Output-Stichprobe `dist/libs/booking/domain`: `esm2022/**/*.js`, `*.d.ts`, `package.json` mit `exports`; Imports auf `@hex/booking/model`, `@hex/booking/port-out`, `@hex/customer/port-in` bleiben extern (nicht gebündelt).
+- **App incremental:** `hexagonal-demo` baut mit `@nx/angular:application` + `buildLibsFromSource: false` gegen `dist/` (Lazy-Chunks heißen jetzt `hex-booking-shell`/`hex-customer-shell` = gebaute Pakete). `serve` bleibt `@angular/build:dev-server` → Dev-Server baut aus Quellen (`@nx/angular:dev-server` bräuchte `@angular-devkit/build-angular`). `client` unverändert.
+- Lazy-Loading unverändert: Initial 212,9 kB, Booking + Customer als Lazy-Chunks.
+
+### Zyklus `domain ↔ port-out`: warum `model`-Lib
+
+Geprüft: mit dem alten Schnitt (port-out `import type` aus domain) bricht Nx ab — `Could not execute command because the task graph has a circular dependency: booking-domain:build → booking-port-out:build → booking-domain:build`. Unabhängig von Nx kann ng-packagr den Zyklus auch nicht bauen: jede Seite braucht die `.d.ts` der anderen aus `dist/`.
+
+Optionen:
+
+| Option | Bewertung |
+|---|---|
+| Port-Interfaces + Tokens in `domain` | port-out-Lib entfällt → `adapter-driving → port-out` (Fall 5) nicht mehr prüfbar. **Weicht Regel auf** — nein. |
+| port-out typisiert generisch / `unknown` | Port verliert Typsicherheit — nein. |
+| `build` für domain/port-out ohne `^build` | Zyklus bleibt, `enforceBuildableLibDependency`/Reihenfolge kaputt — nein. |
+| **Entitäten in `model`-Lib** | DAG `model ← port-out ← domain`; Regeln unverändert oder enger. **Gewählt.** |
+
+`model` enthält nur, was Ports sprechen: Entitäten, IDs, reine Werte-Funktionen (`booking.ts`, `customer.ts`). Regeln (`booking-policy`, `loyalty-tier`), Use-Cases und Store bleiben in `domain` — das ist **keine** Rückkehr zu `domain/application`, sondern ein Schnitt „Vokabular vs. Verhalten". Regeln danach:
+
+- `type:model`: nur `type:model`/`types`, **keine** Externals (strenger als domain — frameworkfrei erzwungen).
+- `type:port-out`: nur `type:model`/`types` — **enger** als vorher (vorher `type:domain`). port-out → domain ist jetzt per Tag *und* Zyklus rot.
+- domain, port-in, adapter-driving, adapter-driven: `+ type:model` — erlaubt nur, was vorher über domain schon erreichbar war.
+- Scope-Isolation unverändert: fremdes `model` ist rot (Fall 53), nur `port` ist die Tür.
+- Kosten: +2 Libs (1 pro Slice).
+
+### Erwartungswerte angepasst
+
+- **47** `port-out: import type der domain`: grün → **rot**. Grund: die Kante ist genau der Zyklus, der Builds unmöglich macht; port-out spricht jetzt `model` (Fall 48 grün).
+- **46** bleibt rot, aber jetzt über `@nx/enforce-module-boundaries` (Tag + Zyklus) statt `no-restricted-imports` (Block entfernt).
+- Hygiene: statt „Ignore ist nötig" prüft das Skript jetzt „`ignoredCircularDependencies` leer + Lib-Graph zyklenfrei".
+
+### Boundary-Regel ohne Graph-Cache
+
+`@nx/enforce-module-boundaries` liest nur den **gecachten** Projekt-Graph. Fehlt er (frischer Clone, `nx reset`, direktes `eslint`, lint-staged, IDE), gibt die Regel nur `warning No cached ProjectGraph is available. The rule will be skipped.` aus — **Exit 0, nichts geprüft** (reproduziert). `nx lint` selbst ist nicht betroffen (baut den Graph vorher; echter Verstoß domain → adapter-driven in `nx lint booking-domain` → rot, geprüft). Lösung in `eslint.config.mjs`: außerhalb eines Nx-Tasks (`NX_TASK_TARGET_PROJECT` nicht gesetzt) vorher `createProjectGraphAsync()` — erzeugt/aktualisiert den Cache, also auch keine veralteten Tags. Kosten: ~1–2 s pro ESLint-Start ohne Daemon. Verify-Skript prüft das mit leerem `NX_WORKSPACE_DATA_DIRECTORY` per ESLint-CLI (Mutationsprobe: Fix deaktiviert → FAIL).
 
 ---
 
 ## Verifikation
 
 ```bash
-NX_DAEMON=false pnpm exec nx run-many -t build lint typecheck   # 19 Projekte grün
-NX_DAEMON=false pnpm exec nx build hexagonal-demo               # grün
-pnpm verify:boundaries                                          # 47/47, 0 Hygiene-Probleme
+NX_DAEMON=false pnpm exec nx run-many -t build lint typecheck --skip-nx-cache   # 21 Projekte grün
+NX_DAEMON=false pnpm exec nx show projects --with-target build                  # 19 Libs + 2 Apps
+pnpm verify:boundaries                                                          # 53/53, 0 Hygiene-Probleme
 ```
 
 Baseline vorher (Sheriff-Stand): `nx run-many -t build lint` grün, 2 Projekte, keine Warnungen.
@@ -195,7 +251,13 @@ Baseline vorher (Sheriff-Stand): `nx run-many -t build lint` grün, 2 Projekte, 
 | 44 | app → fremde App | rot | rot | rot | rot |
 | 45 | Deep-Import an Public API vorbei | rot | rot | rot | rot |
 | 46 | port-out: Value-Import der Domain | rot | rot | rot | rot |
-| 47 | port-out: `import type` der Domain | grün | grün | grün | grün |
+| 47 | port-out: `import type` der Domain (vorher grün, s. o.) | rot | rot | rot | rot |
+| 48 | port-out → eigenes model | grün | grün | grün | grün |
+| 49 | domain → eigenes model | grün | grün | grün | grün |
+| 50 | adapter-driving → eigenes model | grün | grün | grün | grün |
+| 51 | model → domain | rot | rot | rot | rot |
+| 52 | model → `@angular/core` (frameworkfrei) | rot | rot | rot | rot |
+| 53 | cross-slice: domain → fremdes model | rot | rot | rot | rot |
 
 Beispielmeldungen: `A project tagged with "scope:booking" can only depend on libs tagged with "scope:booking", "port", "scope:shared"` (12) · `A project tagged with "type:domain" is not allowed to import "@angular/common/http"` (22) · `A project tagged with "scope:shared" and "type:ui" is not allowed to import "@angular/router"` (37) · `Static imports of lazy-loaded libraries are forbidden.` (39).
 
@@ -207,7 +269,7 @@ Beispielmeldungen: `A project tagged with "scope:booking" can only depend on lib
 
 - **Frameworkfreier Kern** = `type:domain` mit `allowedExternalImports: []`. Ersetzt exakt Fork-`externalRules` / den `no-restricted-imports`-Block — nativ, auf Tag-Ebene statt Pfad-Glob.
 - **Keine `core:<slice>`-Achse nötig.** Die existierte nur, weil Sheriff-`domain:*` den Kern „aufweichen" konnte (OR). In Nx gilt AND; der Kern bekommt einfach die engere Constraint.
-- **Ohne `application`-Zwang?** Nur teilweise. Use-Cases können frameworkfrei im Kern liegen (Konstruktor-Parameter statt `inject()`, Verdrahtung in `providers` per `useFactory: () => new BookRoomUseCase(inject(BOOKING_REPOSITORY), …)`). Out-Port-*Interfaces* gehören dann in den Kern (reines TS) — das beseitigt nebenbei den `domain ↔ port-out`-Zyklus; `InjectionToken`s wandern in eine dünne Token-Lib oder nach `providers`. Der **Signal-Store** braucht aber Angular und passt nicht in einen frameworkfreien Kern: er landet entweder in `adapter-driving` (UI-State) oder in einer eigenen Lib — dann ist das de facto wieder `application`. Ehrliche Antwort: `application` ist nicht Pflicht für Use-Cases, aber für einen geteilten Store.
+- **Ohne `application`-Zwang?** Nur teilweise. Use-Cases können frameworkfrei im Kern liegen (Konstruktor-Parameter statt `inject()`, Verdrahtung in `providers` per `useFactory: () => new BookRoomUseCase(inject(BOOKING_REPOSITORY), …)`). Out-Port-*Interfaces* gehören dann in den Kern (reines TS; der `domain ↔ port-out`-Zyklus ist ohnehin schon per `model`-Lib weg); `InjectionToken`s wandern in eine dünne Token-Lib oder nach `providers`. Der **Signal-Store** braucht aber Angular und passt nicht in einen frameworkfreien Kern: er landet entweder in `adapter-driving` (UI-State) oder in einer eigenen Lib — dann ist das de facto wieder `application`. Ehrliche Antwort: `application` ist nicht Pflicht für Use-Cases, aber für einen geteilten Store.
 - Kosten: 1–2 Libs mehr pro Slice; alles andere wie hier.
 
 ## Offen
