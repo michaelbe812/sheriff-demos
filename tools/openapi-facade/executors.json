@@ -1,0 +1,14 @@
+{
+  "executors": {
+    "generate": {
+      "implementation": "./generate.js",
+      "schema": "./client.schema.json",
+      "description": "OpenAPI-Client über den gewählten Adapter generieren und in die Libs types/api/core aufteilen (src/generated/**)."
+    },
+    "update-spec": {
+      "implementation": "./update-spec.js",
+      "schema": "./client.schema.json",
+      "description": "Spec von spec.url laden, normalisiert als YAML in spec.file schreiben (committet)."
+    }
+  }
+}

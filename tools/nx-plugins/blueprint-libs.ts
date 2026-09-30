@@ -9,6 +9,12 @@
  *   tags       derived from the path — a typo in a tag can no longer happen
  *              (a `testing` folder = test-only lib: `type:testing`)
  *   targets    lint, typecheck, build (not for testing libs), test (only if src/ has *.spec.ts)
+ *              every target depends on `^generate`: generated client code (gitignored) exists before
+ *              a consumer is built/linted/typechecked/tested
+ *   generated  libs/generated/<client>/<part>, libs/<domain>/generated/<client>/<part> (part types|api|core):
+ *              tags scope:<shared|domain> type:<types|api> feat:none generated (no port), a `generate`
+ *              target that runs the client's generate, and implicit edges api → core → types
+ *              (the generated imports do not exist yet when the graph is computed) — see generated-clients.ts
  *
  * The tag derivation is the single source of truth: eslint.config.mjs and
  * tools/verify-boundaries.mjs read the tags from the project graph.
@@ -17,6 +23,7 @@
 import type { CreateNodesResult, CreateNodesV2, TargetConfiguration } from '@nx/devkit';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { GENERATED_PART_LAYERS, parseGeneratedLibPath, projectNameFor } from './generated-clients';
 
 const LIB_MARKER = 'libs/**/src/index.ts';
 const ALIAS_PREFIX = '@blueprint/';
@@ -30,6 +37,11 @@ const KNOWN_LAYERS = ['types', 'utils', 'events', 'api', 'data', 'ui', ...FEATUR
 
 /** Tags of a lib, derived purely from its path below `libs/` (e.g. `booking/feat-check-booking/api`). */
 export function deriveTags(libPath: string): string[] {
+  const generated = parseGeneratedLibPath(libPath);
+  if (generated) {
+    // no `port`: a generated api is never a slice's public API — foreign slices stay out (scope constraint)
+    return [`scope:${generated.scope}`, `type:${GENERATED_PART_LAYERS[generated.part]}`, 'feat:none', 'generated'];
+  }
   const [scope, ...rest] = libPath.split('/');
   const layer = rest.at(-1) ?? '';
   const featFolder = rest.find((segment) => segment.startsWith('feat-'));
@@ -72,6 +84,7 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         { externalDependencies: ['eslint'] },
       ],
       options: { command: 'eslint .', cwd: '{projectRoot}' },
+      dependsOn: ['^generate'],
     },
     typecheck: {
       // one shared libs/tsconfig.json, narrowed to this lib's sources in memory — no per-lib tsconfig
@@ -85,13 +98,14 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         { externalDependencies: ['typescript'] },
       ],
       options: { command: 'node tools/typecheck-lib.mjs {projectRoot}' },
+      dependsOn: ['^generate'],
     },
     // ./tools/ng-lib:build generates ng-package.json, package.json and tsconfig (dist paths) in tmp/
     // and delegates to @nx/angular:ng-packagr-lite — no build files in the lib
     build: {
       executor: './tools/ng-lib:build',
       cache: true,
-      dependsOn: ['^build'],
+      dependsOn: ['^build', '^generate'],
       inputs: [
         'production',
         '^production',
@@ -132,25 +146,62 @@ function libTargets(workspaceRoot: string, projectRoot: string, isTestingLib: bo
         browsers: ['chromiumHeadless'],
         watch: false,
       },
+      dependsOn: ['^generate'],
     };
   }
   return targets;
+}
+
+/**
+ * A generated client part: its own `generate` (noop → the client's generate, so `^generate` of a
+ * consumer reaches it) in front of every target, plus the edges between the parts. The generated
+ * code is gitignored, so on a fresh clone the graph cannot see api → types/core imports yet.
+ */
+function withGeneratedClient(
+  libPath: string,
+  workspaceRoot: string,
+  targets: Record<string, TargetConfiguration>,
+): { targets: Record<string, TargetConfiguration>; implicitDependencies: string[] } {
+  const generated = parseGeneratedLibPath(libPath);
+  if (!generated) return { targets, implicitDependencies: [] };
+  const clientProject = projectNameFor(generated.clientPath);
+  if (!existsSync(join(workspaceRoot, 'libs', generated.clientPath, 'openapi.yaml'))) {
+    throw new Error(`libs/${libPath}: libs/${generated.clientPath}/openapi.yaml fehlt (Spec des Clients)`);
+  }
+  for (const target of Object.values(targets)) target.dependsOn = [...(target.dependsOn ?? []), 'generate'];
+  const siblingsBelow = { types: [], core: ['types'], api: ['types', 'core'] }[generated.part];
+  const implicitDependencies = siblingsBelow
+    .filter((part) => existsSync(join(workspaceRoot, 'libs', generated.clientPath, part, 'src/index.ts')))
+    .map((part) => projectNameFor(`${generated.clientPath}/${part}`));
+  return {
+    targets: {
+      ...targets,
+      generate: { executor: 'nx:noop', dependsOn: [{ projects: [clientProject], target: 'generate' }] },
+    },
+    implicitDependencies,
+  };
 }
 
 function createLibNode(indexFile: string, workspaceRoot: string): CreateNodesResult {
   const projectRoot = dirname(dirname(indexFile));
   const libPath = projectRoot.slice('libs/'.length);
   const tags = deriveTags(libPath);
+  const { targets, implicitDependencies } = withGeneratedClient(
+    libPath,
+    workspaceRoot,
+    libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`)),
+  );
   return {
     projects: {
       [projectRoot]: {
-        name: libPath.replaceAll('/', '-'),
+        name: projectNameFor(libPath),
         root: projectRoot,
         sourceRoot: `${projectRoot}/src`,
         projectType: 'library',
         tags,
         metadata: { js: { packageName: `${ALIAS_PREFIX}${libPath}` } },
-        targets: libTargets(workspaceRoot, projectRoot, tags.includes(`type:${TESTING_LAYER}`)),
+        targets,
+        ...(implicitDependencies.length ? { implicitDependencies } : {}),
       },
     },
   };

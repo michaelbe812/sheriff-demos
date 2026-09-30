@@ -1,0 +1,5 @@
+{
+  "name": "@blueprint/openapi-facade",
+  "private": true,
+  "executors": "./executors.json"
+}

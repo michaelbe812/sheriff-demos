@@ -1,0 +1,48 @@
+# Handgeschrieben (kein spec.url): Backend-Vertrag der Booking-Domain, passend zu /api/bookings.
+openapi: 3.0.3
+info:
+  title: Booking API
+  version: 1.0.0
+servers:
+  - url: /api
+tags:
+  - name: bookings
+paths:
+  /bookings:
+    get:
+      tags:
+        - bookings
+      operationId: listBookings
+      summary: Alle Buchungen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+components:
+  schemas:
+    Booking:
+      type: object
+      required:
+        - id
+        - guestName
+        - checkinDate
+        - status
+      properties:
+        id:
+          type: string
+        guestName:
+          type: string
+        checkinDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum:
+            - pending
+            - confirmed
+            - checked-in

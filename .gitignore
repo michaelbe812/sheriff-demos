@@ -49,3 +49,6 @@ Thumbs.db
 # vitest browser mode: screenshots/attachments of failed tests
 __screenshots__
 .vitest-attachments
+
+# generierte OpenAPI-Clients (tools/openapi-facade): nur src/index.ts + openapi.yaml sind committet
+/libs/**/generated/*/*/src/generated/

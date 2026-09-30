@@ -52,6 +52,18 @@
     }
   },
   "plugins": [
-    "./tools/nx-plugins/blueprint-libs.ts"
+    "./tools/nx-plugins/blueprint-libs.ts",
+    {
+      "plugin": "./tools/nx-plugins/blueprint-openapi-clients.ts",
+      "options": {
+        "defaultAdapter": "openapi-tools",
+        "clients": {
+          "generated/pet-client": {
+            "url": "https://petstore3.swagger.io/api/v3/openapi.json",
+            "adapter": "hey-api"
+          }
+        }
+      }
+    }
   ]
 }
