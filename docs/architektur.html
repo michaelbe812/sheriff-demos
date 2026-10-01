@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nx-Blueprint-Architektur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  :root {
+    --bg: #f3f5f2;
+    --surface: #ffffff;
+    --surface-2: #eaeee9;
+    --ink: #18202b;
+    --ink-2: #4d5866;
+    --muted: #727c88;
+    --line: #d5dbd6;
+    --accent: #2350c4;
+    --accent-soft: #e3eafb;
+    --ok: #1d7f52;
+    --ok-soft: #dff2e8;
+    --bad: #be3328;
+    --bad-soft: #fbe5e2;
+    --warn: #9a6a00;
+    --warn-soft: #fbf0d5;
+    --chip-scope: #e6e0f6;
+    --chip-scope-ink: #4b3a8f;
+    --chip-type: #dceaf6;
+    --chip-type-ink: #1d4f7a;
+    --chip-feat: #f4e6d6;
+    --chip-feat-ink: #7a4a14;
+    --chip-mark: #e1efe4;
+    --chip-mark-ink: #275c37;
+    --code-bg: #f6f8f6;
+    --shadow: 0 1px 2px rgba(20, 30, 40, .06), 0 6px 20px rgba(20, 30, 40, .05);
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f141a;
+      --surface: #161d25;
+      --surface-2: #1d2630;
+      --ink: #e5e9ef;
+      --ink-2: #b2bcc8;
+      --muted: #8b96a3;
+      --line: #2a3542;
+      --accent: #86a6ff;
+      --accent-soft: #1f2c4d;
+      --ok: #52c58c;
+      --ok-soft: #173326;
+      --bad: #ff7a6b;
+      --bad-soft: #3a1d1a;
+      --warn: #e8b84a;
+      --warn-soft: #3a2f14;
+      --chip-scope: #2c2645;
+      --chip-scope-ink: #c8bcf4;
+      --chip-type: #1c2f42;
+      --chip-type-ink: #a9cdf0;
+      --chip-feat: #3a2c1c;
+      --chip-feat-ink: #f0c896;
+      --chip-mark: #1d3324;
+      --chip-mark-ink: #a6dcb4;
+      --code-bg: #121920;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f141a;
+    --surface: #161d25;
+    --surface-2: #1d2630;
+    --ink: #e5e9ef;
+    --ink-2: #b2bcc8;
+    --muted: #8b96a3;
+    --line: #2a3542;
+    --accent: #86a6ff;
+    --accent-soft: #1f2c4d;
+    --ok: #52c58c;
+    --ok-soft: #173326;
+    --bad: #ff7a6b;
+    --bad-soft: #3a1d1a;
+    --warn: #e8b84a;
+    --warn-soft: #3a2f14;
+    --chip-scope: #2c2645;
+    --chip-scope-ink: #c8bcf4;
+    --chip-type: #1c2f42;
+    --chip-type-ink: #a9cdf0;
+    --chip-feat: #3a2c1c;
+    --chip-feat-ink: #f0c896;
+    --chip-mark: #1d3324;
+    --chip-mark-ink: #a6dcb4;
+    --code-bg: #121920;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15.5px;
+    line-height: 1.6;
+    padding-inline: 16px;
+    padding-block: 0 64px;
+  }
+  .wrap { max-width: 1120px; margin-inline: auto; }
+  h1, h2, h3 { font-family: var(--cond); line-height: 1.15; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 700; letter-spacing: -.01em; }
+  h2 { font-size: clamp(1.45rem, 2.6vw, 1.9rem); font-weight: 600; }
+  h3 { font-size: 1.12rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  code, .mono { font-family: var(--mono); font-size: .88em; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  /* header */
+  .masthead { padding-block: 44px 28px; display: grid; gap: 14px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .lede { font-size: 1.08rem; color: var(--ink-2); max-width: 72ch; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+  .meta b { color: var(--ink-2); font-weight: 500; }
+
+  /* nav */
+  .toc {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    margin-inline: -16px; padding: 10px 16px;
+    overflow-x: auto; white-space: nowrap;
+    scrollbar-width: thin;
+  }
+  .toc a {
+    display: inline-block; font-size: .85rem; color: var(--ink-2); text-decoration: none;
+    padding: 4px 10px; border-radius: 999px; margin-right: 4px;
+  }
+  .toc a:hover { background: var(--surface-2); color: var(--ink); }
+
+  section { padding-block: 48px 8px; display: grid; gap: 18px; scroll-margin-top: 56px; }
+  .section-head { display: grid; gap: 8px; }
+  .section-head .eyebrow { color: var(--accent); }
+
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px; display: grid; gap: 12px; align-content: start;
+  }
+  .panel.lift { box-shadow: var(--shadow); }
+  .note { font-size: .9rem; color: var(--ink-2); }
+  .small { font-size: .84rem; color: var(--muted); }
+
+  /* chips */
+  .chip {
+    display: inline-flex; align-items: center; font-family: var(--mono); font-size: .74rem; font-weight: 500;
+    padding: 1px 7px; border-radius: 5px; white-space: nowrap; line-height: 1.6;
+  }
+  .c-scope { background: var(--chip-scope); color: var(--chip-scope-ink); }
+  .c-type { background: var(--chip-type); color: var(--chip-type-ink); }
+  .c-feat { background: var(--chip-feat); color: var(--chip-feat-ink); }
+  .c-mark { background: var(--chip-mark); color: var(--chip-mark-ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  /* tree */
+  .tree-wrap { overflow-x: auto; }
+  .tree {
+    font-family: var(--mono); font-size: .84rem; line-height: 1.85; margin: 0;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; min-width: 640px;
+  }
+  .tree .row { display: grid; grid-template-columns: minmax(250px, 330px) 1fr; gap: 14px; align-items: center; }
+  .tree .path { white-space: pre; color: var(--ink); }
+  .tree .dim { color: var(--muted); }
+  .tree .grp { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
+  .tree .row .chips { gap: 4px; }
+
+  /* tags table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  th { font-family: var(--cond); font-weight: 600; font-size: .9rem; color: var(--ink-2); background: var(--surface-2); }
+
+  /* matrix */
+  .matrix-wrap { overflow-x: auto; }
+  .matrix { border-collapse: separate; border-spacing: 3px; font-family: var(--mono); font-size: .8rem; min-width: 640px; }
+  .matrix th, .matrix td { border: 0; padding: 0; text-align: center; }
+  .matrix thead th { font-weight: 500; color: var(--muted); padding: 6px 4px; background: transparent; font-family: var(--mono); font-size: .76rem; }
+  .matrix tbody th { text-align: right; padding-right: 10px; font-weight: 500; color: var(--ink-2); background: transparent; font-family: var(--mono); font-size: .8rem; white-space: nowrap; }
+  .matrix .corner { text-align: left; font-family: var(--sans); font-size: .74rem; color: var(--muted); }
+  .cell {
+    width: 64px; height: 38px; border-radius: 6px; display: grid; place-items: center;
+    font-size: .95rem; font-weight: 600; cursor: default; transition: transform .12s ease, outline-color .12s;
+  }
+  .cell.yes { background: var(--ok-soft); color: var(--ok); }
+  .cell.no { background: var(--surface-2); color: var(--muted); font-weight: 400; }
+  .cell.part { background: var(--warn-soft); color: var(--warn); }
+  .matrix tr.hl th { color: var(--accent); }
+  .matrix tr.hl .cell { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .84rem; color: var(--ink-2); align-items: center; }
+  .legend .cell { width: 26px; height: 22px; font-size: .78rem; display: inline-grid; margin-right: 6px; vertical-align: middle; }
+
+  /* scope diagram */
+  .slices { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .slice {
+    border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 12px;
+    display: grid; gap: 6px; align-content: start;
+  }
+  .slice h3 { font-size: 1rem; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .slice .layer { font-family: var(--mono); font-size: .78rem; padding: 4px 8px; border-radius: 5px; background: var(--surface-2); color: var(--ink-2); display: flex; justify-content: space-between; gap: 6px; }
+  .slice .layer.port { background: var(--chip-mark); color: var(--chip-mark-ink); font-weight: 600; }
+  .slice .layer.entry { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .slice.shared { border-style: dashed; }
+  .rules { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .rules li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; font-size: .93rem; }
+  .mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .78rem; font-weight: 700; margin-top: 1px; }
+  .mark.ok { background: var(--ok-soft); color: var(--ok); }
+  .mark.bad { background: var(--bad-soft); color: var(--bad); }
+
+  /* feat diagram */
+  .feat-diagram { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .feat-box { border: 1px solid var(--chip-feat-ink); border-radius: 10px; padding: 12px; display: grid; gap: 6px; background: var(--surface); }
+  .feat-box .title { font-family: var(--mono); font-size: .82rem; color: var(--chip-feat-ink); font-weight: 600; }
+
+  /* checker */
+  .checker { display: grid; gap: 16px; }
+  .checker-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: end; }
+  label.field { display: grid; gap: 5px; font-size: .82rem; color: var(--ink-2); font-weight: 500; }
+  select {
+    font: inherit; font-family: var(--mono); font-size: .84rem; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; width: 100%;
+  }
+  .toggle { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--ink-2); padding-bottom: 8px; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .verdict { border-radius: 10px; padding: 16px 18px; display: grid; gap: 10px; border: 1px solid var(--line); background: var(--surface); }
+  .verdict.ok { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+  .verdict.bad { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+  .verdict .head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .badge { font-family: var(--cond); font-weight: 700; font-size: .95rem; padding: 3px 12px; border-radius: 999px; letter-spacing: .02em; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .badge.neutral { background: var(--surface-2); color: var(--ink-2); }
+  .import-line { font-family: var(--mono); font-size: .84rem; background: var(--code-bg); border: 1px solid var(--line); border-radius: 7px; padding: 8px 12px; overflow-x: auto; white-space: pre; }
+  .checks { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .checks li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: .9rem; align-items: start; }
+  .checks .why { color: var(--ink-2); }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .preset {
+    font: inherit; font-size: .8rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+    border-radius: 999px; padding: 4px 11px; cursor: pointer;
+  }
+  .preset:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* examples */
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; }
+  .filter {
+    font: inherit; font-size: .85rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+    border-radius: 999px; padding: 5px 13px; cursor: pointer;
+  }
+  .filter[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .examples { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+  .ex {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    display: grid; gap: 9px; align-content: start; border-left: 4px solid var(--line);
+  }
+  .ex.ok { border-left-color: var(--ok); }
+  .ex.bad { border-left-color: var(--bad); }
+  .ex .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .ex .where { font-family: var(--mono); font-size: .76rem; color: var(--muted); overflow-wrap: anywhere; }
+  .ex pre { margin: 0; font-family: var(--mono); font-size: .8rem; background: var(--code-bg); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; overflow-x: auto; white-space: pre; }
+  .ex .msg { font-family: var(--mono); font-size: .76rem; color: var(--bad); overflow-wrap: anywhere; }
+  .ex .why { font-size: .88rem; color: var(--ink-2); }
+  .ex .cat { font-family: var(--mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+  /* layers of enforcement */
+  .guards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+  .guard { border-top: 3px solid var(--accent); background: var(--surface); border-radius: 0 0 10px 10px; padding: 14px; display: grid; gap: 6px; align-content: start; border-inline: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .guard .when { font-family: var(--mono); font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-size: .84rem; color: var(--muted); display: grid; gap: 6px; }
+
+  @media (max-width: 560px) {
+    body { font-size: 15px; }
+    .examples { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Architektur · Nx Module Boundaries</div>
+    <h1>Nx-Blueprint-Architektur</h1>
+    <p class="lede">Eine Nx-Lib pro Slice und Layer. Tags aus dem Ordnerpfad, Regeln als <code>depConstraints</code>. Hier stehen Ordnerstruktur, Tag-Achsen, Layer-Matrix und Scope- und Feat-Grenzen auf einen Blick, mit erlaubten und verbotenen Imports zum Ausprobieren.</p>
+    <div class="meta">
+      <span>Branch <b>feat/nx-blueprint</b></span>
+      <span>Stand <b>724c44d</b></span>
+      <span>Nx <b>23.1</b> · Angular <b>22</b></span>
+      <span>Quelle <b>docs/nx-umsetzung.md</b></span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Abschnitte">
+    <a href="#struktur">Ordnerstruktur</a>
+    <a href="#tags">Tags</a>
+    <a href="#matrix">Layer-Matrix</a>
+    <a href="#scopes">Scopes</a>
+    <a href="#feats">Feats</a>
+    <a href="#testing">Testing &amp; Clients</a>
+    <a href="#pruefer">Import-Prüfer</a>
+    <a href="#beispiele">Beispiele</a>
+    <a href="#namen">Namensschema</a>
+    <a href="#waechter">Wer prüft was</a>
+  </nav>
+
+  <!-- STRUKTUR -->
+  <section id="struktur">
+    <div class="section-head">
+      <div class="eyebrow">Ordnerstruktur</div>
+      <h2>Eine Lib pro Slice × Layer</h2>
+      <p>Jeder Ordner mit <code>src/index.ts</code> ist eine Nx-Lib, und <code>index.ts</code> ist ihre einzige öffentliche API. Projektname, Alias und Tags folgen aus dem Pfad. Pro Lib gibt es keine Config-Datei, das Crystal-Plugin leitet alles ab.</p>
+    </div>
+    <div class="tree-wrap">
+      <div class="tree" role="list" aria-label="Ordnerstruktur mit Tags">
+        <div class="row" role="listitem"><span class="path">apps/client/</span><span class="chips"><span class="chip c-type">type:app</span><span class="dim">dünne Shell: main.ts, app.routes.ts</span></span></div>
+        <div class="row grp" role="listitem"><span class="path">libs/booking/</span><span class="dim">Domain-Slice</span></div>
+        <div class="row" role="listitem"><span class="path">  types/  utils/  events/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:&lt;layer&gt;</span><span class="chip c-feat">feat:none</span></span></div>
+        <div class="row" role="listitem"><span class="path">  data/  ui/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:data · type:ui</span><span class="chip c-feat">feat:none</span></span></div>
+        <div class="row" role="listitem"><span class="path">  api/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:api</span><span class="chip c-mark">port</span><span class="dim">einziger Weg von außen</span></span></div>
+        <div class="row" role="listitem"><span class="path">  shell/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:feature</span><span class="chip c-mark">entry</span><span class="dim">routes, providers</span></span></div>
+        <div class="row" role="listitem"><span class="path">  feat-check-booking/feature/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:feature</span><span class="chip c-feat">feat:check-booking</span></span></div>
+        <div class="row" role="listitem"><span class="path">  feat-check-booking/api/</span><span class="chips"><span class="chip c-type">type:api</span><span class="chip c-feat">feat:check-booking</span><span class="chip c-mark">feat-port</span></span></div>
+        <div class="row" role="listitem"><span class="path">  feat-check-booking/data/ ui/</span><span class="chips"><span class="chip c-type">type:data · type:ui</span><span class="chip c-feat">feat:check-booking</span></span></div>
+        <div class="row" role="listitem"><span class="path">  testing/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:testing</span><span class="dim">nur für Specs, kein build</span></span></div>
+        <div class="row" role="listitem"><span class="path">  generated/booking-client/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-mark">generated</span><span class="dim">types · api · core · testing</span></span></div>
+        <div class="row grp" role="listitem"><span class="path">libs/checkin/</span><span class="dim">Domain-Slice, gleiches Muster (feat-checkin, feat-history)</span></div>
+        <div class="row" role="listitem"><span class="path">libs/auth/  libs/layout/</span><span class="chips"><span class="chip c-scope">scope:auth</span><span class="chip c-scope">scope:layout</span><span class="dim">Shared Features = normale Slices</span></span></div>
+        <div class="row grp" role="listitem"><span class="path">libs/shared/types|utils|api|ui/</span><span class="chips"><span class="chip c-scope">scope:shared</span><span class="chip c-type">type:&lt;layer&gt;</span><span class="dim">kein port nötig</span></span></div>
+        <div class="row" role="listitem"><span class="path">libs/shared/testing/</span><span class="chips"><span class="chip c-scope">scope:shared</span><span class="chip c-type">type:testing</span><span class="dim">MSW-worker + test-Fixture</span></span></div>
+        <div class="row" role="listitem"><span class="path">libs/generated/pet-client/</span><span class="chips"><span class="chip c-scope">scope:shared</span><span class="chip c-mark">generated</span><span class="dim">shared OpenAPI-Client</span></span></div>
+        <div class="row grp" role="listitem"><span class="path">packages/tooling/*</span><span class="chips"><span class="chip c-type">type:tooling</span><span class="dim">conventions · workspace · openapi · ng-lib · verify · eslint-rules</span></span></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Aus dem Pfad abgeleitet</h3>
+        <ul class="rules">
+          <li><span class="mark ok">→</span><span><code>libs/booking/feat-check-booking/data</code> wird zum Projekt <code>booking-feat-check-booking-data</code></span></li>
+          <li><span class="mark ok">→</span><span>Alias <code>@blueprint/booking/feat-check-booking/data</code>: ein einziger Wildcard-Eintrag <code>@blueprint/*</code> in <code>tsconfig.base.json</code></span></li>
+          <li><span class="mark ok">→</span><span>Tags <span class="chip c-scope">scope:booking</span> <span class="chip c-type">type:data</span> <span class="chip c-feat">feat:check-booking</span></span></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Privat bleibt privat</h3>
+        <ul class="rules">
+          <li><span class="mark ok">✓</span><span>Import nur über den Alias, also über <code>src/index.ts</code></span></li>
+          <li><span class="mark bad">✕</span><span>Deep-Import <code>@blueprint/checkin/data/src/internal/…</code> wird von <code>no-restricted-imports</code> blockiert und von TypeScript gar nicht aufgelöst</span></li>
+          <li><span class="mark bad">✕</span><span><code>index.ts</code> exportiert nichts aus <code>internal/</code> (<code>blueprint/no-internal-export</code>)</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAGS -->
+  <section id="tags">
+    <div class="section-head">
+      <div class="eyebrow">Tag-Schema</div>
+      <h2>Vier Achsen, die mit UND verknüpft werden</h2>
+      <p>Nx wendet jede Constraint an, deren Quell-Tag passt. Alle müssen den Import erlauben (UND). Innerhalb einer Constraint reicht ein passendes Ziel-Tag (ODER).</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Achse</th><th>Tags</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td><b>Scope</b></td><td><div class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-scope">scope:checkin</span><span class="chip c-scope">scope:auth</span><span class="chip c-scope">scope:layout</span><span class="chip c-scope">scope:shared</span></div></td><td>Zu welchem Slice gehört die Lib? Fremde Slices sind nur über ihren <code>port</code> erreichbar.</td></tr>
+          <tr><td><b>Type</b></td><td><div class="chips"><span class="chip c-type">types</span><span class="chip c-type">utils</span><span class="chip c-type">events</span><span class="chip c-type">api</span><span class="chip c-type">data</span><span class="chip c-type">ui</span><span class="chip c-type">feature</span><span class="chip c-type">testing</span><span class="chip c-type">app</span><span class="chip c-type">tooling</span></div></td><td>Der Layer. Er bestimmt die Layer-Matrix und welche npm-Pakete erlaubt sind.</td></tr>
+          <tr><td><b>Feat</b></td><td><div class="chips"><span class="chip c-feat">feat:none</span><span class="chip c-feat">feat:check-booking</span><span class="chip c-feat">feat:checkin</span><span class="chip c-feat">feat:history</span><span class="chip c-feat">feat:manage-booking</span></div></td><td>Feature-Isolation. <code>feat:none</code> ist der positive Marker für alles außerhalb von <code>feat-*</code>.</td></tr>
+          <tr><td><b>Marker</b></td><td><div class="chips"><span class="chip c-mark">port</span><span class="chip c-mark">feat-port</span><span class="chip c-mark">entry</span><span class="chip c-mark">generated</span></div></td><td>Freigaben: <code>port</code> für die api eines Slice, <code>feat-port</code> für die api eines Feats, <code>entry</code> für die Shell. <code>generated</code> markiert OpenAPI-Code.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- MATRIX -->
+  <section id="matrix">
+    <div class="section-head">
+      <div class="eyebrow">Layer-Matrix</div>
+      <h2>Wer darf welchen Layer importieren?</h2>
+      <p>Zeile = importierende Lib, Spalte = importierte Lib. Mit der Maus über eine Zeile, um sie hervorzuheben. Die Scope- und Feat-Regeln gelten zusätzlich, ein ✓ hier ist also notwendig, aber nicht hinreichend.</p>
+    </div>
+    <div class="panel lift">
+      <div class="matrix-wrap"><table class="matrix" id="matrix-table" aria-label="Layer-Matrix"></table></div>
+      <div class="legend">
+        <span><span class="cell yes">✓</span>erlaubt</span>
+        <span><span class="cell part">◐</span>nur Libs aus <code>scope:shared</code></span>
+        <span><span class="cell no">·</span>verboten</span>
+      </div>
+      <p class="small"><b>shell</b> trägt <code>type:feature</code> und den Marker <code>entry</code>. <b>app</b> darf nur Libs mit <code>entry</code>, <code>port</code> oder <code>scope:shared</code> importieren, und davon nur Produktions-Layer. In <code>*.spec.ts</code> ist zusätzlich <code>type:testing</code> erlaubt, außer in <code>types</code>-Libs.</p>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h3>npm-Pakete pro Layer</h3>
+        <ul class="rules">
+          <li><span class="mark bad">✕</span><span><code>types</code>: gar keine npm-Imports, also framework-frei</span></li>
+          <li><span class="mark bad">✕</span><span><code>@angular/common/http</code> in utils, events, data, ui und feature. HTTP gibt es nur im <code>api</code>-Layer</span></li>
+          <li><span class="mark bad">✕</span><span><code>msw</code>, <code>vitest</code>, <code>@testing-library</code>, <code>playwright</code>, <code>@faker-js</code>, <code>openapi-msw</code> in Produktions-Layern und in der App</span></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Was Nx zusätzlich prüft</h3>
+        <ul class="rules">
+          <li><span class="mark bad">✕</span><span>Zyklen zwischen Libs. Ein Aufwärts-Import (api → data) meldet sich oft als „Circular dependency“</span></li>
+          <li><span class="mark bad">✕</span><span>statischer Import einer lazy geladenen Lib</span></li>
+          <li><span class="mark bad">✕</span><span>relative Imports über Lib-Grenzen und Imports aus Apps</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCOPES -->
+  <section id="scopes">
+    <div class="section-head">
+      <div class="eyebrow">Scope-Isolation</div>
+      <h2>Slices reden nur über ihren Port</h2>
+      <p>Pro Scope gibt es eine generierte Constraint: <code>scope:&lt;s&gt;</code> → eigener Scope, <code>port</code>, <code>scope:shared</code>. <code>scope:shared</code> darf nur shared. Nx kennt kein <code>sameTag</code>, deshalb erzeugt <code>eslint.config.mjs</code> diese Constraints aus den Tags im Graph.</p>
+    </div>
+    <div class="slices">
+      <div class="slice">
+        <h3>booking <span class="chip c-scope">scope:booking</span></h3>
+        <div class="layer port"><span>api</span><span>port</span></div>
+        <div class="layer entry"><span>shell</span><span>entry</span></div>
+        <div class="layer"><span>types · utils · events</span></div>
+        <div class="layer"><span>data · ui</span></div>
+        <div class="layer"><span>feat-* · testing · generated</span></div>
+      </div>
+      <div class="slice">
+        <h3>checkin <span class="chip c-scope">scope:checkin</span></h3>
+        <div class="layer port"><span>api</span><span>port</span></div>
+        <div class="layer entry"><span>shell</span><span>entry</span></div>
+        <div class="layer"><span>types · utils · events</span></div>
+        <div class="layer"><span>data · ui</span></div>
+        <div class="layer"><span>feat-* · testing</span></div>
+      </div>
+      <div class="slice">
+        <h3>auth / layout <span class="chip c-scope">shared features</span></h3>
+        <div class="layer port"><span>auth/api</span><span>port</span></div>
+        <div class="layer entry"><span>auth/shell · layout/shell</span><span>entry</span></div>
+        <div class="layer"><span>auth/data · layout/ui</span></div>
+      </div>
+      <div class="slice shared">
+        <h3>shared <span class="chip c-scope">scope:shared</span></h3>
+        <div class="layer"><span>types · utils · api · ui</span></div>
+        <div class="layer"><span>testing</span></div>
+        <div class="layer"><span>generated/pet-client</span></div>
+        <div class="layer"><span>generated/notification-client</span></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Erlaubt</h3>
+        <ul class="rules">
+          <li><span class="mark ok">✓</span><span><code>checkin/data</code> → <code>booking/api</code>: fremder Slice, aber über den <span class="chip c-mark">port</span></span></li>
+          <li><span class="mark ok">✓</span><span>jede Domain → <code>shared/*</code></span></li>
+          <li><span class="mark ok">✓</span><span><code>apps/client</code> → <code>booking/shell</code> (<span class="chip c-mark">entry</span>, lazy geladen)</span></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Verboten</h3>
+        <ul class="rules">
+          <li><span class="mark bad">✕</span><span><code>checkin/data</code> → <code>booking/data</code>: Interna eines fremden Slice</span></li>
+          <li><span class="mark bad">✕</span><span><code>shared/types</code> → <code>booking/types</code>: shared kennt keine Domain</span></li>
+          <li><span class="mark bad">✕</span><span><code>checkin/*</code> → <code>booking/generated/**</code>: Domain-Clients haben keinen port</span></li>
+          <li><span class="mark bad">✕</span><span><code>apps/client</code> → <code>booking/ui</code>: die App sieht nur entry, port und shared</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATS -->
+  <section id="feats">
+    <div class="section-head">
+      <div class="eyebrow">Feature-Isolation</div>
+      <h2>Geschwister-Feats nur über den feat-port</h2>
+      <p>Jedes Feat ist ein eigener Ordner <code>feat-&lt;name&gt;/</code> mit eigenen Libs. Seine Unterordner api, data und ui sind eigene Libs, damit die Layer-Matrix auch innerhalb des Feats gilt. Pro Feat gibt es eine Constraint: <code>feat:&lt;f&gt;</code> → eigenes Feat, <code>feat:none</code>, <code>feat-port</code>.</p>
+    </div>
+    <div class="feat-diagram">
+      <div class="feat-box">
+        <div class="title">checkin/feat-checkin/  ·  feat:checkin</div>
+        <div class="slice" style="border:0;padding:0;background:transparent">
+          <div class="layer"><span>feature</span><span>FeatCheckin</span></div>
+          <div class="layer port"><span>api</span><span>feat-port</span></div>
+          <div class="layer"><span>data</span><span>CheckinDeskStore</span></div>
+        </div>
+      </div>
+      <div class="feat-box">
+        <div class="title">checkin/feat-history/  ·  feat:history</div>
+        <div class="slice" style="border:0;padding:0;background:transparent">
+          <div class="layer"><span>feature</span><span>FeatHistory</span></div>
+        </div>
+        <ul class="rules">
+          <li><span class="mark ok">✓</span><span>→ <code>feat-checkin/api</code> (feat-port)</span></li>
+          <li><span class="mark bad">✕</span><span>→ <code>feat-checkin/data</code> (Interna)</span></li>
+          <li><span class="mark ok">✓</span><span>→ <code>checkin/data</code> (<code>feat:none</code>)</span></li>
+        </ul>
+      </div>
+      <div class="feat-box">
+        <div class="title">innerhalb eines Feats</div>
+        <ul class="rules">
+          <li><span class="mark ok">✓</span><span><code>feat-check-booking/feature</code> → <code>…/data</code>, <code>…/ui</code></span></li>
+          <li><span class="mark bad">✕</span><span><code>feat-check-booking/ui</code> → <code>…/data</code>: die Layer-Matrix gilt auch hier</span></li>
+          <li><span class="mark ok">✓</span><span><code>booking/data</code> → <code>feat-check-booking/data</code>: erlaubt, 1:1 von Sheriff übernommen</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTING -->
+  <section id="testing">
+    <div class="section-head">
+      <div class="eyebrow">Testing &amp; generierte Clients</div>
+      <h2>Testcode und generierter Code mit eigenen Grenzen</h2>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Testing-Libs <span class="chip c-type">type:testing</span></h3>
+        <ul class="rules">
+          <li><span class="mark ok">✓</span><span>Specs (<code>*.spec.ts</code>) importieren Testing-Libs, auch aus fremden Domains</span></li>
+          <li><span class="mark bad">✕</span><span>Produktionscode → Testing-Lib, zusätzlich geblockt, weil Testing-Libs kein build haben</span></li>
+          <li><span class="mark ok">✓</span><span>Testing-Libs importieren nur types, testing und shared</span></li>
+          <li><span class="mark bad">✕</span><span><code>booking/testing</code> → <code>booking/data</code>: das wäre ein Zyklus, weil der Spec in data testing importiert</span></li>
+          <li><span class="mark bad">✕</span><span>msw, vitest oder faker im App-Bundle: <code>verify</code> durchsucht den Build</span></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>OpenAPI-Clients <span class="chip c-mark">generated</span></h3>
+        <ul class="rules">
+          <li><span class="mark ok">→</span><span>pro Client: <code>types</code> (type:types), <code>api</code> und <code>core</code> (type:api), <code>testing</code> (type:testing)</span></li>
+          <li><span class="mark ok">✓</span><span>Domain-<code>api</code> (Port) → generierter api: der Port ist der Wrapper</span></li>
+          <li><span class="mark ok">✓</span><span>Domain-<code>types</code> → generierte types (types → types)</span></li>
+          <li><span class="mark bad">✕</span><span><code>ui</code> → generierter api: Layer-Matrix</span></li>
+          <li><span class="mark bad">✕</span><span>generierter types-Teil → api-Teil desselben Clients</span></li>
+          <li><span class="mark ok">→</span><span>committet ist nur <code>src/index.ts</code>, <code>src/generated/**</code> ist gitignored</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKER -->
+  <section id="pruefer">
+    <div class="section-head">
+      <div class="eyebrow">Interaktiv</div>
+      <h2>Import-Prüfer</h2>
+      <p>Wähle Quelle und Ziel. Der Prüfer wertet dieselben Regeln aus wie <code>eslint.config.mjs</code> (Type, Scope, Feat, App, Testing). Zyklen, Lazy-Loading und npm-Regeln bildet er nicht ab.</p>
+    </div>
+    <div class="panel lift checker">
+      <div class="presets" aria-label="Beispiele laden" id="presets"></div>
+      <div class="checker-form">
+        <label class="field" for="src">Quelle (importiert)
+          <select id="src"></select>
+        </label>
+        <label class="field" for="dst">Ziel (wird importiert)
+          <select id="dst"></select>
+        </label>
+        <label class="toggle" for="spec"><input type="checkbox" id="spec"> Import steht in einer <code>*.spec.ts</code></label>
+      </div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- EXAMPLES -->
+  <section id="beispiele">
+    <div class="section-head">
+      <div class="eyebrow">Beispiele</div>
+      <h2>Was ok ist und was rot wird</h2>
+      <p>Jedes Beispiel ist ein Fall aus <code>pnpm verify</code> oder eine Negativprobe aus der Umsetzung. Rot heißt: <code>nx lint</code> schlägt fehl, und das IDE zeigt den Fehler direkt an.</p>
+    </div>
+    <div class="filters" role="group" aria-label="Filter">
+      <button class="filter" data-f="all" aria-pressed="true">Alle</button>
+      <button class="filter" data-f="ok" aria-pressed="false">Erlaubt</button>
+      <button class="filter" data-f="bad" aria-pressed="false">Verstoß</button>
+    </div>
+    <div class="examples" id="examples"></div>
+  </section>
+
+  <!-- NAMING -->
+  <section id="namen">
+    <div class="section-head">
+      <div class="eyebrow">Namensschema</div>
+      <h2>Namen sind Teil der Architektur</h2>
+      <p>Tags, Aliase und Routen hängen an Namen. Ordnerfehler fängt das Crystal-Plugin beim Aufbau des Graphen ab, Datei- und Symbolnamen drei eigene ESLint-Regeln.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Regel</th><th>✓ richtig</th><th>✕ falsch</th><th>Geprüft durch</th></tr></thead>
+        <tbody>
+          <tr><td>Lib-Ordner</td><td><code>libs/booking/ui</code></td><td><code>libs/bokking/ui</code>, <code>libs/booking/widgets</code>, <code>feat-CheckIn</code></td><td>Crystal-Plugin (Graph-Fehler)</td></tr>
+          <tr><td>Datei je Layer</td><td><code>data/…/booking.store.ts</code></td><td><code>utils/…/booking.store.ts</code></td><td><code>blueprint/lib-file-naming</code></td></tr>
+          <tr><td>Store</td><td><code>BookingsStore</code> in <code>bookings.store.ts</code></td><td><code>Bookings</code></td><td><code>blueprint/layer-symbol-naming</code></td></tr>
+          <tr><td>Port</td><td><code>BookingApi</code> in <code>booking-api.ts</code></td><td><code>BookingService</code></td><td><code>blueprint/layer-symbol-naming</code></td></tr>
+          <tr><td>Feat-Container</td><td><code>FeatHistory</code> in <code>feat-history.ts</code></td><td><code>HistoryPage</code></td><td><code>blueprint/layer-symbol-naming</code></td></tr>
+          <tr><td>Shell</td><td><code>bookingRoutes</code>, <code>provideAuth()</code></td><td><code>routes</code>, <code>auth()</code></td><td><code>blueprint/layer-symbol-naming</code></td></tr>
+          <tr><td>Testing</td><td><code>aBooking()</code>, <code>bookingHandlers</code></td><td><code>booking()</code>, <code>handlers</code></td><td><code>blueprint/layer-symbol-naming</code></td></tr>
+          <tr><td>Selektor</td><td><code>app-booking-card</code></td><td><code>bk-booking-card</code></td><td><code>@angular-eslint/component-selector</code></td></tr>
+          <tr><td>Public API</td><td><code>export * from './booking.store'</code></td><td><code>export * from './internal/…'</code></td><td><code>blueprint/no-internal-export</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- GUARDS -->
+  <section id="waechter">
+    <div class="section-head">
+      <div class="eyebrow">Durchsetzung</div>
+      <h2>Wer prüft was</h2>
+      <p>Jede Regel wird dort geprüft, wo sie am frühesten auffällt.</p>
+    </div>
+    <div class="guards">
+      <div class="guard"><div class="when">bei jedem Nx-Befehl</div><h3>Crystal-Plugin</h3><p class="note">Leitet Projekte und Tags aus dem Pfad ab. Bei unbekanntem Layer, Scope außerhalb der Liste oder einem Ordner, der nicht kebab-case ist, bricht der Graph ab, z.B. „did you mean booking?“</p></div>
+      <div class="guard"><div class="when">im IDE und bei nx lint</div><h3>ESLint</h3><p class="note"><code>@nx/enforce-module-boundaries</code> mit den depConstraints, Deep-Import-Verbot, npm-Bans und die drei <code>blueprint/*</code>-Namensregeln. Fehlt der Projekt-Graph, baut ihn die Config selbst.</p></div>
+      <div class="guard"><div class="when">pnpm verify · CI</div><h3>verify</h3><p class="note">150 Fälle gegen die echte Config. Dazu prüft es, dass es keine Config-Dateien in <code>libs/</code> gibt, dass Tags zum Pfad passen und dass kein msw oder vitest im Bundle landet.</p></div>
+      <div class="guard"><div class="when">nx sync:check · CI</div><h3>Sync-Generator</h3><p class="note">Hält <code>app.routes.ts</code> passend zu den vorhandenen Domain-Shells. <code>nx sync</code> repariert Abweichungen.</p></div>
+      <div class="guard"><div class="when">beim Anlegen</div><h3>Generatoren</h3><p class="note"><code>domain</code>, <code>layer</code>, <code>feat</code>, <code>testing</code>, <code>client</code>, <code>move</code>, <code>rename</code> und <code>remove</code> erzeugen regelkonforme Namen und Routen von Anfang an.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Quelle: <code>docs/nx-umsetzung.md</code>, <code>eslint.config.mjs</code> und <code>packages/tooling/*</code> auf <code>feat/nx-blueprint</code> (724c44d). Die Variante mit expliziten <code>project.json</code>-Dateien liegt auf <code>feat/nx-blueprint-explicit-config</code>, die Regeln sind dieselben.</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const PROD = ['types', 'utils', 'events', 'api', 'data', 'ui', 'feature'];
+  const TYPE_ALLOWED = {
+    types: ['types'],
+    utils: ['types', 'utils'],
+    events: ['types', 'utils', 'events'],
+    api: ['types', 'utils', 'api'],
+    data: ['types', 'utils', 'api', 'data', 'events'],
+    ui: ['types', 'utils', 'ui', 'events'],
+    feature: PROD,
+  };
+
+  // --- libraries (from the real workspace) ---
+  const L = [];
+  const add = (path, o) => L.push(Object.assign({ path, alias: '@blueprint/' + path, markers: [] }, o));
+  for (const s of ['booking', 'checkin']) {
+    for (const t of ['types', 'utils', 'events', 'data', 'ui']) add(`${s}/${t}`, { scope: s, type: t, feat: 'none' });
+    add(`${s}/api`, { scope: s, type: 'api', feat: 'none', markers: ['port'] });
+    add(`${s}/shell`, { scope: s, type: 'feature', feat: 'none', markers: ['entry'], label: 'shell' });
+    add(`${s}/testing`, { scope: s, type: 'testing', feat: 'none' });
+  }
+  add('booking/feat-check-booking/feature', { scope: 'booking', type: 'feature', feat: 'check-booking' });
+  add('booking/feat-check-booking/api', { scope: 'booking', type: 'api', feat: 'check-booking', markers: ['feat-port'] });
+  add('booking/feat-check-booking/data', { scope: 'booking', type: 'data', feat: 'check-booking' });
+  add('booking/feat-check-booking/ui', { scope: 'booking', type: 'ui', feat: 'check-booking' });
+  add('booking/feat-manage-booking/feature', { scope: 'booking', type: 'feature', feat: 'manage-booking' });
+  add('checkin/feat-checkin/feature', { scope: 'checkin', type: 'feature', feat: 'checkin' });
+  add('checkin/feat-checkin/api', { scope: 'checkin', type: 'api', feat: 'checkin', markers: ['feat-port'] });
+  add('checkin/feat-checkin/data', { scope: 'checkin', type: 'data', feat: 'checkin' });
+  add('checkin/feat-history/feature', { scope: 'checkin', type: 'feature', feat: 'history' });
+  add('auth/api', { scope: 'auth', type: 'api', feat: 'none', markers: ['port'] });
+  add('auth/data', { scope: 'auth', type: 'data', feat: 'none' });
+  add('auth/shell', { scope: 'auth', type: 'feature', feat: 'none', markers: ['entry'] });
+  add('layout/ui', { scope: 'layout', type: 'ui', feat: 'none' });
+  add('layout/shell', { scope: 'layout', type: 'feature', feat: 'none', markers: ['entry'] });
+  for (const t of ['types', 'utils', 'api', 'ui']) add(`shared/${t}`, { scope: 'shared', type: t, feat: 'none' });
+  add('shared/testing', { scope: 'shared', type: 'testing', feat: 'none' });
+  const client = (root, scope) => {
+    add(`${root}/types`, { scope, type: 'types', feat: 'none', markers: ['generated'] });
+    add(`${root}/api`, { scope, type: 'api', feat: 'none', markers: ['generated'] });
+    add(`${root}/core`, { scope, type: 'api', feat: 'none', markers: ['generated'] });
+    add(`${root}/testing`, { scope, type: 'testing', feat: 'none', markers: ['generated'] });
+  };
+  client('generated/pet-client', 'shared');
+  client('generated/notification-client', 'shared');
+  client('booking/generated/booking-client', 'booking');
+  L.push({ path: 'apps/client', alias: '(App)', scope: null, type: 'app', feat: null, markers: [], isApp: true });
+
+  const byPath = Object.fromEntries(L.map((l) => [l.path, l]));
+  const tagsOf = (l) => [
+    ...(l.scope ? ['scope:' + l.scope] : []),
+    'type:' + l.type,
+    ...(l.feat ? ['feat:' + l.feat] : []),
+    ...l.markers,
+  ];
+  const has = (l, m) => l.markers.includes(m);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // --- rule evaluation (mirrors eslint.config.mjs) ---
+  function evaluate(src, dst, spec) {
+    const checks = [];
+    if (src === dst) return { same: true, checks };
+    if (dst.isApp) {
+      checks.push({ ok: false, axis: 'App', why: 'Apps sind nicht importierbar (Nx-Builtin).' });
+      return { checks };
+    }
+    // type axis
+    if (src.isApp) {
+      const allowedTarget = has(dst, 'entry') || has(dst, 'port') || dst.scope === 'shared';
+      checks.push({ ok: allowedTarget, axis: 'type:app', why: allowedTarget
+        ? 'Ziel hat entry, port oder scope:shared.'
+        : 'type:app darf nur Libs mit entry, port oder scope:shared importieren.' });
+      const prod = PROD.includes(dst.type);
+      checks.push({ ok: prod, axis: 'type:app', why: prod ? `Ziel ist Produktions-Layer (${dst.type}).` : 'Die App darf keine Testing-Libs importieren.' });
+    } else if (src.type === 'testing') {
+      const ok = dst.type === 'types' || dst.type === 'testing' || dst.scope === 'shared';
+      checks.push({ ok, axis: 'type:testing', why: ok
+        ? 'Testing-Libs dürfen types, testing und scope:shared.'
+        : `type:testing darf nur types, testing oder scope:shared importieren, nicht ${dst.type}.` });
+    } else {
+      const allowed = [...TYPE_ALLOWED[src.type]];
+      if (spec && src.type !== 'types') allowed.push('testing');
+      const ok = allowed.includes(dst.type);
+      checks.push({ ok, axis: 'type:' + src.type, why: ok
+        ? `${src.type} → ${dst.type} ist in der Layer-Matrix erlaubt${spec && dst.type === 'testing' ? ' (Spec-Override)' : ''}.`
+        : `type:${src.type} darf nur ${allowed.join(', ')} importieren, nicht ${dst.type}.` + (dst.type === 'testing' && !spec ? ' Testing-Libs sind nur in Specs erlaubt.' : '') });
+    }
+    // scope axis
+    if (src.scope) {
+      if (src.scope === 'shared') {
+        const ok = dst.scope === 'shared';
+        checks.push({ ok, axis: 'scope:shared', why: ok ? 'shared → shared.' : `scope:shared darf nur shared importieren, nicht scope:${dst.scope}.` });
+      } else {
+        const same = dst.scope === src.scope;
+        const port = has(dst, 'port');
+        const shared = dst.scope === 'shared';
+        const specTesting = spec && dst.type === 'testing';
+        const ok = same || port || shared || specTesting;
+        let why;
+        if (same) why = 'gleicher Scope.';
+        else if (port) why = `fremder Scope, aber über den port von ${dst.scope}.`;
+        else if (shared) why = 'Ziel ist scope:shared.';
+        else if (specTesting) why = 'fremde Testing-Lib, im Spec erlaubt.';
+        else why = `scope:${src.scope} darf scope:${dst.scope} nur über dessen port erreichen.` + (has(dst, 'generated') ? ' Generierte Domain-Clients haben keinen port.' : '');
+        checks.push({ ok, axis: 'scope:' + src.scope, why });
+      }
+    }
+    // feat axis
+    if (src.feat && src.feat !== 'none') {
+      const ok = dst.feat === src.feat || dst.feat === 'none' || has(dst, 'feat-port');
+      let why;
+      if (dst.feat === src.feat) why = 'gleiches Feat.';
+      else if (dst.feat === 'none') why = 'Ziel liegt außerhalb von feat-* (feat:none).';
+      else if (has(dst, 'feat-port')) why = `Geschwister-Feat über dessen feat-port.`;
+      else why = `feat:${src.feat} darf feat:${dst.feat} nur über dessen feat-port erreichen.`;
+      checks.push({ ok, axis: 'feat:' + src.feat, why });
+    }
+    return { checks };
+  }
+
+  // --- checker UI ---
+  const srcSel = document.getElementById('src');
+  const dstSel = document.getElementById('dst');
+  const specBox = document.getElementById('spec');
+  const verdict = document.getElementById('verdict');
+  const groupOf = (l) => l.isApp ? 'App' : l.path.split('/')[0];
+  const fill = (sel) => {
+    const groups = {};
+    for (const l of L) (groups[groupOf(l)] ||= []).push(l);
+    sel.innerHTML = Object.entries(groups).map(([g, ls]) =>
+      `<optgroup label="${esc(g)}">${ls.map((l) => `<option value="${esc(l.path)}">${esc(l.path)}</option>`).join('')}</optgroup>`).join('');
+  };
+  fill(srcSel); fill(dstSel);
+
+  function render() {
+    const src = byPath[srcSel.value];
+    const dst = byPath[dstSel.value];
+    const spec = specBox.checked;
+    const res = evaluate(src, dst, spec);
+    const file = spec ? 'some.spec.ts' : 'some.ts';
+    const importLine = dst.isApp ? `// apps/client ist nicht importierbar` : `// libs/${src.path}/src/${file}\nimport { … } from '${dst.alias}';`;
+    if (src.isApp) {
+      // app sources live in apps/client/src
+    }
+    const line = src.isApp && !dst.isApp ? `// apps/client/src/app/${file}\nimport { … } from '${dst.alias}';` : importLine;
+    if (res.same) {
+      verdict.className = 'verdict';
+      verdict.innerHTML = `<div class="head"><span class="badge neutral">Gleiche Lib</span><span class="small">Imports innerhalb einer Lib sind relativ und werden nicht geprüft.</span></div>`;
+      return;
+    }
+    const ok = res.checks.every((c) => c.ok);
+    verdict.className = 'verdict ' + (ok ? 'ok' : 'bad');
+    verdict.innerHTML = `
+      <div class="head">
+        <span class="badge ${ok ? 'ok' : 'bad'}">${ok ? 'Erlaubt' : 'Verstoß'}</span>
+        <span class="chips">${tagsOf(src).map((t) => chip(t)).join('')}</span>
+        <span class="small">→</span>
+        <span class="chips">${dst.isApp ? chip('type:app') : tagsOf(dst).map((t) => chip(t)).join('')}</span>
+      </div>
+      <div class="import-line">${esc(line)}</div>
+      <ul class="checks">${res.checks.map((c) => `<li><span class="mark ${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✕'}</span><span><code>${esc(c.axis)}</code> <span class="why">${esc(c.why)}</span></span></li>`).join('')}</ul>
+      ${ok ? '' : '<p class="small">In <code>nx lint</code> erscheint das als <code>@nx/enforce-module-boundaries</code>: „A project tagged with … can only depend on libs tagged with …“</p>'}
+    `;
+  }
+  function chip(t) {
+    const cls = t.startsWith('scope:') ? 'c-scope' : t.startsWith('type:') ? 'c-type' : t.startsWith('feat:') ? 'c-feat' : 'c-mark';
+    return `<span class="chip ${cls}">${esc(t)}</span>`;
+  }
+  srcSel.addEventListener('change', render);
+  dstSel.addEventListener('change', render);
+  specBox.addEventListener('change', render);
+
+  const PRESETS = [
+    ['ui → data', 'booking/ui', 'booking/data', false],
+    ['fremder Port', 'checkin/data', 'booking/api', false],
+    ['fremde Interna', 'checkin/data', 'booking/data', false],
+    ['Geschwister-Feat', 'checkin/feat-history/feature', 'checkin/feat-checkin/data', false],
+    ['feat-port', 'checkin/feat-history/feature', 'checkin/feat-checkin/api', false],
+    ['App → Shell', 'apps/client', 'booking/shell', false],
+    ['Spec → Testing', 'checkin/data', 'booking/testing', true],
+    ['Domain-Client von außen', 'checkin/data', 'booking/generated/booking-client/api', false],
+  ];
+  document.getElementById('presets').innerHTML = PRESETS.map(([label], i) => `<button class="preset" type="button" data-i="${i}">${esc(label)}</button>`).join('');
+  document.getElementById('presets').addEventListener('click', (e) => {
+    const b = e.target.closest('.preset'); if (!b) return;
+    const [, s, d, sp] = PRESETS[+b.dataset.i];
+    srcSel.value = s; dstSel.value = d; specBox.checked = sp; render();
+  });
+  srcSel.value = 'booking/ui'; dstSel.value = 'booking/data';
+  render();
+
+  // --- matrix ---
+  const ROWS = ['types', 'utils', 'events', 'api', 'data', 'ui', 'feature', 'testing'];
+  const COLS = ['types', 'utils', 'events', 'api', 'data', 'ui', 'feature', 'testing'];
+  const cellFor = (r, c) => {
+    if (r === 'testing') {
+      if (c === 'types' || c === 'testing') return 'yes';
+      return 'part';
+    }
+    return TYPE_ALLOWED[r].includes(c) ? 'yes' : 'no';
+  };
+  const mt = document.getElementById('matrix-table');
+  mt.innerHTML = `<thead><tr><th class="corner">importiert ↓ · Ziel →</th>${COLS.map((c) => `<th scope="col">${c}</th>`).join('')}</tr></thead>
+    <tbody>${ROWS.map((r) => `<tr><th scope="row">${r === 'feature' ? 'feature / shell' : r}</th>${COLS.map((c) => {
+      const v = cellFor(r, c);
+      const sym = v === 'yes' ? '✓' : v === 'part' ? '◐' : '·';
+      const label = v === 'yes' ? 'erlaubt' : v === 'part' ? 'nur scope:shared' : 'verboten';
+      return `<td><div class="cell ${v}" title="${r} → ${c}: ${label}" aria-label="${r} nach ${c}: ${label}">${sym}</div></td>`;
+    }).join('')}</tr>`).join('')}</tbody>`;
+  mt.addEventListener('mouseover', (e) => {
+    const tr = e.target.closest('tbody tr');
+    mt.querySelectorAll('tr.hl').forEach((x) => x.classList.remove('hl'));
+    if (tr) tr.classList.add('hl');
+  });
+  mt.addEventListener('mouseleave', () => mt.querySelectorAll('tr.hl').forEach((x) => x.classList.remove('hl')));
+
+  // --- examples ---
+  const EX = [
+    { k: 'ok', cat: 'Scope', where: 'libs/checkin/data/src/checkin.store.ts', code: "import { BookingApi } from '@blueprint/booking/api';", why: 'Fremder Slice, aber über dessen port.' },
+    { k: 'bad', cat: 'Scope', where: 'libs/checkin/data/src/checkin.store.ts', code: "import { BookingStore } from '@blueprint/booking/data';", msg: 'A project tagged with "scope:checkin" can only depend on libs tagged with "scope:checkin", "port", "scope:shared"', why: 'Interna eines fremden Slice.' },
+    { k: 'bad', cat: 'Layer', where: 'libs/booking/ui/src/booking-card.ts', code: "import { BookingStore } from '@blueprint/booking/data';", msg: 'A project tagged with "type:ui" can only depend on libs tagged with "type:types", "type:utils", "type:ui", "type:events"', why: 'ui ist dumm und bekommt Daten von außen.' },
+    { k: 'ok', cat: 'Layer', where: 'libs/booking/data/src/booking.store.ts', code: "import { BookingApi } from '@blueprint/booking/api';", why: 'data → api ist laut Matrix erlaubt.' },
+    { k: 'bad', cat: 'Layer', where: 'libs/booking/api/src/booking-api.ts', code: "import { BookingStore } from '@blueprint/booking/data';", msg: 'Circular dependency between "booking-api" and "booking-data" detected', why: 'Aufwärts-Import. Nx meldet zuerst den Zyklus, der Import ist aber auch per Tag verboten.' },
+    { k: 'bad', cat: 'Feat', where: 'libs/checkin/feat-history/feature/src/feat-history.ts', code: "import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data';", msg: 'A project tagged with "feat:history" can only depend on libs tagged with "feat:history", "feat:none", "feat-port"', why: 'Interna eines Geschwister-Feats.' },
+    { k: 'ok', cat: 'Feat', where: 'libs/checkin/feat-history/feature/src/feat-history.ts', code: "import { describeDesk } from '@blueprint/checkin/feat-checkin/api';", why: 'Geschwister-Feat über dessen feat-port.' },
+    { k: 'ok', cat: 'App', where: 'apps/client/src/app/app.routes.ts', code: "loadChildren: () => import('@blueprint/booking/shell')\n  .then((m) => m.bookingRoutes)", why: 'Die App lädt nur Shells (entry), lazy.' },
+    { k: 'bad', cat: 'App', where: 'apps/client/src/app/app.ts', code: "import { BookingCard } from '@blueprint/booking/ui';", msg: 'A project tagged with "type:app" can only depend on libs tagged with "entry", "port", "scope:shared"', why: 'Die App ist eine dünne Shell.' },
+    { k: 'bad', cat: 'Public API', where: 'libs/booking/data/src/booking.store.ts', code: "import { toCheckinRecord } from '@blueprint/checkin/data/src/internal/checkin.mapper';", msg: 'Deep import into @blueprint/checkin/data — only its public API (index.ts) is importable.  no-restricted-imports', why: 'Deep-Import an der Public API vorbei.' },
+    { k: 'bad', cat: 'npm', where: 'libs/booking/data/src/booking.store.ts', code: "import { HttpClient } from '@angular/common/http';", msg: 'A project tagged with "type:data" is not allowed to import "@angular/common/http"', why: 'HTTP gibt es nur im api-Layer.' },
+    { k: 'bad', cat: 'npm', where: 'libs/booking/types/src/booking.model.ts', code: "import { signal } from '@angular/core';", msg: 'A project tagged with "type:types" is not allowed to import "@angular/core"', why: 'types sind framework-frei.' },
+    { k: 'ok', cat: 'Types', where: 'libs/booking/types/src/booking.model.ts', code: "import type { Pet } from '@blueprint/generated/pet-client/types';", why: 'types → types, Ziel ist shared.' },
+    { k: 'bad', cat: 'Types', where: 'libs/shared/types/src/entity-id.ts', code: "import type { Booking } from '@blueprint/booking/types';", msg: 'A project tagged with "scope:shared" can only depend on libs tagged with "scope:shared"', why: 'shared kennt keine Domain.' },
+    { k: 'ok', cat: 'Testing', where: 'libs/booking/data/src/booking.store.spec.ts', code: "import { bookingHandlers } from '@blueprint/booking/testing';\nimport { test, worker } from '@blueprint/shared/testing';", why: 'Specs dürfen Testing-Libs importieren.' },
+    { k: 'bad', cat: 'Testing', where: 'libs/booking/data/src/booking.store.ts', code: "import { aBooking } from '@blueprint/booking/testing';", msg: 'A project tagged with "type:data" can only depend on libs tagged with "type:types", "type:utils", "type:api", "type:data", "type:events"', why: 'Testcode gelangt nie in Produktionscode.' },
+    { k: 'bad', cat: 'Testing', where: 'libs/booking/data/src/booking.store.ts', code: "import { http } from 'msw';", msg: 'A project tagged with "type:data" is not allowed to import "msw"', why: 'Test-Pakete sind in Produktions-Layern gebannt.' },
+    { k: 'ok', cat: 'Client', where: 'libs/booking/api/src/booking-api.ts', code: "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';", why: 'Der Port wrappt den generierten Client.' },
+    { k: 'bad', cat: 'Client', where: 'libs/booking/ui/src/booking-card.ts', code: "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';", msg: 'A project tagged with "type:ui" can only depend on libs tagged with "type:types", "type:utils", "type:ui", "type:events"', why: 'ui darf keine Services importieren, auch keine generierten.' },
+    { k: 'bad', cat: 'Client', where: 'libs/checkin/data/src/checkin.store.ts', code: "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';", msg: 'A project tagged with "scope:checkin" can only depend on libs tagged with "scope:checkin", "port", "scope:shared"', why: 'Domain-Clients haben keinen port, der Zugriff geht über booking/api.' },
+    { k: 'bad', cat: 'Naming', where: 'libs/booking/data/src/bookings.store.ts', code: "export class Bookings {}", msg: 'Store class in "bookings.store.ts" must be named "BookingsStore", not "Bookings"  blueprint/layer-symbol-naming', why: 'Klassenname passt nicht zum Dateinamen.' },
+    { k: 'bad', cat: 'Naming', where: 'libs/bokking/ui/src/index.ts', code: '(Ordner angelegt)', msg: 'libs/bokking/ui: unknown scope "bokking" (did you mean "booking"?)', why: 'Tippfehler im Scope. Der Graph bricht ab, bevor irgendetwas läuft.' },
+  ];
+  const exEl = document.getElementById('examples');
+  const renderEx = (f) => {
+    exEl.innerHTML = EX.filter((e) => f === 'all' || e.k === f).map((e) => `
+      <article class="ex ${e.k}">
+        <div class="top"><span class="cat">${esc(e.cat)}</span><span class="badge ${e.k}">${e.k === 'ok' ? 'Erlaubt' : 'Verstoß'}</span></div>
+        <div class="where">${esc(e.where)}</div>
+        <pre>${esc(e.code)}</pre>
+        ${e.msg ? `<div class="msg">${esc(e.msg)}</div>` : ''}
+        <div class="why">${esc(e.why)}</div>
+      </article>`).join('');
+  };
+  renderEx('all');
+  document.querySelectorAll('.filter').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.filter').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    renderEx(b.dataset.f);
+  }));
+})();
+</script>
+</body>
+</html>
