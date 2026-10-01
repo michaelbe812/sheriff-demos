@@ -4,7 +4,7 @@ import { AUTH_API, AuthApi } from '@blueprint/auth/api';
 import { aBooking, bookingScenarios } from '@blueprint/booking/testing';
 import { test, worker } from '@blueprint/shared/testing';
 import { beforeEach, describe, expect } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { FeatCheckin } from './feat-checkin';
 
 const signedInAgent: AuthApi = {
@@ -12,13 +12,19 @@ const signedInAgent: AuthApi = {
   isAuthenticated: signal(true),
 };
 
+/** Renders the real container with real stores; only the auth port is faked, HTTP goes through MSW. */
 function renderDesk(): void {
   TestBed.configureTestingModule({ providers: [{ provide: AUTH_API, useValue: signedInAgent }] });
   TestBed.createComponent(FeatCheckin);
 }
 
-describe('FeatCheckin (rendered in Chromium, backend via MSW)', () => {
-  // cross-domain: the desk loads arrivals through the booking port (BookingApi)
+// Locators read the page as a user does (role + accessible name). expect.element retries
+// until the DOM matches, so there is no detectChanges(), whenStable() or manual waiting.
+const loadArrivalsButton = () => page.getByRole('button', { name: 'Load arrivals' });
+const checkInButton = (guestName: string) => page.getByRole('button', { name: `Check in ${guestName}` });
+
+describe('FeatCheckin', () => {
+  // cross-domain: the desk loads arrivals through the booking port (BookingApi), answered by MSW
   beforeEach(() =>
     worker.use(
       bookingScenarios.withBookings([
@@ -28,33 +34,40 @@ describe('FeatCheckin (rendered in Chromium, backend via MSW)', () => {
     ),
   );
 
-  test('loads arrivals on click and renders one check-in button per guest', async () => {
+  test('shows the signed-in agent', async () => {
     renderDesk();
 
-    await page.getByRole('button', { name: 'Load arrivals' }).click();
+    await expect.element(page.getByText('Agent: Test Agent')).toBeVisible();
+  });
+
+  test('loads arrivals and offers one check-in per guest', async () => {
+    renderDesk();
+
+    await userEvent.click(loadArrivalsButton());
 
     await expect.element(page.getByText('2 arrivals')).toBeVisible();
-    await expect.element(page.getByRole('button', { name: 'Check in Grace Hopper' })).toBeVisible();
-    await expect.element(page.getByRole('button', { name: 'Check in Ada Lovelace' })).toBeVisible();
+    await expect.element(checkInButton('Grace Hopper')).toBeVisible();
+    await expect.element(checkInButton('Ada Lovelace')).toBeVisible();
   });
 
   test('checking a guest in moves them from arrivals to today’s list', async () => {
     renderDesk();
-    await page.getByRole('button', { name: 'Load arrivals' }).click();
+    await userEvent.click(loadArrivalsButton());
 
-    await page.getByRole('button', { name: 'Check in Grace Hopper' }).click();
+    await userEvent.click(checkInButton('Grace Hopper'));
 
     await expect.element(page.getByText('1 arrival', { exact: true })).toBeVisible();
     await expect.element(page.getByText('Checked in today (1)')).toBeVisible();
-    await expect.element(page.getByRole('button', { name: 'Check in Grace Hopper' })).not.toBeInTheDocument();
+    await expect.element(checkInButton('Grace Hopper')).not.toBeInTheDocument();
   });
 
   test('shows no arrivals when the backend has none', async ({ worker }) => {
     worker.use(bookingScenarios.empty());
     renderDesk();
 
-    await page.getByRole('button', { name: 'Load arrivals' }).click();
+    await userEvent.click(loadArrivalsButton());
 
     await expect.element(page.getByText('0 arrivals')).toBeVisible();
+    await expect.element(page.getByRole('button', { name: /^Check in / })).not.toBeInTheDocument();
   });
 });
