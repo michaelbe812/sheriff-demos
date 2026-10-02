@@ -6,6 +6,8 @@
     "verify": "nx run tooling-verify:verify",
     "verify:boundaries": "node packages/tooling/verify/scripts/verify-boundaries.mjs",
     "verify:nx-internals": "node packages/tooling/verify/scripts/verify-nx-internals.mjs",
+    "arch": "nx run archunit:arch",
+    "arch:probes": "node tools/archunit/negative-probes.mjs",
     "openapi:generate": "nx run-many -t generate",
     "test:ui": "sh -c 'nx run \"$0:test\" --ui \"$@\"'"
   },
@@ -56,6 +58,7 @@
     "@vitest/coverage-v8": "~4.1.11",
     "@vitest/ui": "~4.1.11",
     "angular-eslint": "^22.0.0",
+    "archunit": "2.5.4",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "msw": "^3.0.0",
