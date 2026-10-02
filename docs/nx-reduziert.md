@@ -46,7 +46,9 @@ scope:<s>    -> scope:<s>, scope:shared    (je Slice — kein port)
 feat:<f>     -> feat:<f>, feat:none        (je Feat — kein feat-port)
 // Nx-Extra: HTTP nur in data-access
 utils|state|ui|feature: bannedExternalImports ['@angular/common/http']
-// Specs: + type:testing, Scope-Regeln bleiben (kein fremdes testing)
+// Specs (*.spec.ts): jeder Layer darf zusätzlich type:testing — utils, data-access, state, ui, feature/shell
+//   Ausnahme types: testing baut auf types auf (Zyklus). Scope-Regeln bleiben (kein fremdes testing)
+//   Produktionscode darf testing nie importieren
 ```
 
 | | `feat/nx-blueprint-explicit-config` | dieser Branch |
