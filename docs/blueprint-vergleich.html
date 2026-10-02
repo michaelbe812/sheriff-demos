@@ -1,0 +1,298 @@
+<title>Blueprint vollständig vs. reduziert</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: zwei Spalten (explicit-config | reduziert) pro Thema, Abschnitte untereinander; schmal = gestapelt */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --ink: #18222b;
+  --muted: #5b6873;
+  --line: #d6dde0;
+  --full: #4a4fc0;      /* explicit-config */
+  --full-soft: #e6e7f8;
+  --red: #0b7d70;       /* reduziert */
+  --red-soft: #dcf1ed;
+  --ok: #1f7a46;
+  --ok-soft: #dff1e5;
+  --no: #b3402f;
+  --no-soft: #f8e3df;
+  --cell-off: #eef1f2;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121a20; --surface: #1a242b; --ink: #e4ebee; --muted: #9aa8b1; --line: #2f3c45;
+    --full: #9ea3ff; --full-soft: #262a52; --red: #4fd1bd; --red-soft: #133a35;
+    --ok: #6fd39a; --ok-soft: #173826; --no: #f08b7a; --no-soft: #3f211c; --cell-off: #202b32;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121a20; --surface: #1a242b; --ink: #e4ebee; --muted: #9aa8b1; --line: #2f3c45;
+  --full: #9ea3ff; --full-soft: #262a52; --red: #4fd1bd; --red-soft: #133a35;
+  --ok: #6fd39a; --ok-soft: #173826; --no: #f08b7a; --no-soft: #3f211c; --cell-off: #202b32;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; display: grid; gap: 48px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(28px, 4vw, 42px); font-weight: 700; }
+h2 { font-size: 24px; font-weight: 700; }
+h3 { font-size: 17px; font-weight: 500; }
+p { margin: 0; max-width: 68ch; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+header { display: grid; gap: 14px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { color: var(--muted); font-size: 16px; }
+.branches { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; font-family: var(--mono); font-size: 13px; }
+.chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.chip.full { background: var(--full-soft); color: var(--full); } .chip.full i { background: var(--full); }
+.chip.red { background: var(--red-soft); color: var(--red); } .chip.red i { background: var(--red); }
+section { display: grid; gap: 18px; }
+section > p { color: var(--muted); }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 20px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; align-content: start; }
+.panel.full { border-top: 3px solid var(--full); } .panel.red { border-top: 3px solid var(--red); }
+.panel h3 .tag { font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.scroll { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+.compare td:nth-child(2) { color: var(--full); } .compare td:nth-child(3) { color: var(--red); }
+.compare td:first-child { font-weight: 600; white-space: nowrap; }
+.compare tr.diff td:first-child::after { content: " Δ"; color: var(--muted); font-weight: 400; }
+.matrix { width: auto; font-variant-numeric: tabular-nums; }
+.matrix th, .matrix td { text-align: center; padding: 6px 4px; min-width: 52px; border: 1px solid var(--line); font-family: var(--mono); font-size: 12.5px; }
+.matrix th[scope="row"] { text-align: right; padding-right: 10px; }
+.matrix .corner { font-size: 11px; text-transform: none; letter-spacing: 0; text-align: left; white-space: nowrap; }
+.matrix td.ok { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.matrix td.no { background: var(--cell-off); color: var(--muted); }
+.matrix td.changed { outline: 2px solid var(--red); outline-offset: -2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+.sw.ok { background: var(--ok-soft); } .sw.no { background: var(--cell-off); } .sw.ch { outline: 2px solid var(--red); outline-offset: -2px; }
+.notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; display: grid; gap: 4px; }
+.tree { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; white-space: pre; margin: 0; overflow-x: auto; }
+.tree .t-full { color: var(--full); } .tree .t-red { color: var(--red); } .tree .dim { color: var(--muted); } .tree .gone { color: var(--no); text-decoration: line-through; }
+.diagram { width: 100%; height: auto; max-width: 560px; }
+.diagram .t { font: 600 12px var(--body); fill: var(--ink); }
+.diagram .t-s { font: 11px var(--mono); fill: var(--ink); }
+.diagram .t-h { font: 600 12px var(--mono); fill: var(--muted); }
+.diagram .t-hs { font: 11px var(--mono); fill: var(--muted); }
+.diagram .b-app { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+.diagram .b-slice { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+.diagram .b-feat { fill: var(--surface); stroke: var(--line); stroke-dasharray: 4 3; }
+.diagram .b-entry { fill: var(--surface); stroke: var(--ink); }
+.diagram .b-port { fill: var(--full-soft); stroke: var(--full); }
+.diagram .b-int { fill: var(--cell-off); stroke: var(--line); }
+.diagram .b-shared { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
+.diagram .a-ok { stroke: var(--ok); stroke-width: 2; }
+.diagram .a-no { stroke: var(--no); stroke-width: 2; stroke-dasharray: 5 4; }
+.diagram .m-ok { fill: var(--ok); } .diagram .m-no { fill: var(--no); }
+.diagram .x-bg { fill: var(--no-soft); stroke: var(--no); }
+.diagram .x { font: 700 10px var(--body); fill: var(--no); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 14px; margin: 0; }
+.kv dt { font-family: var(--mono); font-size: 12.5px; } .kv dd { margin: 0; color: var(--muted); }
+.full-c { color: var(--full); } .red-c { color: var(--red); }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+@media (max-width: 520px) { .wrap { padding-inline: 16px; } .compare td:first-child { white-space: normal; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Nx-Blueprint · Architekturebene</div>
+  <h1>Blueprint vollständig vs. reduziert</h1>
+  <p class="lede">Typen, Scopes, Marker und Zugriffsregeln der beiden Nx-Varianten. Alle Regeln stammen aus den <code>depConstraints</code> in <code>eslint.config.mjs</code> des jeweiligen Branches.</p>
+  <div class="branches">
+    <span class="chip full"><i></i>feat/nx-blueprint-explicit-config</span>
+    <span class="chip red"><i></i>feat/nx-reduced-blueprint</span>
+  </div>
+</header>
+
+<section aria-labelledby="s-overview">
+  <h2 id="s-overview">Auf einen Blick</h2>
+  <div class="scroll">
+  <table class="compare">
+    <thead><tr><th>Aspekt</th><th>explicit-config</th><th>reduziert</th></tr></thead>
+    <tbody>
+      <tr class="diff"><td>Layer (type:)</td><td>types · utils · events · api · data · ui · feature</td><td>types · utils · data · ui · feature</td></tr>
+      <tr><td>Sonder-Typen</td><td>app · testing · tooling</td><td>app · testing · tooling</td></tr>
+      <tr><td>Scopes</td><td>scope:&lt;slice&gt; (booking, checkin, auth, layout) · scope:shared</td><td>scope:&lt;slice&gt; (booking, checkin, layout) · scope:shared</td></tr>
+      <tr><td>Feat-Achse</td><td>feat:&lt;feat&gt; · feat:none</td><td>feat:&lt;feat&gt; · feat:none</td></tr>
+      <tr class="diff"><td>Marker</td><td>entry · port · feat-port · generated</td><td>entry · generated</td></tr>
+      <tr class="diff"><td>Fremder Slice</td><td>nur über <code>&lt;slice&gt;/api</code> (port)</td><td>nie</td></tr>
+      <tr class="diff"><td>Geschwister-Feat</td><td>nur über <code>feat-x/api</code> (feat-port)</td><td>nie; geteilt wird über die Slice-Root-Libs</td></tr>
+      <tr class="diff"><td>App-Shell darf</td><td>entry · port · shared</td><td>entry · shared</td></tr>
+      <tr class="diff"><td>HTTP (<code>@angular/common/http</code>)</td><td>nur api</td><td>nur data</td></tr>
+      <tr class="diff"><td>Domain-Events</td><td>eigene Lib <code>events</code>, ui darf sie werfen</td><td>Datei <code>*.events.ts</code> in data; ui gibt nur Werte heraus</td></tr>
+      <tr class="diff"><td>Generierte Clients api/core</td><td>type:api</td><td>type:data</td></tr>
+      <tr class="diff"><td>Zustand für mehrere Slices</td><td>Port mit Token (<code>AUTH_API</code> → <code>AuthStore</code>, <code>provideAuth()</code>)</td><td><code>shared/data</code> (<code>AuthStore</code>, root-provided)</td></tr>
+      <tr class="diff"><td>Specs dürfen zusätzlich</td><td>eigenes, shared <em>und fremdes</em> Domain-testing</td><td>eigenes und shared testing</td></tr>
+      <tr class="diff"><td>Libs im Beispiel</td><td>32 + 3 testing</td><td>23 + 3 testing</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Δ = unterscheidet sich zwischen den Varianten.</p>
+</section>
+
+<section aria-labelledby="s-struct">
+  <h2 id="s-struct">Lib-Struktur eines Slices</h2>
+  <p>Eine Nx-Lib pro Slice × Layer. Die Tags leiten sich aus dem Pfad ab (<code>deriveTags</code>); der Sync-Generator <code>lib-tags</code> hält sie aktuell.</p>
+  <div class="pair">
+    <div class="panel full">
+      <h3>explicit-config</h3>
+      <pre class="tree">libs/booking/
+  types/      <span class="dim">scope:booking type:types   feat:none</span>
+  utils/      <span class="dim">                type:utils</span>
+  events/     <span class="dim">                type:events</span>
+  <span class="t-full">api/        <span class="dim">                type:api</span>     + port</span>
+  data/       <span class="dim">                type:data</span>
+  ui/         <span class="dim">                type:ui</span>
+  shell/      <span class="dim">                type:feature</span>  + entry
+  feat-check-booking/
+    feature/  <span class="dim">                type:feature feat:check-booking</span>
+    <span class="t-full">api/      <span class="dim">                type:api</span>     + feat-port</span>
+    data/ ui/
+  testing/    <span class="dim">                type:testing</span>
+  generated/booking-client/
+    types/    <span class="dim">type:types</span>   api/ core/ <span class="dim">type:api</span>   testing/
+libs/auth/ <span class="dim">api (port) · data · shell</span>
+libs/shared/ <span class="dim">types · utils · api · ui · testing</span></pre>
+    </div>
+    <div class="panel red">
+      <h3>reduziert</h3>
+      <pre class="tree">libs/booking/
+  types/      <span class="dim">scope:booking type:types   feat:none</span>
+  utils/      <span class="dim">                type:utils</span>
+  <span class="gone">events/</span>     <span class="dim">→ data/*.events.ts</span>
+  <span class="gone">api/</span>        <span class="dim">→ data/*-api.ts</span>
+  <span class="t-red">data/       <span class="dim">                type:data</span>    HTTP · Stores · Events</span>
+  ui/         <span class="dim">                type:ui</span>
+  shell/      <span class="dim">                type:feature</span>  + entry
+  feat-check-booking/
+    feature/  <span class="dim">                type:feature feat:check-booking</span>
+    <span class="gone">api/</span>      <span class="dim">→ booking/utils</span>
+    data/ ui/
+  testing/    <span class="dim">                type:testing</span>
+  generated/booking-client/
+    types/    <span class="dim">type:types</span>   api/ core/ <span class="t-red">type:data</span>   testing/
+<span class="gone">libs/auth/</span>   <span class="dim">→ shared/data (AuthStore)</span>
+libs/shared/ <span class="dim">types · utils · </span><span class="t-red">data</span><span class="dim"> · ui · testing</span></pre>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="s-access">
+  <h2 id="s-access">Zugriffe zwischen App, Slices und Feats</h2>
+  <p>Scope- und Feat-Achse. Grüne Pfeile sind erlaubt, rote gestrichelte blockiert. Zusätzlich gilt immer die Layer-Matrix (UND-Verknüpfung).</p>
+  <div class="pair">
+    <div class="panel full">
+      <h3>explicit-config</h3>
+      <svg viewBox="0 0 560 370" role="img" aria-labelledby="t-full" class="diagram"><title id="t-full">Zugriffe zwischen App, Slices, Feats und shared (explicit-config)</title><defs>
+<marker id="ok-full" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+<marker id="no-full" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-no"/></marker>
+</defs><rect x="200" y="10" width="160" height="36" rx="6" class="b-app"/><text x="280.0" y="32.0" class="t" text-anchor="middle">App-Shell · type:app</text><rect x="20" y="80" width="240" height="215" rx="6" class="b-slice"/><text x="32" y="98" class="t-h">scope:booking</text><rect x="32" y="106" width="104" height="26" rx="6" class="b-entry"/><text x="84.0" y="123.0" class="t-s" text-anchor="middle">shell · entry</text><rect x="144" y="106" width="104" height="26" rx="6" class="b-port"/><text x="196.0" y="123.0" class="t-s" text-anchor="middle">api · port</text><rect x="32" y="140" width="216" height="26" rx="6" class="b-int"/><text x="140.0" y="157.0" class="t-s" text-anchor="middle">types · utils · events · data · ui</text><rect x="32" y="178" width="104" height="105" rx="6" class="b-feat"/><text x="40" y="194" class="t-hs">feat-a</text><rect x="40" y="202" width="88" height="24" rx="6" class="b-int"/><text x="84.0" y="218.0" class="t-s" text-anchor="middle">feature · data · ui</text><rect x="40" y="234" width="88" height="24" rx="6" class="b-port"/><text x="84.0" y="250.0" class="t-s" text-anchor="middle">api · feat-port</text><rect x="144" y="178" width="104" height="105" rx="6" class="b-feat"/><text x="152" y="194" class="t-hs">feat-b</text><rect x="152" y="202" width="88" height="24" rx="6" class="b-int"/><text x="196.0" y="218.0" class="t-s" text-anchor="middle">feature · data · ui</text><rect x="152" y="234" width="88" height="24" rx="6" class="b-port"/><text x="196.0" y="250.0" class="t-s" text-anchor="middle">api · feat-port</text><rect x="300" y="80" width="240" height="215" rx="6" class="b-slice"/><text x="312" y="98" class="t-h">scope:checkin</text><rect x="312" y="106" width="104" height="26" rx="6" class="b-entry"/><text x="364.0" y="123.0" class="t-s" text-anchor="middle">shell · entry</text><rect x="424" y="106" width="104" height="26" rx="6" class="b-port"/><text x="476.0" y="123.0" class="t-s" text-anchor="middle">api · port</text><rect x="312" y="140" width="216" height="26" rx="6" class="b-int"/><text x="420.0" y="157.0" class="t-s" text-anchor="middle">types · utils · events · data · ui</text><rect x="312" y="178" width="104" height="105" rx="6" class="b-feat"/><text x="320" y="194" class="t-hs">feat-a</text><rect x="320" y="202" width="88" height="24" rx="6" class="b-int"/><text x="364.0" y="218.0" class="t-s" text-anchor="middle">feature · data · ui</text><rect x="320" y="234" width="88" height="24" rx="6" class="b-port"/><text x="364.0" y="250.0" class="t-s" text-anchor="middle">api · feat-port</text><rect x="424" y="178" width="104" height="105" rx="6" class="b-feat"/><text x="432" y="194" class="t-hs">feat-b</text><rect x="432" y="202" width="88" height="24" rx="6" class="b-int"/><text x="476.0" y="218.0" class="t-s" text-anchor="middle">feature · data · ui</text><rect x="432" y="234" width="88" height="24" rx="6" class="b-port"/><text x="476.0" y="250.0" class="t-s" text-anchor="middle">api · feat-port</text><rect x="160" y="322" width="240" height="36" rx="6" class="b-shared"/><text x="280.0" y="344.0" class="t" text-anchor="middle">scope:shared · types utils api ui</text><line x1="250" y1="46" x2="85" y2="104" class="a-ok" marker-end="url(#ok-full)"/><line x1="310" y1="46" x2="360" y2="104" class="a-ok" marker-end="url(#ok-full)"/><line x1="280" y1="46" x2="190" y2="104" class="a-ok" marker-end="url(#ok-full)"/><line x1="312" y1="146" x2="250" y2="124" class="a-ok" marker-end="url(#ok-full)"/><line x1="312" y1="160" x2="242" y2="160" class="a-no" marker-end="url(#no-full)"/><circle cx="277.0" cy="160.0" r="8" class="x-bg"/><text x="277.0" y="164.0" class="x" text-anchor="middle">✕</text><line x1="148" y1="250" x2="126" y2="248" class="a-ok" marker-end="url(#ok-full)"/><line x1="148" y1="214" x2="126" y2="214" class="a-no" marker-end="url(#no-full)"/><circle cx="137.0" cy="214.0" r="8" class="x-bg"/><text x="137.0" y="218.0" class="x" text-anchor="middle">✕</text><line x1="140" y1="296" x2="215" y2="320" class="a-ok" marker-end="url(#ok-full)"/><line x1="420" y1="296" x2="345" y2="320" class="a-ok" marker-end="url(#ok-full)"/></svg>
+      <ul class="notes">
+        <li>Fremder Slice: nur die Lib mit Marker <code>port</code></li>
+        <li>Geschwister-Feat: nur die Lib mit Marker <code>feat-port</code></li>
+        <li>App: entry-Libs lazy, dazu port und shared</li>
+      </ul>
+    </div>
+    <div class="panel red">
+      <h3>reduziert</h3>
+      <svg viewBox="0 0 560 370" role="img" aria-labelledby="t-red" class="diagram"><title id="t-red">Zugriffe zwischen App, Slices, Feats und shared (reduziert)</title><defs>
+<marker id="ok-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-ok"/></marker>
+<marker id="no-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="m-no"/></marker>
+</defs><rect x="200" y="10" width="160" height="36" rx="6" class="b-app"/><text x="280.0" y="32.0" class="t" text-anchor="middle">App-Shell · type:app</text><rect x="20" y="80" width="240" height="215" rx="6" class="b-slice"/><text x="32" y="98" class="t-h">scope:booking</text><rect x="32" y="106" width="104" height="26" rx="6" class="b-entry"/><text x="84.0" y="123.0" class="t-s" text-anchor="middle">shell · entry</text><rect x="32" y="140" width="216" height="26" rx="6" class="b-int"/><text x="140.0" y="157.0" class="t-s" text-anchor="middle">types · utils · data · ui</text><rect x="32" y="178" width="104" height="105" rx="6" class="b-feat"/><text x="40" y="194" class="t-hs">feat-a</text><rect x="40" y="202" width="88" height="24" rx="6" class="b-int"/><text x="84.0" y="218.0" class="t-s" text-anchor="middle">feature · data · ui</text><rect x="144" y="178" width="104" height="105" rx="6" class="b-feat"/><text x="152" y="194" class="t-hs">feat-b</text><rect x="152" y="202" width="88" height="24" rx="6" class="b-int"/><text x="196.0" y="218.0" class="t-s" text-anchor="middle">feature · data · ui</text><rect x="300" y="80" width="240" height="215" rx="6" class="b-slice"/><text x="312" y="98" class="t-h">scope:checkin</text><rect x="312" y="106" width="104" height="26" rx="6" class="b-entry"/><text x="364.0" y="123.0" class="t-s" text-anchor="middle">shell · entry</text><rect x="312" y="140" width="216" height="26" rx="6" class="b-int"/><text x="420.0" y="157.0" class="t-s" text-anchor="middle">types · utils · data · ui</text><rect x="312" y="178" width="104" height="105" rx="6" class="b-feat"/><text x="320" y="194" class="t-hs">feat-a</text><rect x="320" y="202" width="88" height="24" rx="6" class="b-int"/><text x="364.0" y="218.0" class="t-s" text-anchor="middle">feature · data · ui</text><rect x="424" y="178" width="104" height="105" rx="6" class="b-feat"/><text x="432" y="194" class="t-hs">feat-b</text><rect x="432" y="202" width="88" height="24" rx="6" class="b-int"/><text x="476.0" y="218.0" class="t-s" text-anchor="middle">feature · data · ui</text><rect x="160" y="322" width="240" height="36" rx="6" class="b-shared"/><text x="280.0" y="344.0" class="t" text-anchor="middle">scope:shared · types utils data ui</text><line x1="250" y1="46" x2="85" y2="104" class="a-ok" marker-end="url(#ok-red)"/><line x1="310" y1="46" x2="360" y2="104" class="a-ok" marker-end="url(#ok-red)"/><line x1="280" y1="46" x2="280" y2="320" class="a-ok" marker-end="url(#ok-red)"/><line x1="312" y1="153" x2="242" y2="153" class="a-no" marker-end="url(#no-red)"/><circle cx="277.0" cy="153.0" r="8" class="x-bg"/><text x="277.0" y="157.0" class="x" text-anchor="middle">✕</text><line x1="148" y1="230" x2="126" y2="230" class="a-no" marker-end="url(#no-red)"/><circle cx="137.0" cy="230.0" r="8" class="x-bg"/><text x="137.0" y="234.0" class="x" text-anchor="middle">✕</text><line x1="190" y1="178" x2="190" y2="168" class="a-ok" marker-end="url(#ok-red)"/><line x1="140" y1="296" x2="215" y2="320" class="a-ok" marker-end="url(#ok-red)"/><line x1="420" y1="296" x2="345" y2="320" class="a-ok" marker-end="url(#ok-red)"/></svg>
+      <ul class="notes">
+        <li>Slices sind gegeneinander geschlossen</li>
+        <li>Feats teilen nur über die Libs des eigenen Slice-Roots</li>
+        <li>App: nur entry-Libs (lazy) und shared</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="s-matrix">
+  <h2 id="s-matrix">Layer-Matrix (type-Achse)</h2>
+  <p>Zeile darf Spalte importieren. Gilt in jedem Slice, im Feat und in shared gleich. Imports innerhalb einer Lib sind nicht geprüft. Für die Layer, die es in beiden Varianten gibt, sind die Regeln identisch. Die Reduktion entfernt nur <code>api</code> und <code>events</code> und legt ihre Aufgaben in <code>data</code>.</p>
+  <div class="legend">
+    <span><i class="sw ok"></i>erlaubt</span>
+    <span><i class="sw no"></i>blockiert</span>
+  </div>
+  <div class="pair">
+    <div class="panel full">
+      <h3>explicit-config <span class="tag">8 × 8</span></h3>
+      <div class="scroll"><table class="matrix"><thead><tr><th class="corner">von ↓ &nbsp;nach →</th><th scope="col">types</th><th scope="col">utils</th><th scope="col">events</th><th scope="col">api</th><th scope="col">data</th><th scope="col">ui</th><th scope="col">feature</th><th scope="col">testing</th></tr></thead><tbody><tr><th scope="row">types</th><td class="ok" aria-label="types darf types importieren">✓</td><td class="no" aria-label="types darf utils nicht importieren">·</td><td class="no" aria-label="types darf events nicht importieren">·</td><td class="no" aria-label="types darf api nicht importieren">·</td><td class="no" aria-label="types darf data nicht importieren">·</td><td class="no" aria-label="types darf ui nicht importieren">·</td><td class="no" aria-label="types darf feature nicht importieren">·</td><td class="no" aria-label="types darf testing nicht importieren">·</td></tr><tr><th scope="row">utils</th><td class="ok" aria-label="utils darf types importieren">✓</td><td class="ok" aria-label="utils darf utils importieren">✓</td><td class="no" aria-label="utils darf events nicht importieren">·</td><td class="no" aria-label="utils darf api nicht importieren">·</td><td class="no" aria-label="utils darf data nicht importieren">·</td><td class="no" aria-label="utils darf ui nicht importieren">·</td><td class="no" aria-label="utils darf feature nicht importieren">·</td><td class="no" aria-label="utils darf testing nicht importieren">·</td></tr><tr><th scope="row">events</th><td class="ok" aria-label="events darf types importieren">✓</td><td class="ok" aria-label="events darf utils importieren">✓</td><td class="ok" aria-label="events darf events importieren">✓</td><td class="no" aria-label="events darf api nicht importieren">·</td><td class="no" aria-label="events darf data nicht importieren">·</td><td class="no" aria-label="events darf ui nicht importieren">·</td><td class="no" aria-label="events darf feature nicht importieren">·</td><td class="no" aria-label="events darf testing nicht importieren">·</td></tr><tr><th scope="row">api</th><td class="ok" aria-label="api darf types importieren">✓</td><td class="ok" aria-label="api darf utils importieren">✓</td><td class="no" aria-label="api darf events nicht importieren">·</td><td class="ok" aria-label="api darf api importieren">✓</td><td class="no" aria-label="api darf data nicht importieren">·</td><td class="no" aria-label="api darf ui nicht importieren">·</td><td class="no" aria-label="api darf feature nicht importieren">·</td><td class="no" aria-label="api darf testing nicht importieren">·</td></tr><tr><th scope="row">data</th><td class="ok" aria-label="data darf types importieren">✓</td><td class="ok" aria-label="data darf utils importieren">✓</td><td class="ok" aria-label="data darf events importieren">✓</td><td class="ok" aria-label="data darf api importieren">✓</td><td class="ok" aria-label="data darf data importieren">✓</td><td class="no" aria-label="data darf ui nicht importieren">·</td><td class="no" aria-label="data darf feature nicht importieren">·</td><td class="no" aria-label="data darf testing nicht importieren">·</td></tr><tr><th scope="row">ui</th><td class="ok" aria-label="ui darf types importieren">✓</td><td class="ok" aria-label="ui darf utils importieren">✓</td><td class="ok" aria-label="ui darf events importieren">✓</td><td class="no" aria-label="ui darf api nicht importieren">·</td><td class="no" aria-label="ui darf data nicht importieren">·</td><td class="ok" aria-label="ui darf ui importieren">✓</td><td class="no" aria-label="ui darf feature nicht importieren">·</td><td class="no" aria-label="ui darf testing nicht importieren">·</td></tr><tr><th scope="row">feature</th><td class="ok" aria-label="feature darf types importieren">✓</td><td class="ok" aria-label="feature darf utils importieren">✓</td><td class="ok" aria-label="feature darf events importieren">✓</td><td class="ok" aria-label="feature darf api importieren">✓</td><td class="ok" aria-label="feature darf data importieren">✓</td><td class="ok" aria-label="feature darf ui importieren">✓</td><td class="ok" aria-label="feature darf feature importieren">✓</td><td class="no" aria-label="feature darf testing nicht importieren">·</td></tr><tr><th scope="row">testing</th><td class="ok" aria-label="testing darf types importieren">✓</td><td class="no" aria-label="testing darf utils nicht importieren">·</td><td class="no" aria-label="testing darf events nicht importieren">·</td><td class="no" aria-label="testing darf api nicht importieren">·</td><td class="no" aria-label="testing darf data nicht importieren">·</td><td class="no" aria-label="testing darf ui nicht importieren">·</td><td class="no" aria-label="testing darf feature nicht importieren">·</td><td class="ok" aria-label="testing darf testing importieren">✓</td></tr></tbody></table></div>
+      <ul class="notes">
+        <li><code>types</code>: zusätzlich keinerlei npm-Imports</li>
+        <li><code>data</code> → <code>api</code>, <code>ui</code> → <code>events</code>: über diese beiden läuft der Datenfluss</li>
+        <li><code>testing</code> darf zusätzlich alles mit <code>scope:shared</code></li>
+        <li>Specs: jede Zeile darf zusätzlich <code>testing</code></li>
+      </ul>
+    </div>
+    <div class="panel red">
+      <h3>reduziert <span class="tag">6 × 6</span></h3>
+      <div class="scroll"><table class="matrix"><thead><tr><th class="corner">von ↓ &nbsp;nach →</th><th scope="col">types</th><th scope="col">utils</th><th scope="col">data</th><th scope="col">ui</th><th scope="col">feature</th><th scope="col">testing</th></tr></thead><tbody><tr><th scope="row">types</th><td class="ok" aria-label="types darf types importieren">✓</td><td class="no" aria-label="types darf utils nicht importieren">·</td><td class="no" aria-label="types darf data nicht importieren">·</td><td class="no" aria-label="types darf ui nicht importieren">·</td><td class="no" aria-label="types darf feature nicht importieren">·</td><td class="no" aria-label="types darf testing nicht importieren">·</td></tr><tr><th scope="row">utils</th><td class="ok" aria-label="utils darf types importieren">✓</td><td class="ok" aria-label="utils darf utils importieren">✓</td><td class="no" aria-label="utils darf data nicht importieren">·</td><td class="no" aria-label="utils darf ui nicht importieren">·</td><td class="no" aria-label="utils darf feature nicht importieren">·</td><td class="no" aria-label="utils darf testing nicht importieren">·</td></tr><tr><th scope="row">data</th><td class="ok" aria-label="data darf types importieren">✓</td><td class="ok" aria-label="data darf utils importieren">✓</td><td class="ok" aria-label="data darf data importieren">✓</td><td class="no" aria-label="data darf ui nicht importieren">·</td><td class="no" aria-label="data darf feature nicht importieren">·</td><td class="no" aria-label="data darf testing nicht importieren">·</td></tr><tr><th scope="row">ui</th><td class="ok" aria-label="ui darf types importieren">✓</td><td class="ok" aria-label="ui darf utils importieren">✓</td><td class="no" aria-label="ui darf data nicht importieren">·</td><td class="ok" aria-label="ui darf ui importieren">✓</td><td class="no" aria-label="ui darf feature nicht importieren">·</td><td class="no" aria-label="ui darf testing nicht importieren">·</td></tr><tr><th scope="row">feature</th><td class="ok" aria-label="feature darf types importieren">✓</td><td class="ok" aria-label="feature darf utils importieren">✓</td><td class="ok" aria-label="feature darf data importieren">✓</td><td class="ok" aria-label="feature darf ui importieren">✓</td><td class="ok" aria-label="feature darf feature importieren">✓</td><td class="no" aria-label="feature darf testing nicht importieren">·</td></tr><tr><th scope="row">testing</th><td class="ok" aria-label="testing darf types importieren">✓</td><td class="no" aria-label="testing darf utils nicht importieren">·</td><td class="no" aria-label="testing darf data nicht importieren">·</td><td class="no" aria-label="testing darf ui nicht importieren">·</td><td class="no" aria-label="testing darf feature nicht importieren">·</td><td class="ok" aria-label="testing darf testing importieren">✓</td></tr></tbody></table></div>
+      <ul class="notes">
+        <li><code>data</code> vereint HTTP, Stores und Events</li>
+        <li><code>ui</code> → <code>data</code> bleibt blockiert: dumme Komponenten emittieren Werte, der Container erzeugt das Event</li>
+        <li><code>testing</code> darf zusätzlich alles mit <code>scope:shared</code></li>
+        <li>Specs: jede Zeile darf zusätzlich <code>testing</code> (nur eigener Slice + shared)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="s-scope">
+  <h2 id="s-scope">Scope-, Feat- und App-Regeln</h2>
+  <div class="scroll">
+  <table class="compare">
+    <thead><tr><th>Quelle (Tag)</th><th>explicit-config darf</th><th>reduziert darf</th></tr></thead>
+    <tbody>
+      <tr class="diff"><td>scope:&lt;s&gt;</td><td>scope:&lt;s&gt; · port · scope:shared</td><td>scope:&lt;s&gt; · scope:shared</td></tr>
+      <tr><td>scope:shared</td><td>scope:shared</td><td>scope:shared</td></tr>
+      <tr class="diff"><td>feat:&lt;f&gt;</td><td>feat:&lt;f&gt; · feat:none · feat-port</td><td>feat:&lt;f&gt; · feat:none</td></tr>
+      <tr class="diff"><td>type:app</td><td>entry · port · scope:shared, nur Produktions-Layer</td><td>entry · scope:shared, nur Produktions-Layer</td></tr>
+      <tr><td>type:testing</td><td>types · testing · scope:shared</td><td>types · testing · scope:shared</td></tr>
+      <tr><td>type:tooling</td><td>type:tooling</td><td>type:tooling</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Nx verknüpft alle passenden Constraints einer Quelle mit UND. Eine Lib <code>booking/feat-x/data</code> muss also die Regeln von <code>scope:booking</code>, <code>type:data</code> und <code>feat:x</code> gleichzeitig erfüllen.</p>
+</section>
+
+<section aria-labelledby="s-extra">
+  <h2 id="s-extra">npm-Regeln und Querschnitt</h2>
+  <div class="pair">
+    <div class="panel full">
+      <h3>explicit-config</h3>
+      <dl class="kv">
+        <dt>@angular/common/http</dt><dd>verboten in utils, events, data, ui, feature → nur api</dd>
+        <dt>types</dt><dd>keine npm-Imports</dd>
+        <dt>msw, vitest, faker …</dt><dd>verboten in allen Produktions-Layern und der App</dd>
+        <dt>Deep-Imports</dt><dd>verboten, nur <code>src/index.ts</code> ist öffentlich</dd>
+        <dt>Zyklen</dt><dd>verboten zwischen Libs</dd>
+      </dl>
+    </div>
+    <div class="panel red">
+      <h3>reduziert</h3>
+      <dl class="kv">
+        <dt>@angular/common/http</dt><dd>verboten in utils, ui, feature → nur data</dd>
+        <dt>types</dt><dd>keine npm-Imports</dd>
+        <dt>msw, vitest, faker …</dt><dd>verboten in allen Produktions-Layern und der App</dd>
+        <dt>Deep-Imports</dt><dd>verboten, nur <code>src/index.ts</code> ist öffentlich</dd>
+        <dt>Zyklen</dt><dd>verboten zwischen Libs</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<footer>Quelle: <code>eslint.config.mjs</code>, <code>packages/tooling/conventions/src/lib-conventions.ts</code> und <code>docs/nx-reduziert.md</code> der Branches <span class="full-c">feat/nx-blueprint-explicit-config</span> und <span class="red-c">feat/nx-reduced-blueprint</span>. Geprüft durch <code>pnpm verify</code> (155 Fälle) auf dem reduzierten Branch.</footer>
+</div>
