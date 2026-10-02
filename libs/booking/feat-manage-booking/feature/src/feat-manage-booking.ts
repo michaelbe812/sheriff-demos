@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { BookingStore } from '@blueprint/booking/data';
+import { BookingStore } from '@blueprint/booking/state';
 // Sibling feat ONLY via its feat-port:
 import { describeCheck } from '@blueprint/booking/feat-check-booking/api';
 import { BookingCard } from '@blueprint/booking/ui';
 
-// boundary-violation-example: import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/data'; // sibling feat internals
+// boundary-violation-example: import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/state'; // sibling feat internals
 
 @Component({
   selector: 'app-feat-manage-booking',

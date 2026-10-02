@@ -1,7 +1,7 @@
 import type { Tree } from '@nx/devkit';
 import { type ArtifactSchema, resolveArtifact, writeArtifact } from '../shared/artifact';
 
-export const SERVICE_LAYERS = ['api', 'data', 'feature', 'shell'];
+export const SERVICE_LAYERS = ['api', 'state', 'feature', 'shell'];
 
 /** Root-provided injectable class (`inject()` style). */
 export async function serviceGenerator(tree: Tree, options: ArtifactSchema): Promise<void> {

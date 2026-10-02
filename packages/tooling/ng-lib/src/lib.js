@@ -2,7 +2,7 @@
 //
 // Warum es sie gibt: Nx mappt beim Build gegen dist den Import einer Lib nur dann
 // auf dist/, wenn die Lib eine package.json mit `name` = Import-Alias hat
-// (@nx/js calculateProjectBuildableDependencies: sonst Projektname "booking-data").
+// (@nx/js calculateProjectBuildableDependencies: sonst Projektname "booking-state").
 // Ohne lib-package.json würde die Lib still aus den Quellen kompiliert.
 // Hier kommt der Alias stattdessen aus tsconfig.base.json `paths`.
 const { join, relative, resolve, sep } = require('path');

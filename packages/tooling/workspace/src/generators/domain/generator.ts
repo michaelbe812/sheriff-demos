@@ -1,19 +1,19 @@
 import { formatFiles, type GeneratorCallback, logger, type Tree } from '@nx/devkit';
 import { FEAT_PREFIX, GENERATED_FOLDER, SHARED_SCOPE, SLICE_LAYERS, TESTING_LAYER } from '@blueprint/tooling-conventions';
 import { assertLayerDependencies, generateSliceLayer, generateTestingLib, registerSliceRoute } from '../shared/slice';
-import { dataStoreSpec, SLICE_LAYER_ORDER, sliceNames } from '../shared/slice-templates';
+import { stateStoreSpec, SLICE_LAYER_ORDER, sliceNames } from '../shared/slice-templates';
 import { addScope, APP_ROUTES_FILE, assertKebabCase, libExists, writeIfMissing } from '../shared/workspace';
 
 export interface DomainGeneratorSchema {
   name: string;
-  /** comma-separated or list, default types,api,data,ui,shell */
+  /** comma-separated or list, default types,api,state,ui,shell */
   layers?: string | string[];
   testing?: boolean;
   appRoutesFile?: string;
   skipFormat?: boolean;
 }
 
-export const DEFAULT_DOMAIN_LAYERS = ['types', 'api', 'data', 'ui', 'shell'];
+export const DEFAULT_DOMAIN_LAYERS = ['types', 'api', 'state', 'ui', 'shell'];
 
 export function parseLayers(layers: string | string[] | undefined, fallback: string[]): string[] {
   if (layers === undefined || layers.length === 0) return fallback;
@@ -41,9 +41,9 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
     generateSliceLayer(tree, n, layer),
   );
   if (withTesting) generateTestingLib(tree, n);
-  if (created.includes('data') && libExists(tree, `${scope}/testing`)) {
-    const spec = dataStoreSpec(n);
-    writeIfMissing(tree, `libs/${scope}/data/src/${spec.file}`, spec.content);
+  if (created.includes('state') && libExists(tree, `${scope}/testing`)) {
+    const spec = stateStoreSpec(n);
+    writeIfMissing(tree, `libs/${scope}/state/src/${spec.file}`, spec.content);
   }
   if (layers.includes('shell')) registerSliceRoute(tree, scope, options.appRoutesFile ?? APP_ROUTES_FILE);
 
@@ -52,7 +52,7 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
     logger.info(
       `Domain "${scope}": libs/${scope}/{${[...layers, ...(withTesting ? [TESTING_LAYER] : [])].join(',')}}, scope in nx.json.`,
     );
-    logger.info(`Next: nx g @blueprint/tooling-workspace:feat ${scope} <name> --api --data --ui`);
+    logger.info(`Next: nx g @blueprint/tooling-workspace:feat ${scope} <name> --api --state --ui`);
   };
 }
 

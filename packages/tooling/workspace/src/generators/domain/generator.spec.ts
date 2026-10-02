@@ -16,7 +16,7 @@ describe('domain generator', () => {
     await domainGenerator(tree, { name: 'payment' });
 
     const libs = listLibPaths(tree, 'payment');
-    expect(libs).toEqual(['payment/api', 'payment/data', 'payment/shell', 'payment/testing', 'payment/types', 'payment/ui']);
+    expect(libs).toEqual(['payment/api', 'payment/shell', 'payment/state', 'payment/testing', 'payment/types', 'payment/ui']);
     for (const lib of libs) expect(() => deriveTags(lib, { scopes: scopesOf(tree) })).not.toThrow();
   });
 
@@ -25,13 +25,13 @@ describe('domain generator', () => {
 
     expect(read(tree, 'libs/payment/api/src/payment-api.ts')).toContain("import { ApiHttp } from '@blueprint/shared/api';");
     expect(read(tree, 'libs/payment/api/src/index.ts')).toBe("export * from './payment-api';\n");
-    expect(read(tree, 'libs/payment/data/src/payment.store.ts')).toContain('export class PaymentStore');
+    expect(read(tree, 'libs/payment/state/src/payment.store.ts')).toContain('export class PaymentStore');
     expect(read(tree, 'libs/payment/ui/src/payment-list.ts')).toContain('ChangeDetectionStrategy.OnPush');
     expect(read(tree, 'libs/payment/shell/src/index.ts')).toBe("export * from './payment.routes';\nexport * from './payment.providers';\n");
     expect(read(tree, 'libs/payment/shell/src/payment.routes.ts')).toContain('providers: [providePayment()]');
   });
 
-  it('adds testing (fixtures, handlers, scenarios) and a data spec in the beforeEach/worker.use style', async () => {
+  it('adds testing (fixtures, handlers, scenarios) and a state spec in the beforeEach/worker.use style', async () => {
     await domainGenerator(tree, { name: 'payment' });
 
     expect(read(tree, 'libs/payment/testing/src/index.ts')).toBe(
@@ -43,7 +43,7 @@ describe('domain generator', () => {
     expect(read(tree, 'libs/payment/testing/src/fixtures/payment.fixture.ts')).toContain(
       "import { Payment } from '@blueprint/payment/types';",
     );
-    const spec = read(tree, 'libs/payment/data/src/payment.store.spec.ts');
+    const spec = read(tree, 'libs/payment/state/src/payment.store.spec.ts');
     expect(spec).toContain('beforeEach(() => worker.use(...paymentHandlers));');
     expect(spec).toContain("import { test, worker } from '@blueprint/shared/testing';");
   });
@@ -69,12 +69,12 @@ describe('domain generator', () => {
   it('is idempotent', async () => {
     await domainGenerator(tree, { name: 'payment' });
     const routes = read(tree, APP_ROUTES);
-    tree.write('libs/payment/data/src/payment.store.ts', '// edited\n');
+    tree.write('libs/payment/state/src/payment.store.ts', '// edited\n');
 
     await domainGenerator(tree, { name: 'payment' });
 
     expect(read(tree, APP_ROUTES)).toBe(routes);
-    expect(read(tree, 'libs/payment/data/src/payment.store.ts')).toBe('// edited\n');
+    expect(read(tree, 'libs/payment/state/src/payment.store.ts')).toBe('// edited\n');
     expect(scopesOf(tree)).toEqual(['booking', 'layout', 'payment', 'shared']);
   });
 
@@ -83,7 +83,7 @@ describe('domain generator', () => {
     expect(listLibPaths(tree, 'notes')).toEqual(['notes/types', 'notes/utils']);
     expect(findLazyRoutes(read(tree, APP_ROUTES)).map((route) => route.specifier)).not.toContain('@blueprint/notes/shell');
 
-    await expect(domainGenerator(tree, { name: 'orders', layers: 'data' })).rejects.toThrow('libs/orders/data needs');
+    await expect(domainGenerator(tree, { name: 'orders', layers: 'state' })).rejects.toThrow('libs/orders/state needs');
     await expect(domainGenerator(tree, { name: 'orders', layers: 'widgets' })).rejects.toThrow('Unknown layer(s) widgets');
   });
 

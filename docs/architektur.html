@@ -331,12 +331,12 @@
         <div class="row" role="listitem"><span class="path">apps/client/</span><span class="chips"><span class="chip c-type">type:app</span><span class="dim">dünne Shell: main.ts, app.routes.ts</span></span></div>
         <div class="row grp" role="listitem"><span class="path">libs/booking/</span><span class="dim">Domain-Slice</span></div>
         <div class="row" role="listitem"><span class="path">  types/  utils/  events/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:&lt;layer&gt;</span><span class="chip c-feat">feat:none</span></span></div>
-        <div class="row" role="listitem"><span class="path">  data/  ui/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:data · type:ui</span><span class="chip c-feat">feat:none</span></span></div>
+        <div class="row" role="listitem"><span class="path">  state/  ui/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:state · type:ui</span><span class="chip c-feat">feat:none</span></span></div>
         <div class="row" role="listitem"><span class="path">  api/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:api</span><span class="chip c-mark">port</span><span class="dim">einziger Weg von außen</span></span></div>
         <div class="row" role="listitem"><span class="path">  shell/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:feature</span><span class="chip c-mark">entry</span><span class="dim">routes, providers</span></span></div>
         <div class="row" role="listitem"><span class="path">  feat-check-booking/feature/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:feature</span><span class="chip c-feat">feat:check-booking</span></span></div>
         <div class="row" role="listitem"><span class="path">  feat-check-booking/api/</span><span class="chips"><span class="chip c-type">type:api</span><span class="chip c-feat">feat:check-booking</span><span class="chip c-mark">feat-port</span></span></div>
-        <div class="row" role="listitem"><span class="path">  feat-check-booking/data/ ui/</span><span class="chips"><span class="chip c-type">type:data · type:ui</span><span class="chip c-feat">feat:check-booking</span></span></div>
+        <div class="row" role="listitem"><span class="path">  feat-check-booking/state/ ui/</span><span class="chips"><span class="chip c-type">type:state · type:ui</span><span class="chip c-feat">feat:check-booking</span></span></div>
         <div class="row" role="listitem"><span class="path">  testing/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-type">type:testing</span><span class="dim">nur für Specs, kein build</span></span></div>
         <div class="row" role="listitem"><span class="path">  generated/booking-client/</span><span class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-mark">generated</span><span class="dim">types · api · core · testing</span></span></div>
         <div class="row grp" role="listitem"><span class="path">libs/checkin/</span><span class="dim">Domain-Slice, gleiches Muster (feat-checkin, feat-history)</span></div>
@@ -351,16 +351,16 @@
       <div class="panel">
         <h3>Aus dem Pfad abgeleitet</h3>
         <ul class="rules">
-          <li><span class="mark ok">→</span><span><code>libs/booking/feat-check-booking/data</code> wird zum Projekt <code>booking-feat-check-booking-data</code></span></li>
-          <li><span class="mark ok">→</span><span>Alias <code>@blueprint/booking/feat-check-booking/data</code>: ein einziger Wildcard-Eintrag <code>@blueprint/*</code> in <code>tsconfig.base.json</code></span></li>
-          <li><span class="mark ok">→</span><span>Tags <span class="chip c-scope">scope:booking</span> <span class="chip c-type">type:data</span> <span class="chip c-feat">feat:check-booking</span></span></li>
+          <li><span class="mark ok">→</span><span><code>libs/booking/feat-check-booking/state</code> wird zum Projekt <code>booking-feat-check-booking-state</code></span></li>
+          <li><span class="mark ok">→</span><span>Alias <code>@blueprint/booking/feat-check-booking/state</code>: ein einziger Wildcard-Eintrag <code>@blueprint/*</code> in <code>tsconfig.base.json</code></span></li>
+          <li><span class="mark ok">→</span><span>Tags <span class="chip c-scope">scope:booking</span> <span class="chip c-type">type:state</span> <span class="chip c-feat">feat:check-booking</span></span></li>
         </ul>
       </div>
       <div class="panel">
         <h3>Privat bleibt privat</h3>
         <ul class="rules">
           <li><span class="mark ok">✓</span><span>Import nur über den Alias, also über <code>src/index.ts</code></span></li>
-          <li><span class="mark bad">✕</span><span>Deep-Import <code>@blueprint/checkin/data/src/internal/…</code> wird von <code>no-restricted-imports</code> blockiert und von TypeScript gar nicht aufgelöst</span></li>
+          <li><span class="mark bad">✕</span><span>Deep-Import <code>@blueprint/checkin/state/src/internal/…</code> wird von <code>no-restricted-imports</code> blockiert und von TypeScript gar nicht aufgelöst</span></li>
           <li><span class="mark bad">✕</span><span><code>index.ts</code> exportiert nichts aus <code>internal/</code> (<code>blueprint/no-internal-export</code>)</span></li>
         </ul>
       </div>
@@ -379,7 +379,7 @@
         <thead><tr><th>Achse</th><th>Tags</th><th>Bedeutung</th></tr></thead>
         <tbody>
           <tr><td><b>Scope</b></td><td><div class="chips"><span class="chip c-scope">scope:booking</span><span class="chip c-scope">scope:checkin</span><span class="chip c-scope">scope:auth</span><span class="chip c-scope">scope:layout</span><span class="chip c-scope">scope:shared</span></div></td><td>Zu welchem Slice gehört die Lib? Fremde Slices sind nur über ihren <code>port</code> erreichbar.</td></tr>
-          <tr><td><b>Type</b></td><td><div class="chips"><span class="chip c-type">types</span><span class="chip c-type">utils</span><span class="chip c-type">events</span><span class="chip c-type">api</span><span class="chip c-type">data</span><span class="chip c-type">ui</span><span class="chip c-type">feature</span><span class="chip c-type">testing</span><span class="chip c-type">app</span><span class="chip c-type">tooling</span></div></td><td>Der Layer. Er bestimmt die Layer-Matrix und welche npm-Pakete erlaubt sind.</td></tr>
+          <tr><td><b>Type</b></td><td><div class="chips"><span class="chip c-type">types</span><span class="chip c-type">utils</span><span class="chip c-type">events</span><span class="chip c-type">api</span><span class="chip c-type">state</span><span class="chip c-type">ui</span><span class="chip c-type">feature</span><span class="chip c-type">testing</span><span class="chip c-type">app</span><span class="chip c-type">tooling</span></div></td><td>Der Layer. Er bestimmt die Layer-Matrix und welche npm-Pakete erlaubt sind.</td></tr>
           <tr><td><b>Feat</b></td><td><div class="chips"><span class="chip c-feat">feat:none</span><span class="chip c-feat">feat:check-booking</span><span class="chip c-feat">feat:checkin</span><span class="chip c-feat">feat:history</span><span class="chip c-feat">feat:manage-booking</span></div></td><td>Feature-Isolation. <code>feat:none</code> ist der positive Marker für alles außerhalb von <code>feat-*</code>.</td></tr>
           <tr><td><b>Marker</b></td><td><div class="chips"><span class="chip c-mark">port</span><span class="chip c-mark">feat-port</span><span class="chip c-mark">entry</span><span class="chip c-mark">generated</span></div></td><td>Freigaben: <code>port</code> für die api eines Slice, <code>feat-port</code> für die api eines Feats, <code>entry</code> für die Shell. <code>generated</code> markiert OpenAPI-Code.</td></tr>
         </tbody>
@@ -408,14 +408,14 @@
         <h3>npm-Pakete pro Layer</h3>
         <ul class="rules">
           <li><span class="mark bad">✕</span><span><code>types</code>: gar keine npm-Imports, also framework-frei</span></li>
-          <li><span class="mark bad">✕</span><span><code>@angular/common/http</code> in utils, events, data, ui und feature. HTTP gibt es nur im <code>api</code>-Layer</span></li>
+          <li><span class="mark bad">✕</span><span><code>@angular/common/http</code> in utils, events, state, ui und feature. HTTP gibt es nur im <code>api</code>-Layer</span></li>
           <li><span class="mark bad">✕</span><span><code>msw</code>, <code>vitest</code>, <code>@testing-library</code>, <code>playwright</code>, <code>@faker-js</code>, <code>openapi-msw</code> in Produktions-Layern und in der App</span></li>
         </ul>
       </div>
       <div class="panel">
         <h3>Was Nx zusätzlich prüft</h3>
         <ul class="rules">
-          <li><span class="mark bad">✕</span><span>Zyklen zwischen Libs. Ein Aufwärts-Import (api → data) meldet sich oft als „Circular dependency“</span></li>
+          <li><span class="mark bad">✕</span><span>Zyklen zwischen Libs. Ein Aufwärts-Import (api → state) meldet sich oft als „Circular dependency“</span></li>
           <li><span class="mark bad">✕</span><span>statischer Import einer lazy geladenen Lib</span></li>
           <li><span class="mark bad">✕</span><span>relative Imports über Lib-Grenzen und Imports aus Apps</span></li>
         </ul>
@@ -436,7 +436,7 @@
         <div class="layer port"><span>api</span><span>port</span></div>
         <div class="layer entry"><span>shell</span><span>entry</span></div>
         <div class="layer"><span>types · utils · events</span></div>
-        <div class="layer"><span>data · ui</span></div>
+        <div class="layer"><span>state · ui</span></div>
         <div class="layer"><span>feat-* · testing · generated</span></div>
       </div>
       <div class="slice">
@@ -444,14 +444,14 @@
         <div class="layer port"><span>api</span><span>port</span></div>
         <div class="layer entry"><span>shell</span><span>entry</span></div>
         <div class="layer"><span>types · utils · events</span></div>
-        <div class="layer"><span>data · ui</span></div>
+        <div class="layer"><span>state · ui</span></div>
         <div class="layer"><span>feat-* · testing</span></div>
       </div>
       <div class="slice">
         <h3>auth / layout <span class="chip c-scope">shared features</span></h3>
         <div class="layer port"><span>auth/api</span><span>port</span></div>
         <div class="layer entry"><span>auth/shell · layout/shell</span><span>entry</span></div>
-        <div class="layer"><span>auth/data · layout/ui</span></div>
+        <div class="layer"><span>auth/state · layout/ui</span></div>
       </div>
       <div class="slice shared">
         <h3>shared <span class="chip c-scope">scope:shared</span></h3>
@@ -465,7 +465,7 @@
       <div class="panel">
         <h3>Erlaubt</h3>
         <ul class="rules">
-          <li><span class="mark ok">✓</span><span><code>checkin/data</code> → <code>booking/api</code>: fremder Slice, aber über den <span class="chip c-mark">port</span></span></li>
+          <li><span class="mark ok">✓</span><span><code>checkin/state</code> → <code>booking/api</code>: fremder Slice, aber über den <span class="chip c-mark">port</span></span></li>
           <li><span class="mark ok">✓</span><span>jede Domain → <code>shared/*</code></span></li>
           <li><span class="mark ok">✓</span><span><code>apps/client</code> → <code>booking/shell</code> (<span class="chip c-mark">entry</span>, lazy geladen)</span></li>
         </ul>
@@ -473,7 +473,7 @@
       <div class="panel">
         <h3>Verboten</h3>
         <ul class="rules">
-          <li><span class="mark bad">✕</span><span><code>checkin/data</code> → <code>booking/data</code>: Interna eines fremden Slice</span></li>
+          <li><span class="mark bad">✕</span><span><code>checkin/state</code> → <code>booking/state</code>: Interna eines fremden Slice</span></li>
           <li><span class="mark bad">✕</span><span><code>shared/types</code> → <code>booking/types</code>: shared kennt keine Domain</span></li>
           <li><span class="mark bad">✕</span><span><code>checkin/*</code> → <code>booking/generated/**</code>: Domain-Clients haben keinen port</span></li>
           <li><span class="mark bad">✕</span><span><code>apps/client</code> → <code>booking/ui</code>: die App sieht nur entry, port und shared</span></li>
@@ -487,7 +487,7 @@
     <div class="section-head">
       <div class="eyebrow">Feature-Isolation</div>
       <h2>Geschwister-Feats nur über den feat-port</h2>
-      <p>Jedes Feat ist ein eigener Ordner <code>feat-&lt;name&gt;/</code> mit eigenen Libs. Seine Unterordner api, data und ui sind eigene Libs, damit die Layer-Matrix auch innerhalb des Feats gilt. Pro Feat gibt es eine Constraint: <code>feat:&lt;f&gt;</code> → eigenes Feat, <code>feat:none</code>, <code>feat-port</code>.</p>
+      <p>Jedes Feat ist ein eigener Ordner <code>feat-&lt;name&gt;/</code> mit eigenen Libs. Seine Unterordner api, state und ui sind eigene Libs, damit die Layer-Matrix auch innerhalb des Feats gilt. Pro Feat gibt es eine Constraint: <code>feat:&lt;f&gt;</code> → eigenes Feat, <code>feat:none</code>, <code>feat-port</code>.</p>
     </div>
     <div class="feat-diagram">
       <div class="feat-box">
@@ -495,7 +495,7 @@
         <div class="slice" style="border:0;padding:0;background:transparent">
           <div class="layer"><span>feature</span><span>FeatCheckin</span></div>
           <div class="layer port"><span>api</span><span>feat-port</span></div>
-          <div class="layer"><span>data</span><span>CheckinDeskStore</span></div>
+          <div class="layer"><span>state</span><span>CheckinDeskStore</span></div>
         </div>
       </div>
       <div class="feat-box">
@@ -505,16 +505,16 @@
         </div>
         <ul class="rules">
           <li><span class="mark ok">✓</span><span>→ <code>feat-checkin/api</code> (feat-port)</span></li>
-          <li><span class="mark bad">✕</span><span>→ <code>feat-checkin/data</code> (Interna)</span></li>
-          <li><span class="mark ok">✓</span><span>→ <code>checkin/data</code> (<code>feat:none</code>)</span></li>
+          <li><span class="mark bad">✕</span><span>→ <code>feat-checkin/state</code> (Interna)</span></li>
+          <li><span class="mark ok">✓</span><span>→ <code>checkin/state</code> (<code>feat:none</code>)</span></li>
         </ul>
       </div>
       <div class="feat-box">
         <div class="title">innerhalb eines Feats</div>
         <ul class="rules">
-          <li><span class="mark ok">✓</span><span><code>feat-check-booking/feature</code> → <code>…/data</code>, <code>…/ui</code></span></li>
-          <li><span class="mark bad">✕</span><span><code>feat-check-booking/ui</code> → <code>…/data</code>: die Layer-Matrix gilt auch hier</span></li>
-          <li><span class="mark ok">✓</span><span><code>booking/data</code> → <code>feat-check-booking/data</code>: erlaubt, 1:1 von Sheriff übernommen</span></li>
+          <li><span class="mark ok">✓</span><span><code>feat-check-booking/feature</code> → <code>…/state</code>, <code>…/ui</code></span></li>
+          <li><span class="mark bad">✕</span><span><code>feat-check-booking/ui</code> → <code>…/state</code>: die Layer-Matrix gilt auch hier</span></li>
+          <li><span class="mark ok">✓</span><span><code>booking/state</code> → <code>feat-check-booking/state</code>: erlaubt, 1:1 von Sheriff übernommen</span></li>
         </ul>
       </div>
     </div>
@@ -533,7 +533,7 @@
           <li><span class="mark ok">✓</span><span>Specs (<code>*.spec.ts</code>) importieren Testing-Libs, auch aus fremden Domains</span></li>
           <li><span class="mark bad">✕</span><span>Produktionscode → Testing-Lib, zusätzlich geblockt, weil Testing-Libs kein build haben</span></li>
           <li><span class="mark ok">✓</span><span>Testing-Libs importieren nur types, testing und shared</span></li>
-          <li><span class="mark bad">✕</span><span><code>booking/testing</code> → <code>booking/data</code>: das wäre ein Zyklus, weil der Spec in data testing importiert</span></li>
+          <li><span class="mark bad">✕</span><span><code>booking/testing</code> → <code>booking/state</code>: das wäre ein Zyklus, weil der Spec in state testing importiert</span></li>
           <li><span class="mark bad">✕</span><span>msw, vitest oder faker im App-Bundle: <code>verify</code> durchsucht den Build</span></li>
         </ul>
       </div>
@@ -600,7 +600,7 @@
         <thead><tr><th>Regel</th><th>✓ richtig</th><th>✕ falsch</th><th>Geprüft durch</th></tr></thead>
         <tbody>
           <tr><td>Lib-Ordner</td><td><code>libs/booking/ui</code></td><td><code>libs/bokking/ui</code>, <code>libs/booking/widgets</code>, <code>feat-CheckIn</code></td><td>Crystal-Plugin (Graph-Fehler)</td></tr>
-          <tr><td>Datei je Layer</td><td><code>data/…/booking.store.ts</code></td><td><code>utils/…/booking.store.ts</code></td><td><code>blueprint/lib-file-naming</code></td></tr>
+          <tr><td>Datei je Layer</td><td><code>state/…/booking.store.ts</code></td><td><code>utils/…/booking.store.ts</code></td><td><code>blueprint/lib-file-naming</code></td></tr>
           <tr><td>Store</td><td><code>BookingsStore</code> in <code>bookings.store.ts</code></td><td><code>Bookings</code></td><td><code>blueprint/layer-symbol-naming</code></td></tr>
           <tr><td>Port</td><td><code>BookingApi</code> in <code>booking-api.ts</code></td><td><code>BookingService</code></td><td><code>blueprint/layer-symbol-naming</code></td></tr>
           <tr><td>Feat-Container</td><td><code>FeatHistory</code> in <code>feat-history.ts</code></td><td><code>HistoryPage</code></td><td><code>blueprint/layer-symbol-naming</code></td></tr>
@@ -636,13 +636,13 @@
 
 <script>
 (() => {
-  const PROD = ['types', 'utils', 'events', 'api', 'data', 'ui', 'feature'];
+  const PROD = ['types', 'utils', 'events', 'api', 'state', 'ui', 'feature'];
   const TYPE_ALLOWED = {
     types: ['types'],
     utils: ['types', 'utils'],
     events: ['types', 'utils', 'events'],
     api: ['types', 'utils', 'api'],
-    data: ['types', 'utils', 'api', 'data', 'events'],
+    state: ['types', 'utils', 'api', 'state', 'events'],
     ui: ['types', 'utils', 'ui', 'events'],
     feature: PROD,
   };
@@ -651,22 +651,22 @@
   const L = [];
   const add = (path, o) => L.push(Object.assign({ path, alias: '@blueprint/' + path, markers: [] }, o));
   for (const s of ['booking', 'checkin']) {
-    for (const t of ['types', 'utils', 'events', 'data', 'ui']) add(`${s}/${t}`, { scope: s, type: t, feat: 'none' });
+    for (const t of ['types', 'utils', 'events', 'state', 'ui']) add(`${s}/${t}`, { scope: s, type: t, feat: 'none' });
     add(`${s}/api`, { scope: s, type: 'api', feat: 'none', markers: ['port'] });
     add(`${s}/shell`, { scope: s, type: 'feature', feat: 'none', markers: ['entry'], label: 'shell' });
     add(`${s}/testing`, { scope: s, type: 'testing', feat: 'none' });
   }
   add('booking/feat-check-booking/feature', { scope: 'booking', type: 'feature', feat: 'check-booking' });
   add('booking/feat-check-booking/api', { scope: 'booking', type: 'api', feat: 'check-booking', markers: ['feat-port'] });
-  add('booking/feat-check-booking/data', { scope: 'booking', type: 'data', feat: 'check-booking' });
+  add('booking/feat-check-booking/state', { scope: 'booking', type: 'state', feat: 'check-booking' });
   add('booking/feat-check-booking/ui', { scope: 'booking', type: 'ui', feat: 'check-booking' });
   add('booking/feat-manage-booking/feature', { scope: 'booking', type: 'feature', feat: 'manage-booking' });
   add('checkin/feat-checkin/feature', { scope: 'checkin', type: 'feature', feat: 'checkin' });
   add('checkin/feat-checkin/api', { scope: 'checkin', type: 'api', feat: 'checkin', markers: ['feat-port'] });
-  add('checkin/feat-checkin/data', { scope: 'checkin', type: 'data', feat: 'checkin' });
+  add('checkin/feat-checkin/state', { scope: 'checkin', type: 'state', feat: 'checkin' });
   add('checkin/feat-history/feature', { scope: 'checkin', type: 'feature', feat: 'history' });
   add('auth/api', { scope: 'auth', type: 'api', feat: 'none', markers: ['port'] });
-  add('auth/data', { scope: 'auth', type: 'data', feat: 'none' });
+  add('auth/state', { scope: 'auth', type: 'state', feat: 'none' });
   add('auth/shell', { scope: 'auth', type: 'feature', feat: 'none', markers: ['entry'] });
   add('layout/ui', { scope: 'layout', type: 'ui', feat: 'none' });
   add('layout/shell', { scope: 'layout', type: 'feature', feat: 'none', markers: ['entry'] });
@@ -808,14 +808,14 @@
   specBox.addEventListener('change', render);
 
   const PRESETS = [
-    ['ui → data', 'booking/ui', 'booking/data', false],
-    ['fremder Port', 'checkin/data', 'booking/api', false],
-    ['fremde Interna', 'checkin/data', 'booking/data', false],
-    ['Geschwister-Feat', 'checkin/feat-history/feature', 'checkin/feat-checkin/data', false],
+    ['ui → state', 'booking/ui', 'booking/state', false],
+    ['fremder Port', 'checkin/state', 'booking/api', false],
+    ['fremde Interna', 'checkin/state', 'booking/state', false],
+    ['Geschwister-Feat', 'checkin/feat-history/feature', 'checkin/feat-checkin/state', false],
     ['feat-port', 'checkin/feat-history/feature', 'checkin/feat-checkin/api', false],
     ['App → Shell', 'apps/client', 'booking/shell', false],
-    ['Spec → Testing', 'checkin/data', 'booking/testing', true],
-    ['Domain-Client von außen', 'checkin/data', 'booking/generated/booking-client/api', false],
+    ['Spec → Testing', 'checkin/state', 'booking/testing', true],
+    ['Domain-Client von außen', 'checkin/state', 'booking/generated/booking-client/api', false],
   ];
   document.getElementById('presets').innerHTML = PRESETS.map(([label], i) => `<button class="preset" type="button" data-i="${i}">${esc(label)}</button>`).join('');
   document.getElementById('presets').addEventListener('click', (e) => {
@@ -823,12 +823,12 @@
     const [, s, d, sp] = PRESETS[+b.dataset.i];
     srcSel.value = s; dstSel.value = d; specBox.checked = sp; render();
   });
-  srcSel.value = 'booking/ui'; dstSel.value = 'booking/data';
+  srcSel.value = 'booking/ui'; dstSel.value = 'booking/state';
   render();
 
   // --- matrix ---
-  const ROWS = ['types', 'utils', 'events', 'api', 'data', 'ui', 'feature', 'testing'];
-  const COLS = ['types', 'utils', 'events', 'api', 'data', 'ui', 'feature', 'testing'];
+  const ROWS = ['types', 'utils', 'events', 'api', 'state', 'ui', 'feature', 'testing'];
+  const COLS = ['types', 'utils', 'events', 'api', 'state', 'ui', 'feature', 'testing'];
   const cellFor = (r, c) => {
     if (r === 'testing') {
       if (c === 'types' || c === 'testing') return 'yes';
@@ -853,27 +853,27 @@
 
   // --- examples ---
   const EX = [
-    { k: 'ok', cat: 'Scope', where: 'libs/checkin/data/src/checkin.store.ts', code: "import { BookingApi } from '@blueprint/booking/api';", why: 'Fremder Slice, aber über dessen port.' },
-    { k: 'bad', cat: 'Scope', where: 'libs/checkin/data/src/checkin.store.ts', code: "import { BookingStore } from '@blueprint/booking/data';", msg: 'A project tagged with "scope:checkin" can only depend on libs tagged with "scope:checkin", "port", "scope:shared"', why: 'Interna eines fremden Slice.' },
-    { k: 'bad', cat: 'Layer', where: 'libs/booking/ui/src/booking-card.ts', code: "import { BookingStore } from '@blueprint/booking/data';", msg: 'A project tagged with "type:ui" can only depend on libs tagged with "type:types", "type:utils", "type:ui", "type:events"', why: 'ui ist dumm und bekommt Daten von außen.' },
-    { k: 'ok', cat: 'Layer', where: 'libs/booking/data/src/booking.store.ts', code: "import { BookingApi } from '@blueprint/booking/api';", why: 'data → api ist laut Matrix erlaubt.' },
-    { k: 'bad', cat: 'Layer', where: 'libs/booking/api/src/booking-api.ts', code: "import { BookingStore } from '@blueprint/booking/data';", msg: 'Circular dependency between "booking-api" and "booking-data" detected', why: 'Aufwärts-Import. Nx meldet zuerst den Zyklus, der Import ist aber auch per Tag verboten.' },
-    { k: 'bad', cat: 'Feat', where: 'libs/checkin/feat-history/feature/src/feat-history.ts', code: "import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data';", msg: 'A project tagged with "feat:history" can only depend on libs tagged with "feat:history", "feat:none", "feat-port"', why: 'Interna eines Geschwister-Feats.' },
+    { k: 'ok', cat: 'Scope', where: 'libs/checkin/state/src/checkin.store.ts', code: "import { BookingApi } from '@blueprint/booking/api';", why: 'Fremder Slice, aber über dessen port.' },
+    { k: 'bad', cat: 'Scope', where: 'libs/checkin/state/src/checkin.store.ts', code: "import { BookingStore } from '@blueprint/booking/state';", msg: 'A project tagged with "scope:checkin" can only depend on libs tagged with "scope:checkin", "port", "scope:shared"', why: 'Interna eines fremden Slice.' },
+    { k: 'bad', cat: 'Layer', where: 'libs/booking/ui/src/booking-card.ts', code: "import { BookingStore } from '@blueprint/booking/state';", msg: 'A project tagged with "type:ui" can only depend on libs tagged with "type:types", "type:utils", "type:ui", "type:events"', why: 'ui ist dumm und bekommt Daten von außen.' },
+    { k: 'ok', cat: 'Layer', where: 'libs/booking/state/src/booking.store.ts', code: "import { BookingApi } from '@blueprint/booking/api';", why: 'state → api ist laut Matrix erlaubt.' },
+    { k: 'bad', cat: 'Layer', where: 'libs/booking/api/src/booking-api.ts', code: "import { BookingStore } from '@blueprint/booking/state';", msg: 'Circular dependency between "booking-api" and "booking-state" detected', why: 'Aufwärts-Import. Nx meldet zuerst den Zyklus, der Import ist aber auch per Tag verboten.' },
+    { k: 'bad', cat: 'Feat', where: 'libs/checkin/feat-history/feature/src/feat-history.ts', code: "import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/state';", msg: 'A project tagged with "feat:history" can only depend on libs tagged with "feat:history", "feat:none", "feat-port"', why: 'Interna eines Geschwister-Feats.' },
     { k: 'ok', cat: 'Feat', where: 'libs/checkin/feat-history/feature/src/feat-history.ts', code: "import { describeDesk } from '@blueprint/checkin/feat-checkin/api';", why: 'Geschwister-Feat über dessen feat-port.' },
     { k: 'ok', cat: 'App', where: 'apps/client/src/app/app.routes.ts', code: "loadChildren: () => import('@blueprint/booking/shell')\n  .then((m) => m.bookingRoutes)", why: 'Die App lädt nur Shells (entry), lazy.' },
     { k: 'bad', cat: 'App', where: 'apps/client/src/app/app.ts', code: "import { BookingCard } from '@blueprint/booking/ui';", msg: 'A project tagged with "type:app" can only depend on libs tagged with "entry", "port", "scope:shared"', why: 'Die App ist eine dünne Shell.' },
-    { k: 'bad', cat: 'Public API', where: 'libs/booking/data/src/booking.store.ts', code: "import { toCheckinRecord } from '@blueprint/checkin/data/src/internal/checkin.mapper';", msg: 'Deep import into @blueprint/checkin/data — only its public API (index.ts) is importable.  no-restricted-imports', why: 'Deep-Import an der Public API vorbei.' },
-    { k: 'bad', cat: 'npm', where: 'libs/booking/data/src/booking.store.ts', code: "import { HttpClient } from '@angular/common/http';", msg: 'A project tagged with "type:data" is not allowed to import "@angular/common/http"', why: 'HTTP gibt es nur im api-Layer.' },
+    { k: 'bad', cat: 'Public API', where: 'libs/booking/state/src/booking.store.ts', code: "import { toCheckinRecord } from '@blueprint/checkin/state/src/internal/checkin.mapper';", msg: 'Deep import into @blueprint/checkin/state — only its public API (index.ts) is importable.  no-restricted-imports', why: 'Deep-Import an der Public API vorbei.' },
+    { k: 'bad', cat: 'npm', where: 'libs/booking/state/src/booking.store.ts', code: "import { HttpClient } from '@angular/common/http';", msg: 'A project tagged with "type:state" is not allowed to import "@angular/common/http"', why: 'HTTP gibt es nur im api-Layer.' },
     { k: 'bad', cat: 'npm', where: 'libs/booking/types/src/booking.model.ts', code: "import { signal } from '@angular/core';", msg: 'A project tagged with "type:types" is not allowed to import "@angular/core"', why: 'types sind framework-frei.' },
     { k: 'ok', cat: 'Types', where: 'libs/booking/types/src/booking.model.ts', code: "import type { Pet } from '@blueprint/generated/pet-client/types';", why: 'types → types, Ziel ist shared.' },
     { k: 'bad', cat: 'Types', where: 'libs/shared/types/src/entity-id.ts', code: "import type { Booking } from '@blueprint/booking/types';", msg: 'A project tagged with "scope:shared" can only depend on libs tagged with "scope:shared"', why: 'shared kennt keine Domain.' },
-    { k: 'ok', cat: 'Testing', where: 'libs/booking/data/src/booking.store.spec.ts', code: "import { bookingHandlers } from '@blueprint/booking/testing';\nimport { test, worker } from '@blueprint/shared/testing';", why: 'Specs dürfen Testing-Libs importieren.' },
-    { k: 'bad', cat: 'Testing', where: 'libs/booking/data/src/booking.store.ts', code: "import { aBooking } from '@blueprint/booking/testing';", msg: 'A project tagged with "type:data" can only depend on libs tagged with "type:types", "type:utils", "type:api", "type:data", "type:events"', why: 'Testcode gelangt nie in Produktionscode.' },
-    { k: 'bad', cat: 'Testing', where: 'libs/booking/data/src/booking.store.ts', code: "import { http } from 'msw';", msg: 'A project tagged with "type:data" is not allowed to import "msw"', why: 'Test-Pakete sind in Produktions-Layern gebannt.' },
+    { k: 'ok', cat: 'Testing', where: 'libs/booking/state/src/booking.store.spec.ts', code: "import { bookingHandlers } from '@blueprint/booking/testing';\nimport { test, worker } from '@blueprint/shared/testing';", why: 'Specs dürfen Testing-Libs importieren.' },
+    { k: 'bad', cat: 'Testing', where: 'libs/booking/state/src/booking.store.ts', code: "import { aBooking } from '@blueprint/booking/testing';", msg: 'A project tagged with "type:state" can only depend on libs tagged with "type:types", "type:utils", "type:api", "type:state", "type:events"', why: 'Testcode gelangt nie in Produktionscode.' },
+    { k: 'bad', cat: 'Testing', where: 'libs/booking/state/src/booking.store.ts', code: "import { http } from 'msw';", msg: 'A project tagged with "type:state" is not allowed to import "msw"', why: 'Test-Pakete sind in Produktions-Layern gebannt.' },
     { k: 'ok', cat: 'Client', where: 'libs/booking/api/src/booking-api.ts', code: "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';", why: 'Der Port wrappt den generierten Client.' },
     { k: 'bad', cat: 'Client', where: 'libs/booking/ui/src/booking-card.ts', code: "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';", msg: 'A project tagged with "type:ui" can only depend on libs tagged with "type:types", "type:utils", "type:ui", "type:events"', why: 'ui darf keine Services importieren, auch keine generierten.' },
-    { k: 'bad', cat: 'Client', where: 'libs/checkin/data/src/checkin.store.ts', code: "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';", msg: 'A project tagged with "scope:checkin" can only depend on libs tagged with "scope:checkin", "port", "scope:shared"', why: 'Domain-Clients haben keinen port, der Zugriff geht über booking/api.' },
-    { k: 'bad', cat: 'Naming', where: 'libs/booking/data/src/bookings.store.ts', code: "export class Bookings {}", msg: 'Store class in "bookings.store.ts" must be named "BookingsStore", not "Bookings"  blueprint/layer-symbol-naming', why: 'Klassenname passt nicht zum Dateinamen.' },
+    { k: 'bad', cat: 'Client', where: 'libs/checkin/state/src/checkin.store.ts', code: "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';", msg: 'A project tagged with "scope:checkin" can only depend on libs tagged with "scope:checkin", "port", "scope:shared"', why: 'Domain-Clients haben keinen port, der Zugriff geht über booking/api.' },
+    { k: 'bad', cat: 'Naming', where: 'libs/booking/state/src/bookings.store.ts', code: "export class Bookings {}", msg: 'Store class in "bookings.store.ts" must be named "BookingsStore", not "Bookings"  blueprint/layer-symbol-naming', why: 'Klassenname passt nicht zum Dateinamen.' },
     { k: 'bad', cat: 'Naming', where: 'libs/bokking/ui/src/index.ts', code: '(Ordner angelegt)', msg: 'libs/bokking/ui: unknown scope "bokking" (did you mean "booking"?)', why: 'Tippfehler im Scope. Der Graph bricht ab, bevor irgendetwas läuft.' },
   ];
   const exEl = document.getElementById('examples');

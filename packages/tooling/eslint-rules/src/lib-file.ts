@@ -7,7 +7,7 @@ import { dirname, join, relative, sep } from 'node:path';
 import { GENERATED_FOLDER, LIBS_DIR, type LibPath, parseLibPath } from '@blueprint/tooling-conventions';
 
 export interface LibFile {
-  /** path below libs/, e.g. `booking/feat-check-booking/data` */
+  /** path below libs/, e.g. `booking/feat-check-booking/state` */
   libPath: string;
   lib: LibPath;
   /** folders between `src/` and the file */

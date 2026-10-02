@@ -4,7 +4,7 @@
  *
  *   marker     libs/<scope>/<layer>/src/index.ts
  *              libs/<scope>/feat-<feat>/<layer>/src/index.ts
- *   name       path below libs/ joined with "-"   (booking-feat-check-booking-data)
+ *   name       path below libs/ joined with "-"   (booking-feat-check-booking-state)
  *   alias      @blueprint/<path below libs/>      (resolved by the tsconfig.base.json wildcard)
  *   tags       derived from the path — a typo in a tag can no longer happen
  *              (a `testing` folder = test-only lib: `type:testing`)

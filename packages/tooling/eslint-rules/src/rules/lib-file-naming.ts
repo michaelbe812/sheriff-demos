@@ -1,6 +1,6 @@
 /**
  * File and folder names inside a lib match its layer (FILE_KINDS in @blueprint/tooling-conventions):
- * `booking.store.ts` only in data/ui/feature, `booking.routes.ts` only in shell, slice types/utils/events
+ * `booking.store.ts` only in state/ui/feature, `booking.routes.ts` only in shell, slice types/utils/events
  * only kind files, fixtures in `fixtures/`, everything kebab-case. No autofix: ESLint cannot rename files.
  */
 import {

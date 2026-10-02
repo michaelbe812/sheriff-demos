@@ -23,10 +23,10 @@ describe('component / service / store wrappers', () => {
   });
 
   it('service: root-provided injectable, path without src/ works too', async () => {
-    await serviceGenerator(tree, { path: 'booking/data/booking-cache', export: false });
+    await serviceGenerator(tree, { path: 'booking/state/booking-cache', export: false });
 
-    expect(read(tree, 'libs/booking/data/src/booking-cache.ts')).toContain('export class BookingCache');
-    expect(read(tree, 'libs/booking/data/src/index.ts')).toBe("export * from './booking.store';\n");
+    expect(read(tree, 'libs/booking/state/src/booking-cache.ts')).toContain('export class BookingCache');
+    expect(read(tree, 'libs/booking/state/src/index.ts')).toBe("export * from './booking.store';\n");
   });
 
   it('store: <name>.store.ts with <Name>Store', async () => {
@@ -37,9 +37,9 @@ describe('component / service / store wrappers', () => {
   });
 
   it('validates lib, layer and existing files', async () => {
-    await expect(componentGenerator(tree, { path: 'libs/booking/data/src/card' })).rejects.toThrow('ui/feature/shell lib');
+    await expect(componentGenerator(tree, { path: 'libs/booking/state/src/card' })).rejects.toThrow('ui/feature/shell lib');
     await expect(componentGenerator(tree, { path: 'libs/nope/ui/src/card' })).rejects.toThrow('is no lib');
-    await storeGenerator(tree, { path: 'booking/data/src/booking-cache' });
-    await expect(storeGenerator(tree, { path: 'booking/data/src/booking-cache' })).rejects.toThrow('exists already');
+    await storeGenerator(tree, { path: 'booking/state/src/booking-cache' });
+    await expect(storeGenerator(tree, { path: 'booking/state/src/booking-cache' })).rejects.toThrow('exists already');
   });
 });

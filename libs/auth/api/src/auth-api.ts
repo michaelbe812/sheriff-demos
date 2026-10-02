@@ -2,7 +2,7 @@ import { InjectionToken, Signal } from '@angular/core';
 
 /**
  * PORT of the auth shared-feature: contract only (token + interfaces).
- * The implementation (AuthStore, type:data) is wired at the slice root via
+ * The implementation (AuthStore, type:state) is wired at the slice root via
  * provideAuth() — consumers inject AUTH_API and never see the store.
  */
 export interface AuthUser {

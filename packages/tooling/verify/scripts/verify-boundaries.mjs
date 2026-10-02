@@ -59,7 +59,7 @@ const allowedInGenerated = (...args) => ({ ...allowed(...args), generated: true 
 
 const cases = [
   // layer matrix (type axis)
-  blocked('layer: ui -> data', 'libs/booking/ui', '@blueprint/booking/data', 'type:ui'),
+  blocked('layer: ui -> state', 'libs/booking/ui', '@blueprint/booking/state', 'type:ui'),
   blocked('layer: ui -> api', 'libs/booking/ui', '@blueprint/booking/api', 'type:ui'),
   blocked('layer: utils -> api (in shared)', 'libs/shared/utils', '@blueprint/shared/api', 'type:utils'),
   allowed('layer: types -> types (shared)', 'libs/booking/types', '@blueprint/shared/types'),
@@ -67,79 +67,79 @@ const cases = [
   blocked('layer: types -> utils', 'libs/booking/types', '@blueprint/shared/utils', 'type:types'),
   blocked('layer: types -> foreign domain types', 'libs/booking/types', '@blueprint/checkin/types', 'scope:booking'),
   blocked('layer: shared types -> domain types', 'libs/shared/types', '@blueprint/booking/types', 'scope:shared'),
-  blocked('layer: events -> data', 'libs/booking/events', '@blueprint/booking/data', ['type:events', CYCLE]),
-  blocked('layer: api -> data', 'libs/booking/api', '@blueprint/booking/data', ['type:api', CYCLE]),
+  blocked('layer: events -> state', 'libs/booking/events', '@blueprint/booking/state', ['type:events', CYCLE]),
+  blocked('layer: api -> state', 'libs/booking/api', '@blueprint/booking/state', ['type:api', CYCLE]),
   // without a cycle the layer constraint itself answers (type axis is checked before scope)
-  blocked('layer: events -> data (no cycle)', 'libs/booking/events', '@blueprint/auth/data', 'type:events'),
-  blocked('layer: api -> data (no cycle)', 'libs/booking/api', '@blueprint/auth/data', 'type:api'),
-  blocked('layer: data -> ui', 'libs/booking/data', '@blueprint/booking/ui', 'type:data'),
+  blocked('layer: events -> state (no cycle)', 'libs/booking/events', '@blueprint/auth/state', 'type:events'),
+  blocked('layer: api -> state (no cycle)', 'libs/booking/api', '@blueprint/auth/state', 'type:api'),
+  blocked('layer: state -> ui', 'libs/booking/state', '@blueprint/booking/ui', 'type:state'),
   allowed('layer: ui -> events', 'libs/booking/ui', '@blueprint/booking/events'),
-  allowed('layer: data -> api', 'libs/booking/data', '@blueprint/booking/api'),
-  allowed('layer: feature -> data/ui', 'libs/booking/feat-check-booking/feature', '@blueprint/booking/ui'),
+  allowed('layer: state -> api', 'libs/booking/state', '@blueprint/booking/api'),
+  allowed('layer: feature -> state/ui', 'libs/booking/feat-check-booking/feature', '@blueprint/booking/ui'),
 
   // scope axis (domains + shared features)
-  blocked('scope: foreign domain internals', 'libs/checkin/data', '@blueprint/booking/data', 'scope:checkin'),
-  allowed('scope: foreign domain via port', 'libs/checkin/data', '@blueprint/booking/api'),
-  blocked('scope: shared-feature internals', 'libs/checkin/feat-checkin/feature', '@blueprint/auth/data', 'scope:checkin'),
+  blocked('scope: foreign domain internals', 'libs/checkin/state', '@blueprint/booking/state', 'scope:checkin'),
+  allowed('scope: foreign domain via port', 'libs/checkin/state', '@blueprint/booking/api'),
+  blocked('scope: shared-feature internals', 'libs/checkin/feat-checkin/feature', '@blueprint/auth/state', 'scope:checkin'),
   allowed('scope: shared-feature via port', 'libs/checkin/feat-checkin/feature', '@blueprint/auth/api'),
   blocked('scope: foreign entry', 'libs/booking/shell', '@blueprint/checkin/shell', 'scope:booking'),
   blocked('scope: shared -> domain', 'libs/shared/utils', '@blueprint/checkin/utils', 'scope:shared'),
   allowed('scope: domain -> shared', 'libs/booking/utils', '@blueprint/shared/utils'),
 
   // feat isolation
-  blocked('feat: sibling feat internals', 'libs/checkin/feat-history/feature', '@blueprint/checkin/feat-checkin/data', 'feat:history'),
+  blocked('feat: sibling feat internals', 'libs/checkin/feat-history/feature', '@blueprint/checkin/feat-checkin/state', 'feat:history'),
   blocked('feat: sibling feat container', 'libs/booking/feat-manage-booking/feature', '@blueprint/booking/feat-check-booking/feature', 'feat:manage-booking'),
   allowed('feat: sibling via feat-port', 'libs/checkin/feat-history/feature', '@blueprint/checkin/feat-checkin/api'),
   blocked('feat: foreign feat-port', 'libs/booking/feat-manage-booking/feature', '@blueprint/checkin/feat-checkin/api', 'scope:booking'),
-  allowed('feat: own feat internals', 'libs/booking/feat-check-booking/feature', '@blueprint/booking/feat-check-booking/data'),
-  allowed('feat: domain-shared from feat', 'libs/booking/feat-check-booking/data', '@blueprint/booking/data'),
+  allowed('feat: own feat internals', 'libs/booking/feat-check-booking/feature', '@blueprint/booking/feat-check-booking/state'),
+  allowed('feat: domain-shared from feat', 'libs/booking/feat-check-booking/state', '@blueprint/booking/state'),
 
   // app isolation / app shell
   blocked('app: shell -> slice internals', 'apps/client/src/app', '@blueprint/booking/ui', 'type:app'),
-  blocked('app: shell -> data', 'apps/client/src/app', '@blueprint/booking/data', 'type:app'),
+  blocked('app: shell -> state', 'apps/client/src/app', '@blueprint/booking/state', 'type:app'),
   allowed('app: shell -> entry', 'apps/client/src/app', '@blueprint/layout/shell'),
   blocked('app: static import of lazy entry', 'apps/client/src/app', '@blueprint/booking/shell', 'lazy-loaded'),
   allowed('app: shell -> port', 'apps/client/src/app', '@blueprint/booking/api'),
   blocked('app: lib -> app', 'libs/booking/utils', 'apps/client/src/app/app', 'Projects cannot be imported by a relative or absolute path'),
 
   // encapsulation (public API = index.ts)
-  blocked('encapsulation: relative into foreign lib', 'libs/checkin/ui', '../../data/src/internal/checkin.mapper', 'Projects cannot be imported by a relative or absolute path'),
-  blocked('encapsulation: deep alias import', 'libs/checkin/feat-checkin/data', '@blueprint/checkin/data/src/internal/checkin.mapper', 'Deep import'),
+  blocked('encapsulation: relative into foreign lib', 'libs/checkin/ui', '../../state/src/internal/checkin.mapper', 'Projects cannot be imported by a relative or absolute path'),
+  blocked('encapsulation: deep alias import', 'libs/checkin/feat-checkin/state', '@blueprint/checkin/state/src/internal/checkin.mapper', 'Deep import'),
 
   // Nx-only extras
   blocked('nx: http only in api', 'libs/booking/ui', '@angular/common/http', '@angular/common/http'),
   allowed('nx: http in api', 'libs/booking/api', '@angular/common/http'),
   blocked('nx: types framework-free', 'libs/booking/types', '@angular/core', '@angular/core'),
-  blocked('nx: no cycles', 'libs/booking/data', '@blueprint/booking/feat-check-booking/data', CYCLE),
+  blocked('nx: no cycles', 'libs/booking/state', '@blueprint/booking/feat-check-booking/state', CYCLE),
   blocked('nx: untagged lib (noTag)', UNTAGGED_LIB, '@blueprint/shared/utils', 'without tags'),
 
   // testing: test-only libs never reach production code
   // buildable lib -> non-buildable testing lib: `enforceBuildableLibDependency` answers first ...
-  blocked('testing: production -> testing', 'libs/booking/data', '@blueprint/booking/testing', 'non-buildable'),
+  blocked('testing: production -> testing', 'libs/booking/state', '@blueprint/booking/testing', 'non-buildable'),
   blocked('testing: feature -> testing', 'libs/booking/feat-check-booking/feature', '@blueprint/booking/testing', 'non-buildable'),
   // ... the tag constraints block it on their own, too (buildable check switched off)
-  { ...blocked('testing: production -> testing (tags only)', 'libs/booking/data', '@blueprint/booking/testing', 'type:data'), tagsOnly: true },
+  { ...blocked('testing: production -> testing (tags only)', 'libs/booking/state', '@blueprint/booking/testing', 'type:state'), tagsOnly: true },
   { ...blocked('testing: feature -> testing (tags only)', 'libs/booking/feat-check-booking/feature', '@blueprint/booking/testing', 'type:feature'), tagsOnly: true },
   blocked('testing: app -> shared/testing', 'apps/client/src/app', '@blueprint/shared/testing', 'type:app'),
-  allowedInSpec('testing: spec -> own testing', 'libs/booking/data', '@blueprint/booking/testing'),
+  allowedInSpec('testing: spec -> own testing', 'libs/booking/state', '@blueprint/booking/testing'),
   allowedInSpec('testing: spec -> foreign domain testing', 'libs/checkin/feat-checkin/feature', '@blueprint/booking/testing'),
   allowedInSpec('testing: spec -> shared/testing', 'libs/shared/api', '@blueprint/shared/testing'),
   blockedInSpec('testing: shared spec -> domain testing', 'libs/shared/api', '@blueprint/booking/testing', 'scope:shared'),
-  blockedInSpec('testing: spec keeps layer rules (ui -> data)', 'libs/booking/ui', '@blueprint/booking/data', 'type:ui'),
+  blockedInSpec('testing: spec keeps layer rules (ui -> state)', 'libs/booking/ui', '@blueprint/booking/state', 'type:ui'),
   blockedInSpec('testing: types spec -> testing (cycle)', 'libs/booking/types', '@blueprint/booking/testing', [CYCLE, 'type:types']),
-  // booking/data has specs against booking/testing: the edge back is a cycle
-  blocked('testing: testing -> data', 'libs/booking/testing', '@blueprint/booking/data', [CYCLE, 'type:testing']),
-  blocked('testing: testing -> data (no cycle)', 'libs/booking/testing', '@blueprint/auth/data', 'type:testing'),
+  // booking/state has specs against booking/testing: the edge back is a cycle
+  blocked('testing: testing -> state', 'libs/booking/testing', '@blueprint/booking/state', [CYCLE, 'type:testing']),
+  blocked('testing: testing -> state (no cycle)', 'libs/booking/testing', '@blueprint/auth/state', 'type:testing'),
   blocked('testing: testing -> api (port)', 'libs/booking/testing', '@blueprint/booking/api', 'type:testing'),
   blocked('testing: testing -> foreign domain testing', 'libs/checkin/testing', '@blueprint/booking/testing', 'scope:checkin'),
   allowed('testing: testing -> types', 'libs/booking/testing', '@blueprint/booking/types'),
   allowed('testing: testing -> shared/testing', 'libs/booking/testing', '@blueprint/shared/testing'),
   blocked('testing: msw in production', 'libs/booking/api', 'msw', 'msw'),
-  blocked('testing: msw/browser in production', 'libs/booking/data', 'msw/browser', 'msw/browser'),
+  blocked('testing: msw/browser in production', 'libs/booking/state', 'msw/browser', 'msw/browser'),
   blocked('testing: vitest in production', 'libs/booking/ui', 'vitest', 'vitest'),
   blocked('testing: @vitest/* in app', 'apps/client/src/app', '@vitest/browser-playwright', '@vitest/browser-playwright'),
   allowed('testing: msw in testing lib', 'libs/booking/testing', 'msw'),
-  allowedInSpec('testing: msw + vitest in spec', 'libs/booking/data', 'msw'),
+  allowedInSpec('testing: msw + vitest in spec', 'libs/booking/state', 'msw'),
 
   // generated clients: services + core = type:api, models = type:types, testing = type:testing; scope from the folder
   allowed('generated: domain port -> own client api', 'libs/booking/api', `${BOOKING_CLIENT}/api`),
@@ -149,13 +149,13 @@ const cases = [
   allowed('generated: shared api -> shared client api', 'libs/shared/api', `${PET}/api`),
   blocked('generated: foreign domain -> domain client api', 'libs/checkin/api', `${BOOKING_CLIENT}/api`, 'scope:checkin'),
   blocked('generated: foreign domain -> domain client types', 'libs/checkin/types', `${BOOKING_CLIENT}/types`, 'scope:checkin'),
-  blocked('generated: foreign feat -> domain client', 'libs/checkin/feat-checkin/data', `${BOOKING_CLIENT}/api`, 'scope:checkin'),
+  blocked('generated: foreign feat -> domain client', 'libs/checkin/feat-checkin/state', `${BOOKING_CLIENT}/api`, 'scope:checkin'),
   blocked('generated: shared -> domain client', 'libs/shared/api', `${BOOKING_CLIENT}/api`, 'scope:shared'),
   blocked('generated: ui -> client api', 'libs/booking/ui', `${BOOKING_CLIENT}/api`, 'type:ui'),
   blocked('generated: ui -> client core', 'libs/booking/ui', `${BOOKING_CLIENT}/core`, 'type:ui'),
   blocked('generated: shared ui -> shared client api', 'libs/shared/ui', `${PET}/api`, 'type:ui'),
   allowed('generated: ui -> client types', 'libs/booking/ui', `${BOOKING_CLIENT}/types`),
-  allowed('generated: data -> client api (matrix)', 'libs/booking/data', `${BOOKING_CLIENT}/api`),
+  allowed('generated: state -> client api (matrix)', 'libs/booking/state', `${BOOKING_CLIENT}/api`),
   allowed('generated: feature -> client api (matrix)', 'libs/booking/feat-check-booking/feature', `${BOOKING_CLIENT}/api`),
   blocked('generated: utils -> client api', 'libs/booking/utils', `${BOOKING_CLIENT}/api`, 'type:utils'),
   blocked('generated: domain types -> client api', 'libs/booking/types', `${BOOKING_CLIENT}/api`, 'type:types'),
@@ -182,7 +182,7 @@ const cases = [
   blockedInGenerated('generated code: types -> other client api (no cycle)', 'libs/booking/generated/booking-client/types', `${PET}/api`, 'type:types'),
   blockedInGenerated('generated code: types -> @angular/core', 'libs/generated/pet-client/types', '@angular/core', '@angular/core'),
   blockedInGenerated('generated code: shared client -> domain client', 'libs/generated/pet-client/api', `${BOOKING_CLIENT}/types`, 'scope:shared'),
-  blockedInGenerated('generated code: client api -> domain data', 'libs/booking/generated/booking-client/api', '@blueprint/booking/data', [CYCLE, 'type:api']),
+  blockedInGenerated('generated code: client api -> domain state', 'libs/booking/generated/booking-client/api', '@blueprint/booking/state', [CYCLE, 'type:api']),
   blockedInGenerated('generated code: client api -> events (no cycle)', 'libs/booking/generated/booking-client/api', '@blueprint/booking/events', 'type:api'),
   blockedInGenerated('generated code: deep import', 'libs/booking/generated/booking-client/api', `${BOOKING_CLIENT}/types/src/generated/model/booking`, 'Deep import'),
   blockedInGenerated('generated code: testing -> client api', 'libs/booking/generated/booking-client/testing', `${BOOKING_CLIENT}/api`, 'type:testing'),
@@ -210,8 +210,8 @@ const cases = [
   blockedInSpec('tooling: conventions spec -> openapi', 'packages/tooling/conventions', '@blueprint/tooling-openapi', [CYCLE, 'tooling:conventions']),
   blocked('tooling: relative across tooling libs', 'packages/tooling/workspace', '../../conventions/src/lib-conventions', 'Projects cannot be imported by a relative or absolute path'),
   blocked('tooling: tooling -> lib', 'packages/tooling/openapi', '@blueprint/shared/api', 'type:tooling'),
-  blocked('tooling: lib -> tooling', 'libs/booking/data', '@blueprint/tooling-conventions', 'non-buildable'),
-  { ...blocked('tooling: lib -> tooling (tags only)', 'libs/booking/data', '@blueprint/tooling-conventions', 'type:data'), tagsOnly: true },
+  blocked('tooling: lib -> tooling', 'libs/booking/state', '@blueprint/tooling-conventions', 'non-buildable'),
+  { ...blocked('tooling: lib -> tooling (tags only)', 'libs/booking/state', '@blueprint/tooling-conventions', 'type:state'), tagsOnly: true },
 
   // new lib (only src/index.ts, created for this run): tags + constraints apply without any config
   blocked('new lib: layer rules (ui -> api)', NEW_LIB, '@blueprint/shared/api', 'type:ui'),
@@ -240,17 +240,17 @@ const component = (selector, className) =>
 const naming = (rule, file, code, expectedRule, expectedText) => ({ rule, file, code, expectedRule, expectedText, allowed: !expectedRule });
 
 const namingCases = [
-  naming('naming: .store.ts outside data/ui/feature', 'libs/booking/utils/src/tmp-verify.store.ts', 'export class TmpVerifyStore {}\n', 'blueprint/lib-file-naming', 'belongs into a data/ui/feature lib'),
+  naming('naming: .store.ts outside state/ui/feature', 'libs/booking/utils/src/tmp-verify.store.ts', 'export class TmpVerifyStore {}\n', 'blueprint/lib-file-naming', 'belongs into a state/ui/feature lib'),
   naming('naming: plain file in a slice types lib', 'libs/booking/types/src/tmp-verify.ts', 'export type TmpVerify = string;\n', 'blueprint/lib-file-naming', 'carry their kind'),
   naming('naming: folder not kebab-case', 'libs/booking/ui/src/TmpVerify/tmp-verify.ts', 'export const tmpVerify = 1;\n', 'blueprint/lib-file-naming', 'must be kebab-case'),
-  naming('naming: store class ↔ file', 'libs/booking/data/src/tmp-verify.store.ts', 'export class Bookings {}\n', 'blueprint/layer-symbol-naming', '"TmpVerifyStore"'),
+  naming('naming: store class ↔ file', 'libs/booking/state/src/tmp-verify.store.ts', 'export class Bookings {}\n', 'blueprint/layer-symbol-naming', '"TmpVerifyStore"'),
   naming('naming: feat container ↔ feat', 'libs/checkin/feat-history/feature/src/feat-history.ts', component('app-feat-history', 'HistoryPage'), 'blueprint/layer-symbol-naming', '"FeatHistory"'),
   naming('naming: routes export ↔ scope', 'libs/booking/shell/src/booking.routes.ts', 'export const routes = [];\n', 'blueprint/layer-symbol-naming', '"bookingRoutes"'),
   naming('naming: component selector ↔ file', 'libs/booking/ui/src/tmp-verify.ts', component('app-other', 'TmpVerify'), 'blueprint/layer-symbol-naming', '"app-tmp-verify"'),
   naming('naming: component selector prefix', 'libs/booking/ui/src/tmp-verify.ts', component('bk-tmp-verify', 'TmpVerify'), '@angular-eslint/component-selector', 'prefix'),
-  naming('naming: internal/ in public API', 'libs/checkin/data/src/index.ts', "export * from './internal/checkin.mapper';\n", 'blueprint/no-internal-export', 'internal/ is lib-private'),
-  naming('naming: casing (class)', 'libs/booking/data/src/tmp-verify.ts', 'export class tmp_verify {}\n', '@typescript-eslint/naming-convention', 'PascalCase'),
-  naming('naming: conforming names', 'libs/booking/data/src/tmp-verify.store.ts', 'export class TmpVerifyStore {}\n'),
+  naming('naming: internal/ in public API', 'libs/checkin/state/src/index.ts', "export * from './internal/checkin.mapper';\n", 'blueprint/no-internal-export', 'internal/ is lib-private'),
+  naming('naming: casing (class)', 'libs/booking/state/src/tmp-verify.ts', 'export class tmp_verify {}\n', '@typescript-eslint/naming-convention', 'PascalCase'),
+  naming('naming: conforming names', 'libs/booking/state/src/tmp-verify.store.ts', 'export class TmpVerifyStore {}\n'),
   naming('naming: conforming component', 'libs/booking/ui/src/tmp-verify.ts', component('app-tmp-verify', 'TmpVerify')),
   naming('naming: src/generated/** excluded', 'libs/booking/types/src/generated/model/tmp_verify.ts', 'export class tmp_verify {}\n'),
   naming('naming: generated client lib excluded', 'libs/generated/pet-client/api/src/tmp-verify.store.ts', 'export class Whatever {}\n'),
@@ -558,7 +558,7 @@ function checkToolingLibs(projectGraph) {
  * Probe per tooling area: `nx show projects --affected --files=<file>` contains the expected projects.
  */
 const AFFECTED_PROBES = [
-  { file: 'packages/tooling/ng-lib/src/build.js', expected: ['booking-data', 'generated-pet-client-api', 'client'] },
+  { file: 'packages/tooling/ng-lib/src/build.js', expected: ['booking-state', 'generated-pet-client-api', 'client'] },
   { file: 'packages/tooling/ng-lib/scripts/typecheck-lib.mjs', expected: ['booking-types', 'shared-testing'] },
   { file: 'packages/tooling/workspace/src/plugin/blueprint-libs.ts', expected: ['booking-ui', 'checkin-testing', 'client'] },
   { file: 'packages/tooling/conventions/src/lib-conventions.ts', expected: ['booking-ui', 'generated-pet-client-api', 'client'] },

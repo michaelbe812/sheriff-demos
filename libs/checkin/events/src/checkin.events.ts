@@ -1,4 +1,4 @@
-/** Domain events: ui/feature emit, data handles. */
+/** Domain events: ui/feature emit, state handles. */
 export interface GuestArrived {
   readonly type: 'checkin.guestArrived';
   readonly bookingId: string;
