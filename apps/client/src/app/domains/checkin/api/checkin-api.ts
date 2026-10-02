@@ -4,7 +4,7 @@ import { ApiHttp } from '../../../shared/api/http-client';
 /** PUBLIC PORT of the checkin domain — cross-domain types re-exported here. */
 export type { CheckinRecord } from '../types/checkin.model';
 
-/** Raw backend shape; mapped to the domain model in data/internal. */
+/** Raw backend shape; mapped to the domain model in state/internal. */
 export interface CheckinDto {
   id: string;
   booking_id: string;

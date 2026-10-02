@@ -56,8 +56,8 @@ describe('eslint dependency-rule fires through the packaged config', () => {
 
   it('blocks cross-domain internals (port bypass)', () => {
     const file = writeTmp(
-      'apps/client/src/app/domains/checkin/data/tmp-e2e-viol.ts',
-      `import { BookingStore } from '@blueprint/domains/booking/data/booking.store';\nexport const x = BookingStore;\n`,
+      'apps/client/src/app/domains/checkin/state/tmp-e2e-viol.ts',
+      `import { BookingStore } from '@blueprint/domains/booking/state/booking.store';\nexport const x = BookingStore;\n`,
     );
     const output = eslintOn(file);
     expect(output).toContain('@softarc/sheriff/dependency-rule');
@@ -66,7 +66,7 @@ describe('eslint dependency-rule fires through the packaged config', () => {
 
   it('allows cross-domain access via the port', () => {
     const file = writeTmp(
-      'apps/client/src/app/domains/checkin/data/tmp-e2e-ok.ts',
+      'apps/client/src/app/domains/checkin/state/tmp-e2e-ok.ts',
       `import { BookingApi } from '@blueprint/domains/booking';\nexport const x = BookingApi;\n`,
     );
     const output = eslintOn(file);
@@ -76,7 +76,7 @@ describe('eslint dependency-rule fires through the packaged config', () => {
   it('blocks imports from a foreign internal/ folder (encapsulation)', () => {
     const file = writeTmp(
       'apps/client/src/app/domains/checkin/utils/tmp-e2e-viol.ts',
-      `import { toCheckinRecord } from '../data/internal/checkin.mapper';\nexport const x = toCheckinRecord;\n`,
+      `import { toCheckinRecord } from '../state/internal/checkin.mapper';\nexport const x = toCheckinRecord;\n`,
     );
     const output = eslintOn(file);
     expect(output).toContain('@softarc/sheriff/encapsulation');
@@ -85,7 +85,7 @@ describe('eslint dependency-rule fires through the packaged config', () => {
   it('blocks sibling feat internals but allows the feat-port', () => {
     const viol = writeTmp(
       'apps/client/src/app/domains/checkin/feat-history/tmp-e2e-viol.ts',
-      `import { CheckinDeskStore } from '../feat-checkin/data/checkin-desk.store';\nexport const x = CheckinDeskStore;\n`,
+      `import { CheckinDeskStore } from '../feat-checkin/state/checkin-desk.store';\nexport const x = CheckinDeskStore;\n`,
     );
     expect(eslintOn(viol)).toContain('feat:history');
 

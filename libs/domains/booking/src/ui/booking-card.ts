@@ -4,7 +4,7 @@ import { Booking } from '../types/booking.model';
 import { bookingLabel } from '../utils/booking.utils';
 import { BookingCardStore } from './booking-card.store';
 
-// sheriff-violation-example: import { BookingStore } from '../data/booking.store'; // ui -> data
+// sheriff-violation-example: import { BookingStore } from '../state/booking.store'; // ui -> state
 // sheriff-violation-example: import { BookingApi } from '../api'; // ui -> api
 
 /** Dumb component: types, utils, events, local store — nothing else. */

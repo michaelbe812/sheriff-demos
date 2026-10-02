@@ -3,13 +3,13 @@ import { Component, inject } from '@angular/core';
 import { AUTH_API } from '../../../auth/api/auth-api';
 import { AppButton } from '../../../shared/ui/button';
 import { pluralize } from '../../../shared/utils/pluralize';
-import { CheckinStore } from '../data/checkin.store';
+import { CheckinStore } from '../state/checkin.store';
 import { GuestArrived } from '../events/checkin.events';
 import { ArrivalList } from '../ui/arrival-list';
-import { CheckinDeskStore } from './data/checkin-desk.store';
+import { CheckinDeskStore } from './state/checkin-desk.store';
 
-// sheriff-violation-example: import { BookingStore } from '@blueprint/domains/booking/data/booking.store'; // foreign domain internals
-// sheriff-violation-example: import { AuthStore } from '../../../auth/data/auth.store'; // shared-feature internals
+// sheriff-violation-example: import { BookingStore } from '@blueprint/domains/booking/state/booking.store'; // foreign domain internals
+// sheriff-violation-example: import { AuthStore } from '../../../auth/state/auth.store'; // shared-feature internals
 
 /** Smart container: domain store + feat-private desk store + dumb ui. */
 @Component({

@@ -23,10 +23,10 @@ describe('domain generator', () => {
       `${root}/utils/inventory.utils.ts`,
       `${root}/events/inventory.events.ts`,
       `${root}/api/inventory-api.ts`,
-      `${root}/data/inventory.store.ts`,
+      `${root}/state/inventory.store.ts`,
       `${root}/feat-stock-count/feat-stock-count.ts`,
       `${root}/feat-stock-count/api/stock-count-api.ts`,
-      `${root}/feat-stock-count/data/stock-count.store.ts`,
+      `${root}/feat-stock-count/state/stock-count.store.ts`,
       'libs/domains/inventory/project.json',
       'libs/domains/inventory/tsconfig.json',
     ]) {
@@ -70,7 +70,7 @@ describe('feat generator', () => {
     const root = 'libs/domains/inventory/src/feat-restock';
     expect(tree.exists(`${root}/feat-restock.ts`)).toBe(true);
     expect(tree.read(`${root}/api/restock-api.ts`, 'utf-8')).toContain('FEAT-PORT');
-    expect(tree.exists(`${root}/data/restock.store.ts`)).toBe(true);
+    expect(tree.exists(`${root}/state/restock.store.ts`)).toBe(true);
   });
 
   it('fails when the domain does not exist', async () => {
@@ -89,7 +89,7 @@ describe('shared-feature generator', () => {
     expect(api).toContain('NOTIFICATIONS_API');
     expect(api).toContain('InjectionToken');
     expect(tree.read(`${root}/notifications.providers.ts`, 'utf-8')).toContain('provideNotifications');
-    expect(tree.exists(`${root}/data/notifications.store.ts`)).toBe(true);
+    expect(tree.exists(`${root}/state/notifications.store.ts`)).toBe(true);
   });
 
   it('scaffolds a lib shared feature under libs/<name>/src', async () => {

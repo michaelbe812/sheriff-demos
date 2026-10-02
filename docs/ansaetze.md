@@ -26,7 +26,7 @@ Beide lösen dasselbe Problem, schneiden den Code aber an unterschiedlichen Achs
 |  | Hexagonal (Ports & Adapters) | Vertical Slice (invertiert) |
 |---|---|---|
 | **Einheit** | Ein Hexagon pro Slice | Ein Slice mit Layer-Matrix |
-| **Ordner** | `domain` · `ports/{in,out}` · `adapters/{driving,driven}` | `types` · `utils` · `events` · `api` · `infra` · `data` · `ui` · `feat-<x>` |
+| **Ordner** | `domain` · `ports/{in,out}` · `adapters/{driving,driven}` | `types` · `utils` · `events` · `api` · `infra` · `state` · `ui` · `feat-<x>` |
 | **Öffentliche Fläche** | `ports/in` (Tag `port`) | `api/` (Tag `port`), pro Feat `feat-port` |
 | **Inversion** | Kern nennt `ports/out`, nie den Adapter | `api/` = Contract, `infra/` = Impl, getrennt |
 | **Verdrahtung** | `ports/*.providers.ts` | Slice-Root `<slice>.providers.ts` |
@@ -49,12 +49,12 @@ utils   → types, utils
 events  → types, utils, events
 api     → types, utils, api              (Contract, NICHT infra)
 infra   → types, utils, api, infra
-data    → types, utils, api, data, events (Stores binden ans Token, nie infra)
-ui      → types, utils, ui, events       (NICHT api, NICHT data)
+state   → types, utils, api, state, events (Stores binden ans Token, nie infra)
+ui      → types, utils, ui, events       (NICHT api, NICHT state)
 feature → jedes type: AUSSER infra       (nur der Slice-Root darf infra wiren)
 ```
 
-Warum die Inversion strukturell erzwungen ist: `type:api` hat **keine** Clearance zu `type:infra`. Der Contract kann seine eigene Impl nicht benennen — der Abhängigkeitspfeil zeigt von der Infrastruktur weg, nicht zu ihr. Auch `type:data` sieht `infra` nicht; Stores binden ans Token, verdrahtet wird ausschließlich am Slice-Root.
+Warum die Inversion strukturell erzwungen ist: `type:api` hat **keine** Clearance zu `type:infra`. Der Contract kann seine eigene Impl nicht benennen — der Abhängigkeitspfeil zeigt von der Infrastruktur weg, nicht zu ihr. Auch `type:state` sieht `infra` nicht; Stores binden ans Token, verdrahtet wird ausschließlich am Slice-Root.
 
 **Heute gefixt — die `type:feature`-Lücke** (`f2fc32f`): `type:feature` hängt am Slice-Root *und* an jedem `feat-<x>/`. Die alte Regel `to.startsWith('type:')` ließ pauschal alles durch, sodass ein Feat `infra/` direkt greifen konnte — am eigenen Port vorbei.
 
@@ -117,7 +117,7 @@ Der Fork (`@lambda-solutions/sheriff-core`) bringt zwei Features:
 - **`denyRules`** — eine Regel, die *verbietet*; schlägt jeden `depRules`-Treffer. Löst den „kein `'*'`"-Workaround im strikten Hexagon auf.
 - **`externalRules`** — Regeln für `node_modules`-Imports. **AND**-kombiniert über die Tags (`if (!isAllowed) return false`), invers zu `depRules`, also wirklich einschränkend. `externalRules: { 'type:domain': [] }` ersetzt den `no-restricted-imports`-ESLint-Block und entfernt damit ein zweites Pfad-Matching-Schema, das schon einmal still versagt hat (projekt-relativer Glob statt root-relativ).
 
-**Wichtig — dem Blueprint bringt der Fork fast nichts.** Erwartet war, `denyRules` würde die `api/infra`-Trennung vereinfachen. Der Test gegen die echte Engine widerlegt das: `type:api ↛ type:infra` und `type:data ↛ type:infra` blocken die Allow-Listen längst — der Blueprint hat kein `'*'`, um das er herumarbeiten müsste. Nur die `type:feature`-Lücke war echt, und die ging ohne Fork.
+**Wichtig — dem Blueprint bringt der Fork fast nichts.** Erwartet war, `denyRules` würde die `api/infra`-Trennung vereinfachen. Der Test gegen die echte Engine widerlegt das: `type:api ↛ type:infra` und `type:state ↛ type:infra` blocken die Allow-Listen längst — der Blueprint hat kein `'*'`, um das er herumarbeiten müsste. Nur die `type:feature`-Lücke war echt, und die ging ohne Fork.
 
 Als Kommentar an der jeweils betroffenen Stelle festgehalten:
 

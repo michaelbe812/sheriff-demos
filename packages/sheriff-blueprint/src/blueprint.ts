@@ -29,7 +29,7 @@ type DepRules = SheriffConfig['depRules'];
  *   utils   -> types, utils
  *   events  -> types, utils, events      (signal-store event definitions)
  *   api     -> types, utils, api
- *   data    -> types, utils, api, data, events   (stores, business services)
+ *   state   -> types, utils, api, state, events  (stores, business services)
  *   ui      -> types, utils, ui, events  (dumb components; component-local
  *              stores live INSIDE the ui bucket — intra-module imports are
  *              never checked)
@@ -51,14 +51,14 @@ export const slice = (path: string, scope: string): Modules => ({
   [`${path}/utils`]: [scope, 'type:utils'],
   [`${path}/events`]: [scope, 'type:events'],
   [`${path}/api`]: [scope, 'type:api', 'port'], // the domain's PUBLIC PORT
-  [`${path}/data`]: [scope, 'type:data'],
+  [`${path}/state`]: [scope, 'type:state'],
   [`${path}/ui`]: [scope, 'type:ui'],
   [`${path}/feat-<feat>`]: [scope, 'feat:<feat>', 'type:feature'],
   [`${path}/feat-<feat>/types`]: [scope, 'feat:<feat>', 'type:types'],
   [`${path}/feat-<feat>/utils`]: [scope, 'feat:<feat>', 'type:utils'],
   [`${path}/feat-<feat>/events`]: [scope, 'feat:<feat>', 'type:events'],
   [`${path}/feat-<feat>/api`]: [scope, 'feat:<feat>', 'type:api', 'feat-port'],
-  [`${path}/feat-<feat>/data`]: [scope, 'feat:<feat>', 'type:data'],
+  [`${path}/feat-<feat>/state`]: [scope, 'feat:<feat>', 'type:state'],
   [`${path}/feat-<feat>/ui`]: [scope, 'feat:<feat>', 'type:ui'],
 });
 
@@ -137,8 +137,8 @@ export const blueprintDepRules = (): DepRules => ({
   'type:utils': ['type:types', 'type:utils'],
   'type:events': ['type:types', 'type:utils', 'type:events'],
   'type:api': ['type:types', 'type:utils', 'type:api'],
-  'type:data': ['type:types', 'type:utils', 'type:api', 'type:data', 'type:events'],
-  'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT data
+  'type:state': ['type:types', 'type:utils', 'type:api', 'type:state', 'type:events'],
+  'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT state
   'type:feature': ({ to }) => to.startsWith('type:'),
 
   // scope axis — own domain freely, foreign domains/shared-features only
