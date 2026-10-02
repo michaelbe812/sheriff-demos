@@ -65,7 +65,15 @@ describe('ArchUnitTS 2.5.4 — verifiziertes Verhalten', () => {
   it('projectSlices().definedBy("(**)") erfasst nur [\\w]+ — kebab-case-Ordner fallen still heraus', async () => {
     const sliced = (from: string, to: string) =>
       projectSlices(TSCONFIG).definedBy('libs/booking/(**)/').shouldNot().containDependency(from, to).check();
-    expect((await sliced('data', 'generated')).length).toBe(1); // existing edge, \w-folder: found
+    // control: an existing edge between two \w-only folders below libs/booking is found
+    const graph = await extractGraph(TSCONFIG);
+    const folder = (path: string) => /^libs\/booking\/(\w+)\//.exec(path)?.[1];
+    const control = graph.find((e) => folder(e.source) && folder(e.target) && folder(e.source) !== folder(e.target));
+    expect((await sliced(folder(control!.source)!, folder(control!.target)!)).length).toBe(1);
+    const kebabEdge = graph.some(
+      (e) => e.source.startsWith('libs/booking/feat-check-booking/') && e.target.startsWith('libs/booking/data/'),
+    );
+    expect(kebabEdge).toBe(true);
     expect(await sliced('feat-check-booking', 'data')).toEqual([]); // existing edge, kebab-case: silently missed
   });
 
