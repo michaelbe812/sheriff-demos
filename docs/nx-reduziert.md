@@ -78,7 +78,7 @@ utils|ui|feature: bannedExternalImports ['@angular/common/http']
 | Teil | Änderung |
 |---|---|
 | `tooling-conventions` | `KNOWN_LAYERS` ohne `api`/`events`, `deriveTags` ohne `port`/`feat-port`, Client-Teile `api`/`core` → `data`, Datei-Kind `events` → `data`, `KIND_ONLY_LAYERS` = types, utils |
-| `tooling-workspace` | neuer Sync-Generator `lib-tags` (`nx sync` leitet die Tags jeder Lib aus dem Pfad neu ab, `sync:check` meldet Abweichungen, z.B. alte `type:api`/`port`-Tags nach einer Regeländerung); `domain`: Default `types,data,ui,shell` (+ testing), `data` = `<d>-api.ts` + `<d>.store.ts`; `feat`: kein `--api` mehr (`--data --ui`); `layer`: Liste ohne api/events; `service`: data/feature/shell |
+| `tooling-workspace` | neuer Sync-Generator `lib-tags` (`nx sync` leitet die Tags jeder Lib aus dem Pfad neu ab, `sync:check` meldet Abweichungen, z.B. alte `type:api`/`port`-Tags nach einer Regeländerung); `domain`: Default `types,data,ui,shell` (+ testing), `data` = `<d>-api.ts` + `<d>.store.ts`; `feat`: kein `--api` mehr (`--data --ui`); `layer`: Liste ohne api/events; `service`: data/feature/shell; alle Schemas (auch Sync-Generatoren, `tooling-openapi:client`) mit `additionalProperties: false`: unbekannte Optionen brechen ab statt still ignoriert zu werden (`feat payment checkout --api` → `'api' is not found in schema`) |
 | `tooling-openapi` | Tags kommen aus den Konventionen (`type:data`), Hinweis „in the … data layer“ |
 | `tooling-eslint-rules` | unverändert (liest die Konventionen), Specs auf neue Pfade |
 | `tooling-verify` | 155 Fälle neu geschnitten (Cross-Slice/Feat jetzt durchweg blockiert), `expectedTags` ohne Ports, Affected-Proben `shared-data`/`booking-data`, nx-internals-Proben auf `booking-data`, dist-Snapshot neu (511 Dateien) |

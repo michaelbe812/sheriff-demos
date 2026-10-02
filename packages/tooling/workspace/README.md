@@ -11,7 +11,7 @@ Kein Plugin mehr (auf `feat/nx-blueprint` inferierte `src/plugin/blueprint-libs.
 
 ## Generatoren
 
-Alle arbeiten über die Tree-API, sind idempotent (bestehende Libs bleiben unangetastet) und formatieren mit `formatFiles` (Prettier, `.prettierrc`: `printWidth 120`). Jede neue Lib bekommt ihre Config-Dateien (Tags aus dem Pfad, `peerDependencies` aus den Imports der Beispiele) und einen `paths`-Eintrag. Positionsargumente wie gezeigt, fehlende werden abgefragt (`x-prompt`), `--dry-run` geht überall.
+Alle arbeiten über die Tree-API, sind idempotent (bestehende Libs bleiben unangetastet) und formatieren mit `formatFiles` (Prettier, `.prettierrc`: `printWidth 120`). Jede neue Lib bekommt ihre Config-Dateien (Tags aus dem Pfad, `peerDependencies` aus den Imports der Beispiele) und einen `paths`-Eintrag. Positionsargumente wie gezeigt, fehlende werden abgefragt (`x-prompt`), `--dry-run` geht überall. Unbekannte Optionen lehnt Nx ab statt sie still zu verwerfen (`"additionalProperties": false` in jedem Schema, auch der Sync-Generatoren): `nx g @blueprint/tooling-workspace:feat payment checkout --api` → `'api' is not found in schema`.
 
 ```sh
 nx g @blueprint/tooling-workspace:domain payment                       # libs/payment/{types,data,ui,shell,testing} + Spec, Route, Scope
@@ -72,4 +72,4 @@ CI führt `nx sync:check` aus.
 
 ## Tests
 
-`nx test tooling-workspace`: Vitest (Node), Tree-basiert mit `createTreeWithEmptyWorkspace` + Fixture-Workspace (`@blueprint/tooling-conventions/testing`, jede Lib mit Config): alle Generatoren inkl. geschriebener Config (Tags, Build-Dateien, peers, `paths`, Spec-Config), `remove` nach `domain` = exakt der Ausgangszustand (`tsconfig.base.json`, `lib-scopes.json`, Routen), `move` zieht Config nach, component/service über die Nx-/Angular-Generatoren, Routen-AST, Sync-Generatoren (app-routes, lib-tags), move/rename/remove mit OpenAPI-Clients inkl. Client-`project.json` (`src/generators/shared/clients.spec.ts`).
+`nx test tooling-workspace`: Vitest (Node), Tree-basiert mit `createTreeWithEmptyWorkspace` + Fixture-Workspace (`@blueprint/tooling-conventions/testing`, jede Lib mit Config): alle Generatoren inkl. geschriebener Config (Tags, Build-Dateien, peers, `paths`, Spec-Config), `remove` nach `domain` = exakt der Ausgangszustand (`tsconfig.base.json`, `lib-scopes.json`, Routen), `move` zieht Config nach, component/service über die Nx-/Angular-Generatoren, Routen-AST, Sync-Generatoren (app-routes, lib-tags), move/rename/remove mit OpenAPI-Clients inkl. Client-`project.json` (`src/generators/shared/clients.spec.ts`), jedes Schema aus `generators.json` strikt (`src/schemas.spec.ts`, ein neuer Generator ohne `additionalProperties: false` wird rot).

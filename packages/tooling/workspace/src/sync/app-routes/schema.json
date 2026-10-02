@@ -6,5 +6,6 @@
   "type": "object",
   "properties": {
     "appRoutesFile": { "type": "string", "default": "apps/client/src/app/app.routes.ts" }
-  }
+  },
+  "additionalProperties": false
 }

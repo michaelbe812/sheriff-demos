@@ -20,5 +20,6 @@
     "appRoutesFile": { "type": "string", "default": "apps/client/src/app/app.routes.ts" },
     "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
   },
+  "additionalProperties": false,
   "required": ["from", "to"]
 }

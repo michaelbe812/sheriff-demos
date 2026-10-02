@@ -14,5 +14,6 @@
     "force": { "type": "boolean", "description": "Auch löschen, wenn noch Importe darauf zeigen.", "default": false },
     "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
   },
+  "additionalProperties": false,
   "required": ["path"]
 }

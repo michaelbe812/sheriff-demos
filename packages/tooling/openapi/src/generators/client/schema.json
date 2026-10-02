@@ -31,5 +31,6 @@
     },
     "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
   },
+  "additionalProperties": false,
   "required": ["name", "spec"]
 }

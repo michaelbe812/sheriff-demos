@@ -14,5 +14,6 @@
     "export": { "type": "boolean", "description": "Aus index.ts exportieren.", "default": true },
     "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
   },
+  "additionalProperties": false,
   "required": ["path"]
 }

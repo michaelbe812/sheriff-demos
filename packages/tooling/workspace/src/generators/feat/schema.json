@@ -21,5 +21,6 @@
     "ui": { "type": "boolean", "description": "Dumb-Komponenten (ui).", "default": false },
     "skipFormat": { "type": "boolean", "default": false, "x-priority": "internal" }
   },
+  "additionalProperties": false,
   "required": ["domain", "name"]
 }
