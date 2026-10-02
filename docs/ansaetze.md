@@ -16,7 +16,7 @@ Alle Status­angaben stammen aus tatsächlich ausgeführtem `sheriff verify` bzw
 | `feat/deny-rules-config` | sheriff-hexagonal · `5d7941d` | ❌ läuft nicht | ja (nicht installiert) |
 | `feat/nx-blueprint` | nx-blueprint | ✅ 38/38 Boundary-Fälle, run-many grün | nein (ganz ohne Sheriff) |
 | `feat/nx-blueprint-explicit-config` | – | ✅ 135/135 verify-Fälle, run-many grün | nein (wie 5, explizite Config statt Crystal-Plugins) |
-| `feat/nx-reduced-blueprint` | – | ✅ 155/155 verify-Fälle, run-many grün | nein (wie explicit-config, reduziert: ohne api/events, ohne Ports) |
+| `feat/nx-reduced-blueprint` | – | ✅ 181/181 verify-Fälle, run-many grün | nein (wie explicit-config, reduziert: ohne Ports, ohne events-Layer; HTTP in `data-access`, Stores in `state`) |
 
 `feat/deny-rules-config` importiert in `sheriff.config.ts` aus `@lambda-solutions/sheriff-core`, die `package.json` listet aber nur `@softarc/sheriff-core`, und der Fork ist nicht installiert → `Cannot find module '@lambda-solutions/sheriff-core'`. War als Fork-Branch gedacht; in dem Zustand aber weder mit noch ohne Fork benutzbar.
 
@@ -117,7 +117,7 @@ Dasselbe Regelwerk wie Ansatz 4, aber **ohne Sheriff**: eine Nx-Lib pro Slice ×
 
 **Variante `feat/nx-blueprint-explicit-config`:** dasselbe ohne Crystal-Plugins: jede Lib trägt `project.json`, `package.json`, `ng-package.json` und `tsconfig*.json` selbst (Generatoren schreiben und pflegen sie, `verify` prüft sie), Standard-Executoren statt Wrapper, exakte `paths` statt Wildcard. Unterschiede, Vor- und Nachteile oben in [`nx-umsetzung.md`](./nx-umsetzung.md#variante-explizite-config).
 
-**Variante `feat/nx-reduced-blueprint`:** explicit-config mit reduziertem Regelwerk — Layer nur `types`/`utils`/`data`/`ui`/`feature`, keine Ports (`port`/`feat-port`, kein Token-Contract), Slices und Feats sind gegeneinander geschlossen; Gemeinsames (z.B. Auth) liegt in `shared`. Tooling (Generatoren, OpenAPI-Facade, `/testing`, Verify) unverändert lauffähig. Details in [`nx-reduziert.md`](./nx-reduziert.md).
+**Variante `feat/nx-reduced-blueprint`:** explicit-config mit reduziertem Regelwerk — Layer nur `types`/`utils`/`data-access`/`state`/`ui`/`feature` (`data-access` = einziger Layer mit HTTP, `state` = Stores + Events darüber), keine Ports (`port`/`feat-port`, kein Token-Contract), Slices und Feats sind gegeneinander geschlossen; Gemeinsames (z.B. Auth) liegt in `shared`. Tooling (Generatoren, OpenAPI-Facade, `/testing`, Verify) unverändert lauffähig. Details in [`nx-reduziert.md`](./nx-reduziert.md).
 
 
 ---
