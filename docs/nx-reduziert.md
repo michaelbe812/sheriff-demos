@@ -116,7 +116,7 @@ nx g @blueprint/tooling-openapi:client things-client --domain=payment --spec=./t
 - **ui ohne Events:** Dumme Komponenten geben nur Werte heraus, der Container baut das Event — etwas mehr Code im Container.
 - **Generierter Client-Code ist `type:data`:** `client api → domain data` blockt nur noch der Zyklus, nicht mehr die Layer-Regel (Verify-Fall dokumentiert das).
 
-## Offen
+## Entscheidungen
 
-- `shared/data` mit Zustand (Auth) begrenzen? Option: eigener Layer/Marker für shared-State, sobald mehr als ein Store dort liegt.
-- Soll `layout` als eigener Slice bleiben (nur von der App genutzt) oder nach `shared/ui`?
+- **`shared/data` darf Zustand halten** (z.B. `AuthStore`). Ohne Ports ist `shared` der einzige Ort für Zustand, den mehrere Slices brauchen. Kein eigener Marker.
+- **`layout` bleibt eigener Slice**, nur von der App über `layout/shell` komponiert.
