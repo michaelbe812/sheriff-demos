@@ -5,7 +5,7 @@ Alle Generatoren außer `client`. Projekt `tooling-workspace` (`type:tooling`, `
 | Teil | Datei(en) | Aufgabe |
 |---|---|---|
 | Generatoren | `src/generators/*`, `generators.json` | domain, layer, feat, testing, move, rename, remove, component, service, store — schreiben bzw. pflegen die Config-Dateien jeder Lib (`project.json`, `package.json`, `ng-package.json`, `tsconfig*.json`) und `tsconfig.base.json` → `paths` |
-| Sync-Generator | `src/sync/app-routes` | `nx sync` / `nx sync:check`: Slice-Shells ↔ `app.routes.ts` |
+| Sync-Generatoren | `src/sync/app-routes`, `src/sync/lib-tags` | `nx sync` / `nx sync:check`: Slice-Shells ↔ `app.routes.ts`; Tags jeder Lib ↔ Pfad |
 
 Kein Plugin mehr (auf `feat/nx-blueprint` inferierte `src/plugin/blueprint-libs.ts` Projekte und Targets). Vorlage der Dateien: `@blueprint/tooling-conventions` → `lib-files.ts`; Target-Bodies: `nx.json` → `targetDefaults`.
 
@@ -55,15 +55,21 @@ libs/booking/ui/project.json: tags ["scope:bookng","type:ui","feat:none"], path 
 
 `domain`, `move`/`rename` und `remove` pflegen die Liste; die Generatoren lehnen Pfade mit unbekanntem Scope (`libPathError` mit Tippfehler-Hinweis) und Ordner, die nicht kebab-case sind (`feat-CheckIn`), ab; von Hand angelegte meldet `verify` (Ordnerregel). `generated` ist reserviert und nie ein Scope: `libs/generated/<client>` gehört zu `shared`, `libs/<d>/generated/<client>` zur Domain. Die depConstraints (`sameTagConstraints()` in `eslint.config.mjs`) leiten Scopes aus den Graph-Tags (= `project.json`) ab.
 
-## Sync-Generator
+## Sync-Generatoren
 
-`@blueprint/tooling-workspace:app-routes` ist in `nx.json` → `sync.globalGenerators` registriert. Beleg Nx 23.1 (`node_modules/nx/schemas/nx-schema.json`): *„List of workspace-wide sync generators to be run (not attached to targets)“*; laufen mit `nx sync` / `nx sync:check` (Nx-Doku „Sync Generators“). Ein Task-Sync-Generator (`targets.<t>.syncGenerators`) passt nicht, weil die Prüfung keinem Target gehört. Er prüft bzw. repariert:
+`@blueprint/tooling-workspace:app-routes` und `:lib-tags` sind in `nx.json` → `sync.globalGenerators` registriert. Beleg Nx 23.1 (`node_modules/nx/schemas/nx-schema.json`): *„List of workspace-wide sync generators to be run (not attached to targets)“*; laufen mit `nx sync` / `nx sync:check` (Nx-Doku „Sync Generators“). Ein Task-Sync-Generator (`targets.<t>.syncGenerators`) passt nicht, weil die Prüfung keinem Target gehört.
+
+`app-routes` prüft bzw. repariert:
 
 - jede Slice-Shell (`libs/<scope>/shell`, die eine `Routes`-Konstante exportiert) ist lazy in `app.routes.ts` eingetragen (fehlt sie → Route `path: '<scope>'` wird ergänzt)
 - keine Lazy-Route (App-Routes und Shell-Routes) zeigt auf eine Lib, die es nicht gibt (→ Route wird entfernt)
 
-Shells ohne Routes (`auth/shell` = Provider, `layout/shell` = Komponente) sind nicht betroffen. CI führt `nx sync:check` aus.
+Shells ohne Routes (z.B. `layout/shell` = Komponente) sind nicht betroffen.
+
+`lib-tags` prüft bzw. repariert: die `tags` jeder `libs/**/project.json` sind genau `deriveTags(<pfad>)` aus `@blueprint/tooling-conventions` (dieselbe Funktion, mit der die Generatoren sie schreiben). Grund: Tags entstehen einmal beim Anlegen einer Lib. Ändert sich das Regelwerk (z.B. Reduktion: generierte `api`/`core` → `type:data`, `port`/`feat-port` entfallen) oder editiert jemand eine `project.json` von Hand, bleiben alte Tags stehen. `nx sync` schreibt sie neu, der Rest der `project.json` bleibt unverändert. Liegt eine Lib in einem Ordner außerhalb der Konvention (`libs/booking/api`), wird sie nur gemeldet: dann ist der Ordner falsch (→ `move`), nicht die Tags. Probe: `type:api` an zwei Client-Libs und `port` an `booking-data` → `sync:check` meldet alle drei, `nx sync` stellt die Tags byte-gleich wieder her.
+
+CI führt `nx sync:check` aus.
 
 ## Tests
 
-`nx test tooling-workspace`: Vitest (Node), Tree-basiert mit `createTreeWithEmptyWorkspace` + Fixture-Workspace (`@blueprint/tooling-conventions/testing`, jede Lib mit Config): alle Generatoren inkl. geschriebener Config (Tags, Build-Dateien, peers, `paths`, Spec-Config), `remove` nach `domain` = exakt der Ausgangszustand (`tsconfig.base.json`, `lib-scopes.json`, Routen), `move` zieht Config nach, component/service über die Nx-/Angular-Generatoren, Routen-AST, Sync-Generator, move/rename/remove mit OpenAPI-Clients inkl. Client-`project.json` (`src/generators/shared/clients.spec.ts`).
+`nx test tooling-workspace`: Vitest (Node), Tree-basiert mit `createTreeWithEmptyWorkspace` + Fixture-Workspace (`@blueprint/tooling-conventions/testing`, jede Lib mit Config): alle Generatoren inkl. geschriebener Config (Tags, Build-Dateien, peers, `paths`, Spec-Config), `remove` nach `domain` = exakt der Ausgangszustand (`tsconfig.base.json`, `lib-scopes.json`, Routen), `move` zieht Config nach, component/service über die Nx-/Angular-Generatoren, Routen-AST, Sync-Generatoren (app-routes, lib-tags), move/rename/remove mit OpenAPI-Clients inkl. Client-`project.json` (`src/generators/shared/clients.spec.ts`).

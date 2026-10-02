@@ -46,7 +46,7 @@ Dazu pro Client-Ordner `libs/[<d>/]generated/<client>/project.json`. Summe: 267 
 
 **Nachteile:**
 - 267 Dateien Boilerplate, fast alle gleich; Pflege über Generatoren (`move`/`rename`/`remove` ziehen Name, Tags, Alias, relative Pfade, `paths`, `implicitDependencies` nach).
-- Tags sind wieder handeditierbar: Tippfehler fängt nicht mehr der Graph, sondern erst `tooling-verify:verify` (Tags ↔ Pfad ↔ `lib-scopes.json`).
+- Tags sind wieder handeditierbar: Tippfehler fängt nicht mehr der Graph, sondern `nx sync:check` (Sync-Generator `lib-tags`, `nx sync` repariert) und `tooling-verify:verify` (Tags ↔ Pfad ↔ `lib-scopes.json`).
 - `peerDependencies` sind statisch: der Generator leitet sie einmal aus den Imports ab, danach prüft `verify` die Übereinstimmung (rot statt still veraltet).
 - Adapterwechsel eines Clients = `openapi-clients.json` + Adapter-Inputs in `project.json` (verify meldet die Abweichung).
 - Nx liest die lib-`package.json` mit: jede buildable Lib trägt zusätzlich das Tag `npm:private` (ohne Constraint, harmlos).
@@ -733,7 +733,7 @@ nx g @nx/angular:component libs/booking/ui/src/booking-badge --export          #
 ### Wächter
 
 - **Config pro Lib:** `tooling-verify:verify` meldet jede fehlende oder falsche Datei (`project.json`, `tsconfig.json`, bei buildable Libs `package.json`, `ng-package.json`, `tsconfig.lib*.json`, bei Specs `tsconfig.spec.json`; Name, `sourceRoot`, Targets, Alias, `dest`, `extends`, peers), Build-Dateien in Testing-Libs, Config-Dateien außerhalb einer Lib/eines Client-Ordners, fehlende/falsche/veraltete `paths`-Einträge und einen Wildcard.
-- **Tags + Scope-Liste:** Tags jeder `project.json` = aus dem Pfad abgeleitete Tags, Scope in `lib-scopes.json`, keine Listeneinträge ohne Lib. `domain`, `move`/`rename`, `remove` pflegen die Liste.
+- **Tags + Scope-Liste:** Tags jeder `project.json` = aus dem Pfad abgeleitete Tags (`nx sync` schreibt sie per Sync-Generator `lib-tags` neu, `nx sync:check` meldet Abweichungen), Scope in `lib-scopes.json`, keine Listeneinträge ohne Lib. `domain`, `move`/`rename`, `remove` pflegen die Liste.
 - **Namen:** Lib-Ordner (Form, Layer, kebab-case für Scope/Feat/Client) → `tooling-verify:verify` (Ordnerregel), Generatoren lehnen ab; Datei-, Ordner- und Symbolnamen in den Libs → `nx lint` (`blueprint/*`, `@angular-eslint/*-selector`, `@typescript-eslint/naming-convention`), siehe [Namensschema](#namensschema).
 - **Routen:** `nx sync:check` (globaler Sync-Generator `@blueprint/tooling-workspace:app-routes`): jede Slice-Shell mit `Routes` ist in `app.routes.ts` registriert, keine Lazy-Route zeigt auf eine fehlende Lib. `nx sync` repariert.
 

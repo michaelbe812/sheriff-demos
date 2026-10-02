@@ -50,6 +50,11 @@
       "schema": "./src/generators/store/schema.json",
       "description": "Signal-Store in einer Lib (eigenes Template, Nx hat keinen Store-Generator)."
     },
+    "lib-tags": {
+      "factory": "./src/sync/lib-tags/generator",
+      "schema": "./src/sync/lib-tags/schema.json",
+      "description": "Sync-Generator (nx sync): Tags jeder Lib = aus dem Pfad abgeleitete Tags (deriveTags)."
+    },
     "app-routes": {
       "factory": "./src/sync/app-routes/generator",
       "schema": "./src/sync/app-routes/schema.json",

@@ -161,6 +161,6 @@
     }
   },
   "sync": {
-    "globalGenerators": ["@blueprint/tooling-workspace:app-routes"]
+    "globalGenerators": ["@blueprint/tooling-workspace:app-routes", "@blueprint/tooling-workspace:lib-tags"]
   }
 }

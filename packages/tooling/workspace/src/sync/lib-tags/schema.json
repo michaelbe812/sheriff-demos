@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "BlueprintLibTagsSync",
+  "title": "Sync: Tags jeder Lib ↔ Pfad",
+  "description": "Tags in libs/**/project.json = aus dem Pfad abgeleitete Tags (deriveTags). nx sync schreibt sie neu, nx sync:check meldet Abweichungen.",
+  "type": "object",
+  "properties": {}
+}
