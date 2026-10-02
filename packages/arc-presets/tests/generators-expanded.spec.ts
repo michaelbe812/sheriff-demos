@@ -53,7 +53,7 @@ describe('feat generator', () => {
     expect(tree.exists(`${base}/feat-check-in.ts`)).toBe(true);
     expect(tree.exists(`${base}/api/check-in-api.ts`)).toBe(true);
     expect(tree.exists(`${base}/api/index.ts`)).toBe(false);
-    expect(tree.exists(`${base}/data/check-in.store.ts`)).toBe(true);
+    expect(tree.exists(`${base}/state/check-in.store.ts`)).toBe(true);
   });
 
   it('writes inverted feat files below an existing domain', async () => {
@@ -71,7 +71,7 @@ describe('feat generator', () => {
     expect(tree.exists(`${base}/feat-check-in.ts`)).toBe(true);
     expect(tree.exists(`${base}/api/index.ts`)).toBe(true);
     expect(tree.exists(`${base}/api/check-in-api.ts`)).toBe(false);
-    expect(tree.exists(`${base}/data/check-in.store.ts`)).toBe(true);
+    expect(tree.exists(`${base}/state/check-in.store.ts`)).toBe(true);
   });
 
   it('rejects when the domain root does not exist', async () => {
@@ -99,7 +99,7 @@ describe('shared-feature generator', () => {
     expect(read(tree, `${base}/api/auth-session-api.ts`)).toContain(
       'new InjectionToken<AuthSessionApi>',
     );
-    expect(read(tree, `${base}/data/auth-session.store.ts`)).toContain(
+    expect(read(tree, `${base}/state/auth-session.store.ts`)).toContain(
       'class AuthSessionStore implements AuthSessionApi',
     );
     expect(read(tree, `${base}/auth-session.providers.ts`)).toContain(
