@@ -198,6 +198,7 @@
   .cell.yes { background: var(--ok-soft); color: var(--ok); }
   .cell.no { background: var(--surface-2); color: var(--muted); font-weight: 400; }
   .cell.part { background: var(--warn-soft); color: var(--warn); }
+  .cell.spec { background: var(--surface); color: var(--ok); font-size: .72rem; box-shadow: inset 0 0 0 1px var(--ok-soft); }
   .matrix tr.hl th { color: var(--accent); }
   .matrix tr.hl .cell { outline: 2px solid var(--accent); outline-offset: -2px; }
   .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .84rem; color: var(--ink-2); align-items: center; }
@@ -399,6 +400,7 @@
       <div class="legend">
         <span><span class="cell yes">✓</span>erlaubt</span>
         <span><span class="cell part">◐</span>nur Libs aus <code>scope:shared</code></span>
+        <span><span class="cell spec">✓ Spec</span>nur in <code>*.spec.ts</code> (types nicht: testing baut auf types auf, Zyklus)</span>
         <span><span class="cell no">·</span>verboten</span>
       </div>
       <p class="small"><b>shell</b> trägt <code>type:feature</code> und den Marker <code>entry</code>. <b>app</b> darf nur Libs mit <code>entry</code>, <code>port</code> oder <code>scope:shared</code> importieren, und davon nur Produktions-Layer. In <code>*.spec.ts</code> ist zusätzlich <code>type:testing</code> erlaubt, außer in <code>types</code>-Libs.</p>
@@ -834,14 +836,16 @@
       if (c === 'types' || c === 'testing') return 'yes';
       return 'part';
     }
-    return TYPE_ALLOWED[r].includes(c) ? 'yes' : 'no';
+    if (TYPE_ALLOWED[r].includes(c)) return 'yes';
+    // specs of every layer may import testing — except types (testing builds on types: cycle)
+    return c === 'testing' && r !== 'types' ? 'spec' : 'no';
   };
   const mt = document.getElementById('matrix-table');
   mt.innerHTML = `<thead><tr><th class="corner">importiert ↓ · Ziel →</th>${COLS.map((c) => `<th scope="col">${c}</th>`).join('')}</tr></thead>
     <tbody>${ROWS.map((r) => `<tr><th scope="row">${r === 'feature' ? 'feature / shell' : r}</th>${COLS.map((c) => {
       const v = cellFor(r, c);
-      const sym = v === 'yes' ? '✓' : v === 'part' ? '◐' : '·';
-      const label = v === 'yes' ? 'erlaubt' : v === 'part' ? 'nur scope:shared' : 'verboten';
+      const sym = v === 'yes' ? '✓' : v === 'part' ? '◐' : v === 'spec' ? '✓ Spec' : '·';
+      const label = v === 'yes' ? 'erlaubt' : v === 'part' ? 'nur scope:shared' : v === 'spec' ? 'nur in Specs' : 'verboten';
       return `<td><div class="cell ${v}" title="${r} → ${c}: ${label}" aria-label="${r} nach ${c}: ${label}">${sym}</div></td>`;
     }).join('')}</tr>`).join('')}</tbody>`;
   mt.addEventListener('mouseover', (e) => {
