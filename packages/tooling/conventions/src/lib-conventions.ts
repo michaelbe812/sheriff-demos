@@ -6,11 +6,12 @@
  *   libs/<scope>/<layer>                  scope:<scope> type:<layer> feat:none
  *   libs/<scope>/feat-<feat>/<layer>      scope:<scope> type:<layer> feat:<feat>
  *
- * Reduced blueprint: layers types, utils, data, ui, feature (+ testing); no port markers. A slice is closed
- * towards every other slice — shared code lives in `shared`, the app composes slices via their shell (`entry`).
+ * Reduced blueprint: layers types, utils, data-access, state, ui, feature (+ testing); no port markers. A slice is
+ * closed towards every other slice — shared code lives in `shared`, the app composes slices via their shell (`entry`).
+ * data-access = HTTP (the only layer with @angular/common/http), state = signal stores + domain events on top of it.
  *
  * Generated OpenAPI clients (`generated` is a reserved folder, never a scope or layer):
- *   libs/generated/<client>/<part>          scope:shared   ┐ type:types | type:data (api, core) | type:testing,
+ *   libs/generated/<client>/<part>          scope:shared   ┐ type:types | type:data-access (api, core) | type:testing,
  *   libs/<domain>/generated/<client>/<part> scope:<domain> ┘ feat:none, marker `generated` (never entry)
  *   The client folder itself holds the committed spec (openapi.yaml|json); its options live in
  *   openapi-clients.json (workspace root), see packages/tooling/openapi.
@@ -35,10 +36,13 @@ export const FEATURE_LAYERS = ['shell', 'feature'];
 /** Test-only libs (MSW handlers, fixtures): never built, never shipped. */
 export const TESTING_LAYER = 'testing';
 /** Every layer folder the depConstraints know. Anything else would get an unconstrained `type:` tag. */
-export const KNOWN_LAYERS = ['types', 'utils', 'data', 'ui', ...FEATURE_LAYERS, TESTING_LAYER];
+export const KNOWN_LAYERS = ['types', 'utils', 'data-access', 'state', 'ui', ...FEATURE_LAYERS, TESTING_LAYER];
 /** Layers of a slice root (`libs/<scope>/<layer>`): `feature` only exists inside a feat. */
 export const SLICE_LAYERS = KNOWN_LAYERS.filter((layer) => layer !== 'feature');
-/** Layers inside a feat (`libs/<scope>/feat-<feat>/<layer>`): no shell, no testing. */
+/**
+ * Layers inside a feat (`libs/<scope>/feat-<feat>/<layer>`): no shell, no testing. Generic on purpose: a feat may
+ * own a data-access lib (feat-only endpoints), the feat generator only offers state + ui.
+ */
 export const FEAT_LAYERS = KNOWN_LAYERS.filter((layer) => layer !== 'shell' && layer !== TESTING_LAYER);
 
 /** Reserved folder of generated OpenAPI clients: `libs/generated/<client>`, `libs/<domain>/generated/<client>`. */
@@ -50,11 +54,17 @@ export const CLIENTS_CONFIG_FILE = 'openapi-clients.json';
 /** Committed spec in the client folder — exactly one of them. */
 export const CLIENT_SPEC_FILES = ['openapi.yaml', 'openapi.json'];
 /**
- * Parts of a client = libs below its folder, part → layer. `api` and `core` are `data` (HTTP is the data
- * layer's job), not `utils`: the generated runtime (Configuration, encoder, client) imports @angular/common/http.
+ * Parts of a client = libs below its folder, part → layer. `api` and `core` are `data-access` (HTTP is the
+ * data-access layer's job), not `utils`: the generated runtime (Configuration, encoder, client) imports
+ * @angular/common/http. The folder names stay `api`/`core` — `api` is no layer.
  * `testing`: MSW handlers, faker factories and the typed `<client>Http` — generated from the spec only.
  */
-export const CLIENT_PARTS: Record<string, string> = { types: 'types', api: 'data', core: 'data', testing: TESTING_LAYER };
+export const CLIENT_PARTS: Record<string, string> = {
+  types: 'types',
+  api: 'data-access',
+  core: 'data-access',
+  testing: TESTING_LAYER,
+};
 /** Parts written by the code generator adapter (the facade); `testing` has its own generate target. */
 export const CLIENT_CODE_PARTS = ['types', 'api', 'core'];
 
@@ -72,9 +82,9 @@ export const FILE_KINDS: Record<string, string[]> = {
   model: ['types'],
   dto: ['types'],
   utils: ['utils'],
-  events: ['data'],
-  mapper: ['data'],
-  store: ['data', 'ui', 'feature'],
+  events: ['state'],
+  mapper: ['state'],
+  store: ['state', 'ui', 'feature'],
   routes: ['shell'],
   providers: ['shell'],
   shell: ['shell'],
@@ -129,7 +139,7 @@ export function parseClientPath(clientPath: string): ClientPath | undefined {
     : { path: clientPath, name, scope: segments[0], placement: { domain: segments[0] } };
 }
 
-/** `booking/feat-check-booking/data` → { scope, feat, layer }; undefined if the shape is wrong. */
+/** `booking/feat-check-booking/state` → { scope, feat, layer }; undefined if the shape is wrong. */
 export function parseLibPath(libPath: string): LibPath | undefined {
   if (libPath.split('/').includes(GENERATED_FOLDER)) return parseGeneratedLibPath(libPath);
   const [scope, ...rest] = libPath.split('/');
@@ -140,7 +150,7 @@ export function parseLibPath(libPath: string): LibPath | undefined {
   return { scope, layer, feat: featFolder?.slice(FEAT_PREFIX.length) };
 }
 
-/** `generated/pet-client/api` → part `api` (layer data) of the shared client; undefined if the shape is wrong. */
+/** `generated/pet-client/api` → part `api` (layer data-access) of the shared client; undefined if the shape is wrong. */
 function parseGeneratedLibPath(libPath: string): LibPath | undefined {
   const segments = libPath.split('/');
   const part = segments.pop() as string;
@@ -183,7 +193,7 @@ export function scopesOfFile(content: unknown): string[] | undefined {
   return Array.isArray(scopes) ? scopes : undefined;
 }
 
-/** Tags of a lib, derived purely from its path below `libs/` (e.g. `booking/feat-check-booking/data`). */
+/** Tags of a lib, derived purely from its path below `libs/` (e.g. `booking/feat-check-booking/state`). */
 export function deriveTags(libPath: string, options: BlueprintLibsOptions = {}): string[] {
   const error = libPathError(libPath, options);
   // fail instead of silently creating an unconstrained lib (the old tag-typo problem)

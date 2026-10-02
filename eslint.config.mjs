@@ -8,14 +8,15 @@ import { join } from "node:path";
  * REDUCED blueprint as pure Nx module boundaries — see docs/nx-umsetzung.md.
  * One lib per slice x layer, tags:
  *   scope:<slice>   booking, checkin, layout, ... | shared
- *   type:<layer>    types, utils, data, ui, feature | app
+ *   type:<layer>    types, utils, data-access, state, ui, feature | app
  *                   | testing (test-only libs: MSW handlers, fixtures)
  *   feat:<feat>     lib belongs to feat-<feat>/ ; feat:none = outside any feat
  *   entry           the slice root lib (shell: routes/providers) — the only marker
  *
  * No ports: a slice never imports another slice (only itself + shared), a feat
  * never imports a sibling feat. The app shell composes slices via their entry.
- * data = HTTP + stores + domain events (no api/events layers).
+ * data-access = HTTP (the only layer with @angular/common/http, generated client api/core, too);
+ * state = signal stores + domain events on top of it (no api/events layers).
  *
  * Nx combines ALL constraints matching the source's tags with AND; inside one
  * constraint the target needs ANY of the listed tags — the same semantics as
@@ -34,16 +35,18 @@ const tagsWithPrefix = (tags, prefix, ...excluded) =>
     [...new Set(tags)].filter((tag) => tag.startsWith(prefix) && !excluded.includes(tag)).sort();
 
 /** Layers that ship to production — everything except `type:testing`. */
-const productionLayers = ["type:types", "type:utils", "type:data", "type:ui", "type:feature"];
+const productionLayers = ["type:types", "type:utils", "type:data-access", "type:state", "type:ui", "type:feature"];
 
 /** Layer matrix (type axis): X may only depend on the listed layers. */
 const layerConstraints = [
     // types build on other types only (own slice or shared — the scope constraints still apply), no npm at all
     { sourceTag: "type:types", onlyDependOnLibsWithTags: ["type:types"], bannedExternalImports: ["*"] },
     { sourceTag: "type:utils", onlyDependOnLibsWithTags: ["type:types", "type:utils"] },
-    // HTTP, stores, domain events (generated client services/core are data, too)
-    { sourceTag: "type:data", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:data"] },
-    // dumb components: no data — plain values out via outputs, the container makes the event
+    // HTTP wrappers over ApiHttp / the generated clients (generated client api/core are data-access, too)
+    { sourceTag: "type:data-access", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:data-access"] },
+    // signal stores + domain events, load through data-access
+    { sourceTag: "type:state", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:data-access", "type:state"] },
+    // dumb components: no data-access, no state — plain values out via outputs, the container makes the event
     { sourceTag: "type:ui", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:ui"] },
     // every production layer — no `type:*` glob, it would match type:testing
     { sourceTag: "type:feature", onlyDependOnLibsWithTags: productionLayers },
@@ -66,8 +69,8 @@ const noTestPackagesInProduction = [...productionLayers, "type:app"].map((source
     bannedExternalImports: testOnlyPackages,
 }));
 
-/** Nx-only extra: HTTP is the data layer's job (no api layer in the reduced blueprint). */
-const httpOnlyInData = ["type:utils", "type:ui", "type:feature"].map((sourceTag) => ({
+/** Nx-only extra: HTTP is the data-access layer's job — every other production layer is banned from it. */
+const httpOnlyInDataAccess = ["type:utils", "type:state", "type:ui", "type:feature"].map((sourceTag) => ({
     sourceTag,
     bannedExternalImports: ["@angular/common/http"],
 }));
@@ -144,7 +147,7 @@ async function ensureProjectGraph() {
 
 export const blueprintDepConstraints = [
     ...layerConstraints,
-    ...httpOnlyInData,
+    ...httpOnlyInDataAccess,
     ...noTestPackagesInProduction,
     ...sameTagConstraints(allProjectTags()),
     // tooling packages (packages/*) are outside the app architecture

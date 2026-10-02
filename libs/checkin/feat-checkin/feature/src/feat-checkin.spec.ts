@@ -10,7 +10,7 @@ function renderDesk(): void {
 }
 
 describe('FeatCheckin (rendered in Chromium, backend via MSW)', () => {
-  // the desk loads arrivals through checkin's own data layer (CheckinApi) — no booking import
+  // the desk loads arrivals through checkin's own data-access layer (CheckinApi) — no booking import
   beforeEach(() =>
     worker.use(
       arrivalScenarios.withArrivals([

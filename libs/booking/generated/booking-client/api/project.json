@@ -3,7 +3,7 @@
   "$schema": "../../../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
   "sourceRoot": "libs/booking/generated/booking-client/api/src",
-  "tags": ["scope:booking", "type:data", "feat:none", "generated"],
+  "tags": ["scope:booking", "type:data-access", "feat:none", "generated"],
   "implicitDependencies": [
     "booking-generated-booking-client",
     "booking-generated-booking-client-types",

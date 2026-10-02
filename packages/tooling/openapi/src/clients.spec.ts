@@ -88,28 +88,28 @@ describe('openapi-clients.json on the Tree', () => {
 
   it('a renamed client renames <client>Http/Handlers/BaseUrl in apps/ and libs/', () => {
     tree.write(
-      'libs/booking/data/src/a.spec.ts',
+      'libs/booking/data-access/src/a.spec.ts',
       'import { demoClientHttp, demoClientHandlers, demoClientBaseUrl, demoClientX } from "x";\n',
     );
     tree.write('apps/client/src/main.ts', 'const u = demoClientBaseUrl;\n');
-    tree.write('libs/booking/data/src/b.ts', 'export const other = 1;\n');
+    tree.write('libs/booking/data-access/src/b.ts', 'export const other = 1;\n');
 
     expect(renameClientExports(tree, 'generated/demo-client', 'booking/generated/thing-client')).toEqual([
       'apps/client/src/main.ts',
-      'libs/booking/data/src/a.spec.ts',
+      'libs/booking/data-access/src/a.spec.ts',
     ]);
-    expect(read(tree, 'libs/booking/data/src/a.spec.ts')).toBe(
+    expect(read(tree, 'libs/booking/data-access/src/a.spec.ts')).toBe(
       'import { thingClientHttp, thingClientHandlers, thingClientBaseUrl, demoClientX } from "x";\n',
     );
     expect(read(tree, 'apps/client/src/main.ts')).toBe('const u = thingClientBaseUrl;\n');
   });
 
   it('no rename for the same name, a non-client path or a moved (not renamed) client', () => {
-    tree.write('libs/booking/data/src/a.ts', 'demoClientHttp;\n');
+    tree.write('libs/booking/data-access/src/a.ts', 'demoClientHttp;\n');
     expect(renameClientExports(tree, 'generated/demo-client', 'booking/generated/demo-client')).toEqual([]);
-    expect(renameClientExports(tree, 'booking/data', 'booking/generated/x-client')).toEqual([]);
-    expect(renameClientExports(tree, 'generated/demo-client', 'booking/data')).toEqual([]);
-    expect(read(tree, 'libs/booking/data/src/a.ts')).toBe('demoClientHttp;\n');
+    expect(renameClientExports(tree, 'booking/data-access', 'booking/generated/x-client')).toEqual([]);
+    expect(renameClientExports(tree, 'generated/demo-client', 'booking/data-access')).toEqual([]);
+    expect(read(tree, 'libs/booking/data-access/src/a.ts')).toBe('demoClientHttp;\n');
   });
 
   it('relocateClientProject: name, $schema, scope tag, paths in the targets; no-op without project.json', () => {

@@ -5,11 +5,12 @@ const scopes = ['booking', 'checkin', 'layout', 'shared'];
 
 describe('deriveTags', () => {
   it('derives scope/type/feat + entry marker from the path, no ports', () => {
-    expect(deriveTags('booking/data', { scopes })).toEqual(['scope:booking', 'type:data', 'feat:none']);
+    expect(deriveTags('booking/data-access', { scopes })).toEqual(['scope:booking', 'type:data-access', 'feat:none']);
+    expect(deriveTags('booking/state', { scopes })).toEqual(['scope:booking', 'type:state', 'feat:none']);
     expect(deriveTags('booking/shell', { scopes })).toEqual(['scope:booking', 'type:feature', 'feat:none', 'entry']);
-    expect(deriveTags('booking/feat-check-booking/data', { scopes })).toEqual([
+    expect(deriveTags('booking/feat-check-booking/state', { scopes })).toEqual([
       'scope:booking',
-      'type:data',
+      'type:state',
       'feat:check-booking',
     ]);
     expect(deriveTags('booking/feat-check-booking/feature', { scopes })).toEqual([
@@ -17,12 +18,16 @@ describe('deriveTags', () => {
       'type:feature',
       'feat:check-booking',
     ]);
-    expect(deriveTags('shared/data', { scopes })).toEqual(['scope:shared', 'type:data', 'feat:none']);
+    expect(deriveTags('shared/data-access', { scopes })).toEqual(['scope:shared', 'type:data-access', 'feat:none']);
+    expect(deriveTags('shared/state', { scopes })).toEqual(['scope:shared', 'type:state', 'feat:none']);
+    // generic: a feat may own a data-access lib
+    expect(deriveTags('booking/feat-check-booking/data-access', { scopes })).toContain('type:data-access');
     expect(deriveTags('booking/testing', { scopes })).toEqual(['scope:booking', 'type:testing', 'feat:none']);
   });
 
-  it('knows no api/events layer (reduced blueprint)', () => {
+  it('knows no api/events/data layer (reduced blueprint)', () => {
     expect(() => deriveTags('booking/api', { scopes })).toThrow('not a blueprint lib path');
+    expect(() => deriveTags('booking/data', { scopes })).toThrow('not a blueprint lib path');
     expect(() => deriveTags('booking/events', { scopes })).toThrow('not a blueprint lib path');
     expect(() => deriveTags('booking/feat-check-booking/api', { scopes })).toThrow('not a blueprint lib path');
   });
@@ -59,16 +64,16 @@ describe('deriveTags', () => {
 });
 
 describe('generated OpenAPI clients', () => {
-  it('derives scope from the placement, type from the part (api/core = data), marker `generated`', () => {
+  it('derives scope from the placement, type from the part (api/core = data-access), marker `generated`', () => {
     expect(deriveTags('generated/pet-client/api', { scopes })).toEqual([
       'scope:shared',
-      'type:data',
+      'type:data-access',
       'feat:none',
       'generated',
     ]);
     expect(deriveTags('generated/pet-client/core', { scopes })).toEqual([
       'scope:shared',
-      'type:data',
+      'type:data-access',
       'feat:none',
       'generated',
     ]);

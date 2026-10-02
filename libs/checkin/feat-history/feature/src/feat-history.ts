@@ -1,9 +1,9 @@
 import { Component, inject } from '@angular/core';
-import { CheckinStore } from '@blueprint/checkin/data';
+import { CheckinStore } from '@blueprint/checkin/state';
 // shared between sibling feats: lives in the slice root (no feat-port)
 import { checkinLabel, describeDesk } from '@blueprint/checkin/utils';
 
-// boundary-violation-example: import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data'; // sibling feat (never, no feat-port)
+// boundary-violation-example: import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/state'; // sibling feat (never, no feat-port)
 
 @Component({
   selector: 'app-feat-history',

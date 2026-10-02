@@ -51,7 +51,7 @@ describe('client generator', () => {
 
     expect(readJsonFile(tree, 'libs/generated/demo-client/api/project.json')).toMatchObject({
       name: 'generated-demo-client-api',
-      tags: ['scope:shared', 'type:data', 'feat:none', 'generated'],
+      tags: ['scope:shared', 'type:data-access', 'feat:none', 'generated'],
       implicitDependencies: ['generated-demo-client', 'generated-demo-client-types', 'generated-demo-client-core'],
       targets: { build: {}, lint: {}, typecheck: {} },
     });
@@ -256,12 +256,12 @@ describe('client generator', () => {
     expect(info.mock.calls.map(([message]) => message)).toEqual([
       'Client booking-generated-demo-client: libs/booking/generated/demo-client/{openapi.yaml,project.json,types,api,core,testing}, paths in tsconfig.base.json, entry in openapi-clients.json.',
       'Generate: nx run-many -t generate (build/lint/test/typecheck do it on their own).',
-      'Use: @blueprint/booking/generated/demo-client/api (services) + /types in the booking data layer, specs: @blueprint/booking/generated/demo-client/testing (demoClientHandlers, demoClientHttp).',
+      'Use: @blueprint/booking/generated/demo-client/api (services) + /types in the booking data-access layer, specs: @blueprint/booking/generated/demo-client/testing (demoClientHandlers, demoClientHttp).',
     ]);
     await clientGenerator(tree, { name: 'shared-client', spec: 'specs/demo.yaml', skipFormat: true }).then((done) =>
       done(),
     );
-    expect(info).toHaveBeenLastCalledWith(expect.stringContaining('in the shared data layer'));
+    expect(info).toHaveBeenLastCalledWith(expect.stringContaining('in the shared data-access layer'));
     info.mockRestore();
   });
 });

@@ -1,0 +1,13 @@
+{
+  "name": "shared-data-access",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/shared/data-access/src",
+  "tags": ["scope:shared", "type:data-access", "feat:none"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {},
+    "test": {}
+  }
+}

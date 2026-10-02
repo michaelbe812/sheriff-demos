@@ -1,7 +1,7 @@
 /**
  * Example sources of a feat (libs/<slice>/feat-<feat>/…): feature = smart container (lazy route of
- * the slice shell), data = feat store, ui = dumb view. No feat-port: sibling feats never import each
- * other — what they share lives in the slice root libs (types/utils/data/ui).
+ * the slice shell), state = feat store, ui = dumb view. No feat-port: sibling feats never import each
+ * other — what they share lives in the slice root libs (types/utils/data-access/state/ui).
  */
 import { names } from '@nx/devkit';
 import { aliasFor } from '@blueprint/tooling-conventions';
@@ -27,13 +27,13 @@ export function featNames(scope: string, feat: string): FeatNames {
 }
 
 export interface FeatParts {
-  data: boolean;
+  state: boolean;
   ui: boolean;
 }
 
 const alias = (n: FeatNames, layer: string): string => aliasFor(`${n.featPath}/${layer}`);
 
-export const featData = (n: FeatNames): LibFiles => ({
+export const featState = (n: FeatNames): LibFiles => ({
   files: {
     [`${n.feat}.store.ts`]: `import { Injectable, signal } from '@angular/core';
 
@@ -85,13 +85,13 @@ export class ${n.className}View {
 
 export const featFeature = (n: FeatNames, parts: FeatParts): LibFiles => {
   const imports = [
-    `import { ChangeDetectionStrategy, Component${parts.data ? ', inject' : ''} } from '@angular/core';`,
-    parts.data ? `import { ${n.className}Store } from '${alias(n, 'data')}';` : '',
+    `import { ChangeDetectionStrategy, Component${parts.state ? ', inject' : ''} } from '@angular/core';`,
+    parts.state ? `import { ${n.className}Store } from '${alias(n, 'state')}';` : '',
     parts.ui ? `import { ${n.className}View } from '${alias(n, 'ui')}';` : '',
   ].filter(Boolean);
   const view = parts.ui
-    ? `<app-${n.feat}-view [items]="${parts.data ? 'store.items()' : '[]'}"${parts.data ? ' (selected)="store.select($event)"' : ''} />`
-    : parts.data
+    ? `<app-${n.feat}-view [items]="${parts.state ? 'store.items()' : '[]'}"${parts.state ? ' (selected)="store.select($event)"' : ''} />`
+    : parts.state
       ? `<p>{{ store.items().length }} entries</p>`
       : `<p>feat-${n.feat} works.</p>`;
   return {
@@ -100,14 +100,14 @@ export const featFeature = (n: FeatNames, parts: FeatParts): LibFiles => {
 
 /** Smart container of feat-${n.feat} (lazy route of the ${n.scope} shell). */
 @Component({
-  selector: 'app-feat-${n.feat}',${parts.ui ? `\n  imports: [${n.className}View],` : ''}${parts.data ? `\n  providers: [${n.className}Store],` : ''}
+  selector: 'app-feat-${n.feat}',${parts.ui ? `\n  imports: [${n.className}View],` : ''}${parts.state ? `\n  providers: [${n.className}Store],` : ''}
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: \`
     <h2>${n.className}</h2>
     ${view}
   \`,
 })
-export class ${n.container} {${parts.data ? `\n  protected readonly store = inject(${n.className}Store);\n` : ''}}
+export class ${n.container} {${parts.state ? `\n  protected readonly store = inject(${n.className}Store);\n` : ''}}
 `,
     },
     exports: [`feat-${n.feat}`],

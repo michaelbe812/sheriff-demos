@@ -7,14 +7,14 @@ const component = (selector: string, className: string) =>
 ruleTester.run(RULE_NAME, layerSymbolNaming, {
   valid: [
     // stores, ports, feat containers, components — as in the example slices
-    { code: 'export class BookingStore {}', filename: libFile('booking/data/src/booking.store.ts') },
+    { code: 'export class BookingStore {}', filename: libFile('booking/state/src/booking.store.ts') },
     { code: 'export class BookingCardStore {}', filename: libFile('booking/ui/src/booking-card.store.ts') },
-    { code: 'export class CheckinDeskStore {}', filename: libFile('checkin/feat-checkin/data/src/checkin-desk.store.ts') },
-    { code: 'export class BookingApi {}', filename: libFile('booking/data/src/booking-api.ts') },
-    { code: 'export interface PetSummary {}\nexport class PetApi {}', filename: libFile('shared/data/src/pet-api.ts') },
-    { code: 'export class AuthStore {}', filename: libFile('shared/data/src/auth.store.ts') },
-    { code: 'export class ApiHttp {}', filename: libFile('shared/data/src/http-client.ts') },
-    { code: 'export class BookingNotifications {}', filename: libFile('booking/data/src/booking-notifications.ts') },
+    { code: 'export class CheckinDeskStore {}', filename: libFile('checkin/feat-checkin/state/src/checkin-desk.store.ts') },
+    { code: 'export class BookingApi {}', filename: libFile('booking/data-access/src/booking-api.ts') },
+    { code: 'export interface PetSummary {}\nexport class PetApi {}', filename: libFile('shared/data-access/src/pet-api.ts') },
+    { code: 'export class AuthStore {}', filename: libFile('shared/state/src/auth.store.ts') },
+    { code: 'export class ApiHttp {}', filename: libFile('shared/data-access/src/http-client.ts') },
+    { code: 'export class BookingNotifications {}', filename: libFile('booking/data-access/src/booking-notifications.ts') },
     { code: 'export function describeCheck() {}', filename: libFile('booking/utils/src/booking.utils.ts') },
     { code: component('app-feat-check-booking', 'FeatCheckBooking'), filename: libFile('booking/feat-check-booking/feature/src/feat-check-booking.ts') },
     { code: component('app-booking-card', 'BookingCard'), filename: libFile('booking/ui/src/booking-card.ts') },
@@ -43,30 +43,30 @@ ruleTester.run(RULE_NAME, layerSymbolNaming, {
       filename: libFile('checkin/testing/src/handlers/checkin.handlers.ts'),
     },
     // specs, index.ts, generated code, apps: not checked
-    { code: 'export class Whatever {}', filename: libFile('booking/data/src/booking.store.spec.ts') },
-    { code: "export * from './booking.store';", filename: libFile('booking/data/src/index.ts') },
+    { code: 'export class Whatever {}', filename: libFile('booking/state/src/booking.store.spec.ts') },
+    { code: "export * from './booking.store';", filename: libFile('booking/state/src/index.ts') },
     { code: 'export class BookingService {}', filename: libFile('booking/generated/booking-client/api/src/generated/api/booking.store.ts') },
     { code: component('app-root', 'App'), filename: '/ws/apps/client/src/app/app.ts' },
   ],
   invalid: [
     {
       code: 'export class Bookings {}',
-      filename: libFile('booking/data/src/booking.store.ts'),
+      filename: libFile('booking/state/src/booking.store.ts'),
       errors: [{ messageId: 'storeClass', data: { file: 'booking.store.ts', name: 'Bookings', expected: 'BookingStore' } }],
     },
     {
       code: 'export class BookingStore {}',
-      filename: libFile('booking/data/src/booking-state.ts'),
+      filename: libFile('booking/state/src/booking-state.ts'),
       errors: [{ messageId: 'storeFile', data: { name: 'BookingStore', expected: 'booking.store.ts' } }],
     },
     {
       code: 'export class BookingPort {}',
-      filename: libFile('booking/data/src/booking-api.ts'),
+      filename: libFile('booking/data-access/src/booking-api.ts'),
       errors: [{ messageId: 'apiClass', data: { file: 'booking-api.ts', name: 'BookingPort', expected: 'BookingApi' } }],
     },
     {
       code: 'export class BookingApi {}',
-      filename: libFile('booking/data/src/bookings.ts'),
+      filename: libFile('booking/data-access/src/bookings.ts'),
       errors: [{ messageId: 'apiFile', data: { name: 'BookingApi', expected: 'booking-api.ts' } }],
     },
     {

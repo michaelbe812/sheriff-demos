@@ -17,7 +17,7 @@
  *   3. marker: a text in dist/libs/layout/ui is replaced, client:build without task dependencies
  *      must bundle the marker → the app is built against dist, not silently from source
  *      (@nx/angular:application with buildLibsFromSource: false, alias from the lib's package.json)
- *   4. MSW: without the default handlers (`beforeEach(() => worker.use(...))`) booking-data:test must fail
+ *   4. MSW: without the default handlers (`beforeEach(() => worker.use(...))`) booking-state:test must fail
  *   5. MSW worker: the browser gets `/mockServiceWorker.js` of the installed msw package, served by
  *      Vitest itself (`vitest:browser:resolve-virtual`, no publicDir, no committed copy) — a Vitest
  *      internal, so checked here: version + integrity checksum of the served script
@@ -38,9 +38,9 @@ process.env.NX_DAEMON ??= 'false';
 const SNAPSHOT = 'packages/tooling/verify/nx-internals/dist-hashes.json';
 const MARKER_FILE = 'dist/libs/layout/ui/esm2022/nav-bar.js';
 const MARKER_TEXT = 'Bookings';
-const SPEC_FILE = 'libs/booking/data/src/booking.store.spec.ts';
+const SPEC_FILE = 'libs/booking/state/src/booking.store.spec.ts';
 const DEFAULT_HANDLERS_LINE = '  beforeEach(() => worker.use(...bookingHandlers));\n';
-const WORKER_PROBE_SPEC = 'libs/booking/data/src/tmp-msw-worker.spec.ts';
+const WORKER_PROBE_SPEC = 'libs/booking/state/src/tmp-msw-worker.spec.ts';
 
 const args = process.argv.slice(2);
 const reference = args.includes('--reference') ? args[args.indexOf('--reference') + 1] : undefined;
@@ -133,13 +133,13 @@ function missingHandlerFailsTest() {
   try {
     writeFileSync(SPEC_FILE, original.replace(DEFAULT_HANDLERS_LINE, ''));
     try {
-      nx('run', 'booking-data:test', '--skip-nx-cache');
+      nx('run', 'booking-state:test', '--skip-nx-cache');
     } catch (error) {
       const output = `${error.stdout ?? ''}${error.stderr ?? ''}`;
-      if (!output.includes('without a matching request handler')) throw new Error('booking-data:test failed, but not because of MSW');
-      return 'booking-data:test red: "[MSW] … without a matching request handler"';
+      if (!output.includes('without a matching request handler')) throw new Error('booking-state:test failed, but not because of MSW');
+      return 'booking-state:test red: "[MSW] … without a matching request handler"';
     }
-    throw new Error('booking-data:test stayed green without default handlers');
+    throw new Error('booking-state:test stayed green without default handlers');
   } finally {
     writeFileSync(SPEC_FILE, original);
     if (!hadScreenshots) rmSync(screenshots, { recursive: true, force: true });
@@ -169,7 +169,7 @@ test('serves the worker of the installed msw package', async () => {
 `,
   );
   try {
-    nx('run', 'booking-data:test', '--skip-nx-cache');
+    nx('run', 'booking-state:test', '--skip-nx-cache');
     return `msw ${version} (checksum ${checksum}) served by Vitest`;
   } finally {
     rmSync(WORKER_PROBE_SPEC, { force: true });

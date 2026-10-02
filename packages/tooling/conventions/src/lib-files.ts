@@ -40,7 +40,7 @@ export interface LibConfigOptions extends BlueprintLibsOptions {
   targets?: Record<string, JsonObject>;
 }
 
-/** `libs/booking/data` → `../../../` (from the lib folder to the workspace root). */
+/** `libs/booking/state` → `../../../` (from the lib folder to the workspace root). */
 export const offsetFromRoot = (dir: string): string => '../'.repeat(dir.split('/').filter(Boolean).length);
 
 /** A lib is buildable unless it is a testing lib. */

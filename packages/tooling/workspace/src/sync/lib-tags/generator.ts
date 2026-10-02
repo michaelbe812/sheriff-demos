@@ -4,7 +4,7 @@
  * @blueprint/tooling-conventions — the same function the generators write them with).
  *
  * Why: tags are written once, when a lib is created. A rule change in the conventions (e.g. the
- * reduced blueprint: generated api/core became type:data, port/feat-port were dropped) or a
+ * reduced blueprint: generated api/core became type:data-access, data split into data-access + state, port/feat-port were dropped) or a
  * hand-edited project.json leaves stale tags behind. `nx sync` rewrites them, CI's `nx sync:check`
  * reports them. A lib whose path breaks the convention is only reported — its folder needs a fix
  * (move/rename), not its tags.

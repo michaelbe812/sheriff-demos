@@ -1,6 +1,6 @@
 /**
  * Fixture workspace for the generator specs: the relevant slice of the real blueprint
- * (scope list, app routes with a lazy booking shell, booking slice, shared data/testing), every lib
+ * (scope list, app routes with a lazy booking shell, booking slice, shared data-access/testing), every lib
  * with its explicit config files + paths entry, as the generators write them.
  */
 import type { Tree } from '@nx/devkit';
@@ -44,15 +44,17 @@ const files: Record<string, string> = {
   'libs/booking/shell/src/booking.routes.ts': bookingRoutes,
   'libs/booking/types/src/index.ts': "export * from './booking.model';\n",
   'libs/booking/types/src/booking.model.ts': 'export interface Booking {\n  id: string;\n}\n',
-  'libs/booking/data/src/index.ts': "export * from './booking-api';\nexport * from './booking.store';\n",
-  'libs/booking/data/src/booking-api.ts': "import { Booking } from '@blueprint/booking/types';\nexport class BookingApi {\n  all: Booking[] = [];\n}\n",
-  'libs/booking/data/src/booking.store.ts':
-    "import { BookingApi } from './booking-api';\nexport class BookingStore {\n  api = BookingApi;\n}\n",
+  'libs/booking/data-access/src/index.ts': "export * from './booking-api';\n",
+  'libs/booking/data-access/src/booking-api.ts':
+    "import { Booking } from '@blueprint/booking/types';\nexport class BookingApi {\n  all: Booking[] = [];\n}\n",
+  'libs/booking/state/src/index.ts': "export * from './booking.store';\n",
+  'libs/booking/state/src/booking.store.ts':
+    "import { BookingApi } from '@blueprint/booking/data-access';\nexport class BookingStore {\n  api = BookingApi;\n}\n",
   'libs/booking/feat-check-booking/feature/src/index.ts': "export * from './feat-check-booking';\n",
   'libs/booking/feat-check-booking/feature/src/feat-check-booking.ts':
-    "import { BookingStore } from '@blueprint/booking/data';\nexport class FeatCheckBooking {\n  store = BookingStore;\n}\n",
+    "import { BookingStore } from '@blueprint/booking/state';\nexport class FeatCheckBooking {\n  store = BookingStore;\n}\n",
   'libs/layout/shell/src/index.ts': 'export class LayoutShell {}\n',
-  'libs/shared/data/src/index.ts': 'export class ApiHttp {}\n',
+  'libs/shared/data-access/src/index.ts': 'export class ApiHttp {}\n',
   'libs/shared/testing/src/index.ts': 'export const worker = {};\n',
 };
 

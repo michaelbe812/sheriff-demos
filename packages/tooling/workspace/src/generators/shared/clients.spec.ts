@@ -53,22 +53,22 @@ describe('move / rename / remove with OpenAPI clients', () => {
     expect(scopesOf(tree)).toEqual(['booking', 'layout', 'shared']);
   });
 
-  it('remove refuses while a data lib imports the client', async () => {
+  it('remove refuses while a data-access lib imports the client', async () => {
     addClient(tree, 'booking/generated/demo-client');
     tree.write(
-      'libs/booking/data/src/uses.ts',
+      'libs/booking/data-access/src/uses.ts',
       "import { DemoService } from '@blueprint/booking/generated/demo-client/api';\nexport const x = DemoService;\n",
     );
 
     await expect(removeGenerator(tree, { path: 'booking/generated/demo-client' })).rejects.toThrow(
-      'libs/booking/data/src/uses.ts',
+      'libs/booking/data-access/src/uses.ts',
     );
   });
 
   it('move / rename keep the entry, the aliases and the generated testing exports in step', async () => {
     addClient(tree, 'generated/demo-client', { url: 'https://example.org/a.yaml' });
     tree.write(
-      'libs/booking/data/src/booking-api.spec.ts',
+      'libs/booking/data-access/src/booking-api.spec.ts',
       "import { demoClientHandlers, demoClientHttp } from '@blueprint/generated/demo-client/testing';\nexport const h = [demoClientHandlers, demoClientHttp];\n",
     );
 
@@ -98,7 +98,7 @@ describe('move / rename / remove with OpenAPI clients', () => {
     const testing = readProject(tree, 'libs/booking/generated/thing-client/testing/project.json');
     expect(testing.targets.generate.options).toEqual({ client: 'booking/generated/thing-client' });
     expect(pathsOf(tree)).toHaveProperty(['@blueprint/booking/generated/thing-client/api']);
-    expect(read(tree, 'libs/booking/data/src/booking-api.spec.ts')).toBe(
+    expect(read(tree, 'libs/booking/data-access/src/booking-api.spec.ts')).toBe(
       "import { thingClientHandlers, thingClientHttp } from '@blueprint/booking/generated/thing-client/testing';\nexport const h = [thingClientHandlers, thingClientHttp];\n",
     );
   });

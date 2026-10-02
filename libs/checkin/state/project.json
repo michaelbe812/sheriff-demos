@@ -1,0 +1,13 @@
+{
+  "name": "checkin-state",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/checkin/state/src",
+  "tags": ["scope:checkin", "type:state", "feat:none"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {},
+    "test": {}
+  }
+}

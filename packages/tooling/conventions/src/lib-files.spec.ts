@@ -5,7 +5,7 @@ const scopes = ['booking', 'shared'];
 
 describe('libConfigFiles', () => {
   it('buildable lib: project.json (tags from the path), package.json, ng-package.json, tsconfigs', () => {
-    const files = libConfigFiles('booking/feat-check-booking/data', {
+    const files = libConfigFiles('booking/feat-check-booking/state', {
       scopes,
       peerDependencies: { rxjs: '^7.0.0', '@angular/core': '^22.0.0' },
     });
@@ -18,18 +18,18 @@ describe('libConfigFiles', () => {
       'tsconfig.lib.prod.json',
     ]);
     expect(files['project.json']).toEqual({
-      name: 'booking-feat-check-booking-data',
+      name: 'booking-feat-check-booking-state',
       $schema: '../../../../node_modules/nx/schemas/project-schema.json',
       projectType: 'library',
-      sourceRoot: 'libs/booking/feat-check-booking/data/src',
-      tags: ['scope:booking', 'type:data', 'feat:check-booking'],
+      sourceRoot: 'libs/booking/feat-check-booking/state/src',
+      tags: ['scope:booking', 'type:state', 'feat:check-booking'],
       targets: { build: {}, lint: {}, typecheck: {} },
     });
     // sorted peers, key order as ng-packagr copies it into dist
     expect(JSON.stringify(files['package.json'])).toBe(
-      '{"name":"@blueprint/booking/feat-check-booking/data","version":"0.0.1","private":true,"peerDependencies":{"@angular/core":"^22.0.0","rxjs":"^7.0.0"},"sideEffects":false}',
+      '{"name":"@blueprint/booking/feat-check-booking/state","version":"0.0.1","private":true,"peerDependencies":{"@angular/core":"^22.0.0","rxjs":"^7.0.0"},"sideEffects":false}',
     );
-    expect(files['ng-package.json']).toMatchObject({ dest: '../../../../dist/libs/booking/feat-check-booking/data' });
+    expect(files['ng-package.json']).toMatchObject({ dest: '../../../../dist/libs/booking/feat-check-booking/state' });
     expect(files['tsconfig.lib.json']).toMatchObject({ exclude: ['src/**/*.spec.ts', 'src/**/*.test.ts'] });
   });
 
@@ -38,7 +38,7 @@ describe('libConfigFiles', () => {
     expect(Object.keys(testing)).toEqual(['project.json', 'tsconfig.json']);
     expect(testing['project.json']['targets']).toEqual({ lint: {}, typecheck: {} });
 
-    const withSpecs = libConfigFiles('shared/data', {
+    const withSpecs = libConfigFiles('shared/state', {
       scopes,
       hasSpecs: true,
       implicitDependencies: ['x'],
@@ -64,35 +64,35 @@ describe('libConfigFiles', () => {
 
 describe('relocateConfig / replacePaths', () => {
   it('rewrites the path-dependent fields, keeps the rest', () => {
-    const files = libConfigFiles('booking/data', { scopes, hasSpecs: true });
+    const files = libConfigFiles('booking/state', { scopes, hasSpecs: true });
     const project = {
       ...files['project.json'],
-      targets: { build: {}, custom: { options: { file: 'libs/booking/data/x.json' } } },
+      targets: { build: {}, custom: { options: { file: 'libs/booking/state/x.json' } } },
     };
-    expect(relocateConfig('project.json', project, 'booking/data', 'booking/feat-a/data', { scopes })).toMatchObject({
-      name: 'booking-feat-a-data',
+    expect(relocateConfig('project.json', project, 'booking/state', 'booking/feat-a/state', { scopes })).toMatchObject({
+      name: 'booking-feat-a-state',
       $schema: '../../../../node_modules/nx/schemas/project-schema.json',
-      sourceRoot: 'libs/booking/feat-a/data/src',
-      tags: ['scope:booking', 'type:data', 'feat:a'],
-      targets: { build: {}, custom: { options: { file: 'libs/booking/feat-a/data/x.json' } } },
+      sourceRoot: 'libs/booking/feat-a/state/src',
+      tags: ['scope:booking', 'type:state', 'feat:a'],
+      targets: { build: {}, custom: { options: { file: 'libs/booking/feat-a/state/x.json' } } },
     });
     const peers = { ...files['package.json'], peerDependencies: { rxjs: '^7.0.0' } };
-    expect(relocateConfig('package.json', peers, 'booking/data', 'shared/data', { scopes })).toMatchObject({
-      name: '@blueprint/shared/data',
+    expect(relocateConfig('package.json', peers, 'booking/state', 'shared/state', { scopes })).toMatchObject({
+      name: '@blueprint/shared/state',
       peerDependencies: { rxjs: '^7.0.0' },
     });
     expect(
-      relocateConfig('ng-package.json', files['ng-package.json'], 'booking/data', 'booking/feat-a/data'),
+      relocateConfig('ng-package.json', files['ng-package.json'], 'booking/state', 'booking/feat-a/state'),
     ).toMatchObject({
-      dest: '../../../../dist/libs/booking/feat-a/data',
+      dest: '../../../../dist/libs/booking/feat-a/state',
     });
     expect(
-      relocateConfig('tsconfig.json', files['tsconfig.json'], 'booking/data', 'booking/feat-a/data'),
+      relocateConfig('tsconfig.json', files['tsconfig.json'], 'booking/state', 'booking/feat-a/state'),
     ).toMatchObject({
       extends: '../../../../tsconfig.base.json',
     });
     expect(
-      relocateConfig('tsconfig.spec.json', files['tsconfig.spec.json'], 'booking/data', 'booking/feat-a/data'),
+      relocateConfig('tsconfig.spec.json', files['tsconfig.spec.json'], 'booking/state', 'booking/feat-a/state'),
     ).toMatchObject({
       compilerOptions: { outDir: '../../../../dist/out-tsc/spec', noEmit: false },
     });

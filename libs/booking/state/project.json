@@ -1,0 +1,13 @@
+{
+  "name": "booking-state",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/booking/state/src",
+  "tags": ["scope:booking", "type:state", "feat:none"],
+  "targets": {
+    "build": {},
+    "lint": {},
+    "typecheck": {},
+    "test": {}
+  }
+}

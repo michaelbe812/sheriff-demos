@@ -19,20 +19,20 @@ describe('lib-tags sync generator', () => {
     expect(await libTagsSyncGenerator(tree)).toBeUndefined();
   });
 
-  it('rewrites stale tags (old rule set: port marker, type:api) to the derived ones', async () => {
-    setTags('booking/data', ['scope:booking', 'type:api', 'feat:none', 'port']);
+  it('rewrites stale tags (old rule set: port marker, type:api, type:data) to the derived ones', async () => {
+    setTags('booking/state', ['scope:booking', 'type:data', 'feat:none', 'port']);
     setTags('booking/shell', ['scope:booking', 'type:feature', 'feat:none']);
 
     const result = await libTagsSyncGenerator(tree);
 
     expect(result?.outOfSyncDetails).toEqual([
-      'libs/booking/data/project.json: tags ["scope:booking","type:api","feat:none","port"] → ["scope:booking","type:data","feat:none"]',
       'libs/booking/shell/project.json: tags ["scope:booking","type:feature","feat:none"] → ["scope:booking","type:feature","feat:none","entry"]',
+      'libs/booking/state/project.json: tags ["scope:booking","type:data","feat:none","port"] → ["scope:booking","type:state","feat:none"]',
     ]);
-    expect(readProject(tree, 'libs/booking/data/project.json').tags).toEqual(['scope:booking', 'type:data', 'feat:none']);
+    expect(readProject(tree, 'libs/booking/state/project.json').tags).toEqual(['scope:booking', 'type:state', 'feat:none']);
     expect(readProject(tree, 'libs/booking/shell/project.json').tags).toContain('entry');
     // the rest of project.json stays untouched
-    expect(readProject(tree, 'libs/booking/data/project.json')).toMatchObject({ name: 'booking-data', targets: { build: {} } });
+    expect(readProject(tree, 'libs/booking/state/project.json')).toMatchObject({ name: 'booking-state', targets: { build: {} } });
     expect(await libTagsSyncGenerator(tree)).toBeUndefined();
   });
 

@@ -2,8 +2,8 @@ import { Component, input, output } from '@angular/core';
 import { Arrival, CheckinRecord } from '@blueprint/checkin/types';
 import { checkinLabel } from '@blueprint/checkin/utils';
 
-// boundary-violation-example: import { CheckinStore } from '@blueprint/checkin/data'; // ui -> data (store, http, events)
-// boundary-violation-example: import { toCheckinRecord } from '../../../data/src/internal/checkin.mapper'; // module-private internal/
+// boundary-violation-example: import { CheckinStore } from '@blueprint/checkin/state'; // ui -> state (store, events)
+// boundary-violation-example: import { toCheckinRecord } from '../../../state/src/internal/checkin.mapper'; // module-private internal/
 
 @Component({
   selector: 'app-arrival-list',

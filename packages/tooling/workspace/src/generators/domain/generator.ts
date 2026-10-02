@@ -7,7 +7,7 @@ import {
   TESTING_LAYER,
 } from '@blueprint/tooling-conventions';
 import { assertLayerDependencies, generateSliceLayer, generateTestingLib, registerSliceRoute } from '../shared/slice';
-import { dataStoreSpec, SLICE_LAYER_ORDER, sliceNames } from '../shared/slice-templates';
+import { stateStoreSpec, SLICE_LAYER_ORDER, sliceNames } from '../shared/slice-templates';
 import {
   addScope,
   addSpecConfig,
@@ -19,14 +19,14 @@ import {
 
 export interface DomainGeneratorSchema {
   name: string;
-  /** comma-separated or list, default types,data,ui,shell */
+  /** comma-separated or list, default types,data-access,state,ui,shell */
   layers?: string | string[];
   testing?: boolean;
   appRoutesFile?: string;
   skipFormat?: boolean;
 }
 
-export const DEFAULT_DOMAIN_LAYERS = ['types', 'data', 'ui', 'shell'];
+export const DEFAULT_DOMAIN_LAYERS = ['types', 'data-access', 'state', 'ui', 'shell'];
 
 export function parseLayers(layers: string | string[] | undefined, fallback: string[]): string[] {
   if (layers === undefined || layers.length === 0) return fallback;
@@ -54,9 +54,9 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
     generateSliceLayer(tree, n, layer),
   );
   if (withTesting) generateTestingLib(tree, n);
-  if (created.includes('data') && libExists(tree, `${scope}/testing`)) {
-    const spec = dataStoreSpec(n);
-    if (writeIfMissing(tree, `libs/${scope}/data/src/${spec.file}`, spec.content)) addSpecConfig(tree, `${scope}/data`);
+  if (created.includes('state') && libExists(tree, `${scope}/testing`)) {
+    const spec = stateStoreSpec(n);
+    if (writeIfMissing(tree, `libs/${scope}/state/src/${spec.file}`, spec.content)) addSpecConfig(tree, `${scope}/state`);
   }
   if (layers.includes('shell')) registerSliceRoute(tree, scope, options.appRoutesFile ?? APP_ROUTES_FILE);
 
@@ -65,7 +65,7 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
     logger.info(
       `Domain "${scope}": libs/${scope}/{${[...layers, ...(withTesting ? [TESTING_LAYER] : [])].join(',')}} (+ config files, paths), scope in lib-scopes.json.`,
     );
-    logger.info(`Next: nx g @blueprint/tooling-workspace:feat ${scope} <name> --data --ui`);
+    logger.info(`Next: nx g @blueprint/tooling-workspace:feat ${scope} <name> --state --ui`);
   };
 }
 

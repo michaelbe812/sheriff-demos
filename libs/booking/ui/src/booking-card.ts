@@ -3,7 +3,8 @@ import { Booking } from '@blueprint/booking/types';
 import { bookingLabel } from '@blueprint/booking/utils';
 import { BookingCardStore } from './booking-card.store';
 
-// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // ui -> data (store, http, events)
+// boundary-violation-example: import { BookingStore } from '@blueprint/booking/state'; // ui -> state (store, events)
+// boundary-violation-example: import { BookingApi } from '@blueprint/booking/data-access'; // ui -> data-access (http)
 
 /** Dumb component: types, utils, local store — nothing else. Emits the booking id, the container makes the event. */
 @Component({

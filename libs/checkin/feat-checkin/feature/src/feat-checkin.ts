@@ -1,14 +1,14 @@
 import { Component, inject } from '@angular/core';
-import { AuthStore } from '@blueprint/shared/data';
+import { AuthStore } from '@blueprint/shared/state';
 import { AppButton } from '@blueprint/shared/ui';
 import { pluralize } from '@blueprint/shared/utils';
-import { CheckinStore, guestArrived } from '@blueprint/checkin/data';
+import { CheckinStore, guestArrived } from '@blueprint/checkin/state';
 import { Arrival } from '@blueprint/checkin/types';
 import { ArrivalList } from '@blueprint/checkin/ui';
-import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data';
+import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/state';
 
-// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // foreign slice (never, no port)
-// boundary-violation-example: import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/data'; // foreign feat
+// boundary-violation-example: import { BookingStore } from '@blueprint/booking/state'; // foreign slice (never, no port)
+// boundary-violation-example: import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/state'; // foreign feat
 
 /** Smart container: domain store + feat-private desk store + shared auth + dumb ui. */
 @Component({

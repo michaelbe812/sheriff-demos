@@ -14,25 +14,25 @@ describe('feat generator', () => {
   });
 
   it('creates the feature container and only the requested sub-libs', async () => {
-    await featGenerator(tree, { domain: 'booking', name: 'rebook', data: true });
+    await featGenerator(tree, { domain: 'booking', name: 'rebook', state: true });
 
     const libs = listLibPaths(tree, 'booking/feat-rebook');
-    expect(libs).toEqual(['booking/feat-rebook/data', 'booking/feat-rebook/feature']);
+    expect(libs).toEqual(['booking/feat-rebook/feature', 'booking/feat-rebook/state']);
     // no feat-port: sibling feats never import each other
-    expect(deriveTags('booking/feat-rebook/data', { scopes: scopesOf(tree) })).toEqual([
+    expect(deriveTags('booking/feat-rebook/state', { scopes: scopesOf(tree) })).toEqual([
       'scope:booking',
-      'type:data',
+      'type:state',
       'feat:rebook',
     ]);
     const container = read(tree, 'libs/booking/feat-rebook/feature/src/feat-rebook.ts');
-    expect(container).toContain("import { RebookStore } from '@blueprint/booking/feat-rebook/data';");
+    expect(container).toContain("import { RebookStore } from '@blueprint/booking/feat-rebook/state';");
     expect(container).toContain('providers: [RebookStore]');
     expect(container).not.toContain('RebookView');
-    expect(read(tree, 'libs/booking/feat-rebook/data/src/rebook.store.ts')).not.toContain('@blueprint/');
+    expect(read(tree, 'libs/booking/feat-rebook/state/src/rebook.store.ts')).not.toContain('@blueprint/');
   });
 
   it('wires the ui into the container', async () => {
-    await featGenerator(tree, { domain: 'booking', name: 'rebook', data: true, ui: true });
+    await featGenerator(tree, { domain: 'booking', name: 'rebook', state: true, ui: true });
 
     const container = read(tree, 'libs/booking/feat-rebook/feature/src/feat-rebook.ts');
     expect(container).toContain('imports: [RebookView]');
@@ -54,16 +54,16 @@ describe('feat generator', () => {
 
   it('adds the route into the children of a generated domain shell', async () => {
     await domainGenerator(tree, { name: 'payment' });
-    await featGenerator(tree, { domain: 'payment', name: 'feat-checkout', data: true });
+    await featGenerator(tree, { domain: 'payment', name: 'feat-checkout', state: true });
 
     const shellRoutes = read(tree, 'libs/payment/shell/src/payment.routes.ts');
     expect(shellRoutes).toMatch(/children: \[\s*\{ path: '', component: PaymentPage \},\s*\{\s*path: 'checkout',/);
   });
 
   it('is idempotent and validates the domain', async () => {
-    await featGenerator(tree, { domain: 'booking', name: 'rebook', data: true });
+    await featGenerator(tree, { domain: 'booking', name: 'rebook', state: true });
     const routes = read(tree, 'libs/booking/shell/src/booking.routes.ts');
-    await featGenerator(tree, { domain: 'booking', name: 'rebook', data: true });
+    await featGenerator(tree, { domain: 'booking', name: 'rebook', state: true });
     expect(read(tree, 'libs/booking/shell/src/booking.routes.ts')).toBe(routes);
 
     await expect(featGenerator(tree, { domain: 'payment', name: 'x' })).rejects.toThrow('Unknown scope "payment"');

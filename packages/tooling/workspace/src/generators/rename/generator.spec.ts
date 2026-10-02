@@ -12,15 +12,15 @@ describe('rename generator', () => {
   beforeEach(async () => {
     tree = createBlueprintTree();
     await domainGenerator(tree, { name: 'payment' });
-    await featGenerator(tree, { domain: 'payment', name: 'checkout', data: true });
+    await featGenerator(tree, { domain: 'payment', name: 'checkout', state: true });
   });
 
   it('renames a domain: libs, imports (static + import()), route path, scope list', async () => {
     await renameGenerator(tree, { path: 'payment', name: 'billing' });
 
     expect(listLibPaths(tree, 'payment')).toEqual([]);
-    expect(listLibPaths(tree, 'billing')).toContain('billing/feat-checkout/data');
-    expect(read(tree, 'libs/billing/data/src/payment.store.spec.ts')).toContain("from '@blueprint/billing/testing'");
+    expect(listLibPaths(tree, 'billing')).toContain('billing/feat-checkout/state');
+    expect(read(tree, 'libs/billing/state/src/payment.store.spec.ts')).toContain("from '@blueprint/billing/testing'");
     expect(read(tree, 'libs/billing/shell/src/payment.routes.ts')).toContain("import('@blueprint/billing/feat-checkout/feature')");
     const appRoutes = findLazyRoutes(read(tree, APP_ROUTES)).map((route) => [route.path, route.specifier]);
     expect(appRoutes).toContainEqual(['billing', '@blueprint/billing/shell']);
@@ -30,7 +30,7 @@ describe('rename generator', () => {
   it('renames a feat (with or without feat- prefix) and its route path', async () => {
     await renameGenerator(tree, { path: 'payment/feat-checkout', name: 'feat-pay' });
 
-    expect(listLibPaths(tree, 'payment/feat-pay')).toEqual(['payment/feat-pay/data', 'payment/feat-pay/feature']);
+    expect(listLibPaths(tree, 'payment/feat-pay')).toEqual(['payment/feat-pay/feature', 'payment/feat-pay/state']);
     const shellRoutes = findLazyRoutes(read(tree, 'libs/payment/shell/src/payment.routes.ts'));
     expect(shellRoutes.map((route) => [route.path, route.specifier])).toEqual([['pay', '@blueprint/payment/feat-pay/feature']]);
   });
