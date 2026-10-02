@@ -1,5 +1,7 @@
 # Blueprint mit reinen Nx-Mitteln
 
+> **Branch `feat/nx-reduced-blueprint`: reduziertes Regelwerk.** Layer nur `types`/`utils`/`data`/`ui`/`feature` (+ `testing`), keine Ports (`port`/`feat-port`), keine Cross-Slice- und Geschwister-Feat-Imports, Auth in `shared/data`. Was sich gegenüber dem Text unten ändert (Lib-Struktur, Tag-Schema, depConstraints, Generator-Optionen, Verify-Fälle), steht in [`nx-reduziert.md`](./nx-reduziert.md). Build, Cache, Testing & MSW, OpenAPI-Clients, Namensschema und Tooling-Aufbau sind unverändert. Tag-Schema, depConstraints und Anleitungen unten sind auf den reduzierten Stand gebracht; Verifikations-Tabellen und Zahlen weiter unten beschreiben den Stand von `feat/nx-blueprint-explicit-config`.
+
 Branch `feat/nx-blueprint-explicit-config` (abgezweigt von `feat/nx-blueprint` bei `8578b83`): das Regelwerk aus [`architecture.md`](./architecture.md) (Ausgangs-Blueprint, ohne `infra/`), aber **ohne Sheriff**. Die Grenzen erzwingen nur Nx-Libs, Tags und `@nx/enforce-module-boundaries` (Nx 23.1). Sheriff wird auch für Regeln *innerhalb* einer Lib nicht gebraucht (Begründung in [Entscheidung: Feat-Buckets als eigene Libs](#entscheidung-feat-buckets-als-eigene-libs)).
 
 ## Variante explizite Config
@@ -55,28 +57,26 @@ Dazu pro Client-Ordner `libs/[<d>/]generated/<client>/project.json`. Summe: 267 
 ```
 apps/client/src/            type:app            dünne Shell: main.ts, app.ts, app.config.ts, app.routes.ts
 libs/
-  <slice>/                  booking, checkin (Domains) · auth, layout (Shared-Features)
-    types/ utils/ events/ data/ ui/         scope:<slice> type:<layer> feat:none
-    api/                                    + port        öffentliche API des Slices
+  <slice>/                  booking, checkin (Domains) · layout (nur von der App komponiert)
+    types/ utils/ data/ ui/                 scope:<slice> type:<layer> feat:none   (data = HTTP + Stores + Events)
     shell/                                  type:feature + entry   routes/providers/shell = Slice-Root
     feat-<feat>/
       feature/                              scope:<slice> type:feature feat:<feat>
-      api/                                  + feat-port   öffentliche API für Geschwister-Feats
-      data/ ui/ …                           feat:<feat>
-  shared/types|utils|api|ui                 scope:shared type:<layer> feat:none
+      data/ ui/ …                           feat:<feat>   (kein feat-port)
+  shared/types|utils|data|ui                scope:shared type:<layer> feat:none   (shared/data: ApiHttp, PetApi, AuthStore)
   <domain>/testing, shared/testing          scope:<d>|shared type:testing feat:none   nur für Specs, siehe Testing & MSW
   generated/<client>/types|api|core|testing           scope:shared      ┐ generierte OpenAPI-Clients, Marker `generated`,
-  <domain>/generated/<client>/types|api|core|testing  scope:<domain>    ┘ nur index.ts committet, siehe OpenAPI-Clients
+  <domain>/generated/<client>/types|api|core|testing  scope:<domain>    ┘ api/core = type:data, nur index.ts committet, siehe OpenAPI-Clients
 ```
 
 - Jede Lib = Ordner + `src/index.ts` als **einzige** öffentliche API, daneben ihre Config-Dateien (`project.json`, `tsconfig*.json`, bei buildable Libs `package.json` + `ng-package.json`, siehe [Explizite Config pro Lib](#explizite-config-pro-lib)). `tooling-verify:verify` meldet jede fehlende oder falsche Datei.
 - Neue Domains, Libs und Feats legen die Generatoren an (siehe [Tooling & Generatoren](#tooling--generatoren)).
-- Alias: `@blueprint/<pfad-unter-libs>`, z.B. `@blueprint/booking/api` oder `@blueprint/checkin/feat-checkin/api`. Ein exakter Eintrag pro Lib in `tsconfig.base.json` (`@blueprint/booking/api` → `./libs/booking/api/src/index.ts`), kein Wildcard.
+- Alias: `@blueprint/<pfad-unter-libs>`, z.B. `@blueprint/booking/data` oder `@blueprint/checkin/feat-checkin/data`. Ein exakter Eintrag pro Lib in `tsconfig.base.json` (`@blueprint/booking/data` → `./libs/booking/data/src/index.ts`), kein Wildcard.
 - Projektname = Pfad mit `-` (`booking-feat-check-booking-data`), steht in `project.json`.
 - `booking.routes.ts`/`checkin.routes.ts` exportieren jetzt benannt (`bookingRoutes`), weil `export *` keinen Default re-exportiert.
 - Ein lib-privater Ordner `internal/` (z.B. `checkin/data/src/internal/checkin.mapper.ts`) ist bloße Konvention. Privat ist die Datei, weil `index.ts` sie nicht exportiert.
 
-**Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2, dazu 3 Testing-Libs und 12 Libs der 3 Beispiel-Clients (je types/api/core/testing, nur `index.ts` committet). Pro Lib 2–7 Config-Dateien, Zählung siehe [Dateizählung](#dateizählung).
+**Kosten:** 23 Libs (booking 9, checkin 8, layout 2, shared 4; vor der Reduktion 32) statt 2, dazu 3 Testing-Libs und 12 Libs der 3 Beispiel-Clients (je types/api/core/testing, nur `index.ts` committet). Pro Lib 2–7 Config-Dateien, Zählung siehe [Dateizählung](#dateizählung).
 
 ## Buildable Libs
 
@@ -97,11 +97,11 @@ Jede Lib außer den Testing-Libs hat ein `build`-Target: `@nx/angular:ng-packagr
 Jede Lib trägt ihre Config selbst, kein Plugin leitet etwas ab. Eine neue Lib legt ein Generator an:
 
 ```sh
-nx g @blueprint/tooling-workspace:layer booking events
-# → libs/booking/events/src/{index.ts,booking.events.ts}
-#   + project.json (booking-events, Tags scope:booking type:events feat:none, Targets build/lint/typecheck),
+nx g @blueprint/tooling-workspace:layer checkin utils
+# → libs/checkin/utils/src/{index.ts,checkin.utils.ts}
+#   + project.json (checkin-utils, Tags scope:checkin type:utils feat:none, Targets build/lint/typecheck),
 #     package.json, ng-package.json, tsconfig.json, tsconfig.lib.json, tsconfig.lib.prod.json
-#   + tsconfig.base.json paths["@blueprint/booking/events"]
+#   + tsconfig.base.json paths["@blueprint/checkin/utils"]
 ```
 
 Von Hand geht es auch: alle Dateien wie in einer Nachbar-Lib, Tags passend zum Pfad, Scope in `lib-scopes.json`, `paths`-Eintrag. Specs dazulegen (`src/**/*.spec.ts`) braucht zusätzlich `tsconfig.spec.json` + `"test": {}` (der Domain-Generator macht das für die Beispiel-Spec). Ein Ordner `testing` statt eines Layers ist eine Testing-Lib (`type:testing`, kein `build`, keine Build-Dateien). `tooling-verify:verify` beweist bei jedem Lauf mit zwei temporären Libs in `libs/booking/feat-tmpverify/` (`ui`, `types`, mit den Dateien der Generatoren): Projekt, Tags und Targets stimmen, 8 Lint-Fälle gegen und von ihnen greifen; eine dritte Lib nur mit `src/index.ts` meldet der Config-Wächter (7 Meldungen). Danach wird alles entfernt und `tsconfig.base.json` wiederhergestellt.
@@ -187,9 +187,9 @@ Alle Lib-Targets hashen zusätzlich den generierten Code ihrer Abhängigkeiten (
 | Achse | Tags | Wo |
 |---|---|---|
 | Scope | `scope:<slice>`, `scope:shared` | jede Lib |
-| Type | `type:types\|utils\|events\|api\|data\|ui\|feature`, `type:app`, `type:tooling`, `type:testing` | jede Lib/App/Package |
+| Type | `type:types\|utils\|data\|ui\|feature`, `type:app`, `type:tooling`, `type:testing` | jede Lib/App/Package |
 | Feat | `feat:<feat>` bzw. `feat:none` | jede Lib |
-| Marker | `port`, `feat-port`, `entry`, `generated` | Slice-api, Feat-api, Slice-shell, generierte Client-Libs (siehe [OpenAPI-Clients](#openapi-clients)) |
+| Marker | `entry`, `generated` | Slice-shell, generierte Client-Libs (siehe [OpenAPI-Clients](#openapi-clients)). Keine Ports |
 | Tooling | `tooling:conventions\|workspace\|openapi\|ng-lib\|verify` | Tooling-Libs in `packages/tooling/*` (siehe [Tooling & Generatoren](#tooling--generatoren)) |
 
 ## depConstraints (`eslint.config.mjs`)
@@ -197,24 +197,22 @@ Alle Lib-Targets hashen zusätzlich den generierten Code ihrer Abhängigkeiten (
 Nx wendet **alle** Constraints an, die auf die Tags der Quelle passen, und verknüpft sie mit UND. Innerhalb einer Constraint reicht **ein** passendes Ziel-Tag (ODER). Das ist dieselbe Semantik wie bei den Sheriff-depRules. Marker-Tags brauchen deshalb keine transparente `anyTag`-Regel: für ein Tag ohne Constraint gilt einfach nichts.
 
 ```js
-// Layer-Matrix
+// Layer-Matrix (reduziert: kein api, kein events — beides in data)
 type:types   -> types                      + bannedExternalImports ['*']   (Scope-Regeln gelten: shared → shared, Domain → eigene + shared)
 type:utils   -> types, utils
-type:events  -> types, utils, events
-type:api     -> types, utils, api
-type:data    -> types, utils, api, data, events
-type:ui      -> types, utils, ui, events
+type:data    -> types, utils, data         (HTTP, Stores, Events; generierte api/core sind type:data)
+type:ui      -> types, utils, ui
 type:feature -> alle Produktions-Layer     (kein `type:*`-Glob mehr, er träfe type:testing)
-type:app     -> entry, port, scope:shared  UND nur Produktions-Layer
+type:app     -> entry, scope:shared        UND nur Produktions-Layer
 type:testing -> types, testing, scope:shared
-// sameTag-Ersatz, generiert aus den vorhandenen Tags
+// sameTag-Ersatz, generiert aus den vorhandenen Tags — ohne Ports
 scope:shared -> scope:shared
-scope:<s>    -> scope:<s>, port, scope:shared           (je Slice)
-feat:<f>     -> feat:<f>, feat:none, feat-port          (je Feat)
+scope:<s>    -> scope:<s>, scope:shared                 (je Slice: nie ein fremder Slice)
+feat:<f>     -> feat:<f>, feat:none                     (je Feat: nie ein Geschwister-Feat)
 // Nx-Extra
-utils|events|data|ui|feature: bannedExternalImports ['@angular/common/http']
+utils|ui|feature: bannedExternalImports ['@angular/common/http']
 Produktions-Layer + app:      bannedExternalImports [msw, msw/*, vitest, vitest/*, @vitest/*, @testing-library/*, playwright, playwright/*]
-// Override für *.spec.ts, *.test.ts, test-setup.ts: dieselben Constraints + type:testing (siehe Testing & MSW)
+// Override für *.spec.ts, *.test.ts, test-setup.ts: Layer-Constraints + type:testing; scope:*/feat:* unverändert (kein fremdes testing)
 ```
 
 **Wie wird `sameTag` ausgedrückt?** Gar nicht direkt: Nx kann aus einem Ziel-Tag nicht auf das Quell-Tag zurückverweisen. Deshalb gibt es eine Constraint pro Scope und eine pro Feat. `sameTagConstraints()` in `eslint.config.mjs` liest dazu die Tags aller Projekte aus dem Projekt-Graph (= die Tags der `project.json`) und erzeugt die Constraints aus den vorhandenen `scope:*`- und `feat:*`-Tags. Ein neuer Slice ist abgedeckt, sobald die `project.json` seiner ersten Lib den Tag trägt. Eine Liste muss niemand pflegen.
@@ -709,12 +707,12 @@ Abhängigkeiten (Paket-Imports, `depConstraints` + 20 Verify-Fälle, zyklenfrei)
 ### Anleitungen
 
 ```sh
-# neue Domain: types, api, data, ui, shell + testing + Beispiel-Spec, je mit Config-Dateien + paths, Lazy-Route, Scope in lib-scopes.json
+# neue Domain: types, data, ui, shell + testing + Beispiel-Spec, je mit Config-Dateien + paths, Lazy-Route, Scope in lib-scopes.json
 nx g @blueprint/tooling-workspace:domain payment
 # neue Lib in bestehender Domain (Layer-Liste aus den Konventionen)
-nx g @blueprint/tooling-workspace:layer payment events
-# neues Feat: feature-Container + optional api (feat-port), data, ui; Lazy-Route in den Shell-Routes
-nx g @blueprint/tooling-workspace:feat payment checkout --api --data
+nx g @blueprint/tooling-workspace:layer payment utils
+# neues Feat: feature-Container + optional data, ui; Lazy-Route in den Shell-Routes
+nx g @blueprint/tooling-workspace:feat payment checkout --data --ui
 # testing-Gerüst für eine bestehende Domain
 nx g @blueprint/tooling-workspace:testing checkin
 # generierter OpenAPI-Client (shared oder --domain), Spec als Datei oder URL
@@ -730,7 +728,7 @@ nx g @blueprint/tooling-workspace:component libs/booking/ui/src/booking-badge   
 nx g @nx/angular:component libs/booking/ui/src/booking-badge --export          # geht jetzt auch direkt (ohne Layer-Prüfung)
 ```
 
-`@nx/angular:component` funktioniert mit `project.json` wieder (getestet: erzeugt `booking-badge.ts` und exportiert es aus `index.ts`). Nx hat keinen Service-Generator; `@schematics/angular:service` läuft über Nx' Angular-CLI-Adapter mit `--project booking-data --path libs/booking/data/src` (getestet). Die Blueprint-Generatoren `component`/`service` bleiben als **dünne Vorbelegung**: Layer-Prüfung (component nur in ui/feature/shell, service in api/data/feature/shell, nie in generierten Clients), Pfad statt Projekt + Name, inline Template/Styles, `app`-Präfix, ohne Spec, Export aus `index.ts`, dann delegieren sie an den Nx- bzw. Angular-Generator (Templates von dort, z.B. Angular 22 `@Service()`). `store` behält sein Template (Nx kennt keinen Signal-Store-Generator). `nx.json` → `generators["@nx/angular:component"].style` ist gesetzt, sonst schreibt der Nx-Generator ihn beim ersten Aufruf in `nx.json` (Cache-Invalidierung).
+`@nx/angular:component` funktioniert mit `project.json` wieder (getestet: erzeugt `booking-badge.ts` und exportiert es aus `index.ts`). Nx hat keinen Service-Generator; `@schematics/angular:service` läuft über Nx' Angular-CLI-Adapter mit `--project booking-data --path libs/booking/data/src` (getestet). Die Blueprint-Generatoren `component`/`service` bleiben als **dünne Vorbelegung**: Layer-Prüfung (component nur in ui/feature/shell, service in data/feature/shell, nie in generierten Clients), Pfad statt Projekt + Name, inline Template/Styles, `app`-Präfix, ohne Spec, Export aus `index.ts`, dann delegieren sie an den Nx- bzw. Angular-Generator (Templates von dort, z.B. Angular 22 `@Service()`). `store` behält sein Template (Nx kennt keinen Signal-Store-Generator). `nx.json` → `generators["@nx/angular:component"].style` ist gesetzt, sonst schreibt der Nx-Generator ihn beim ersten Aufruf in `nx.json` (Cache-Invalidierung).
 
 ### Wächter
 
@@ -831,7 +829,7 @@ Voraussetzungen: Node 22 (≥ 22.16), pnpm 10, Java 11+ (`java -version`, für d
 ```sh
 # 1. frischer Checkout
 git clone <repo-url> sheriff-blue-print && cd sheriff-blue-print
-git checkout feat/nx-blueprint-explicit-config
+git checkout feat/nx-reduced-blueprint
 pnpm install
 pnpm exec playwright install chromium          # einmalig, Browser für die Tests
 
@@ -842,7 +840,7 @@ ls libs/booking/generated/booking-client/*/src/generated
 
 # 3. bauen, testen, prüfen
 pnpm exec nx run-many -t build lint test typecheck
-pnpm verify                                     # nx run tooling-verify:verify, 151 Fälle + Checks
+pnpm verify                                     # nx run tooling-verify:verify, 155 Fälle + Checks
 pnpm exec nx sync:check
 
 # 4. ansehen
@@ -856,9 +854,9 @@ pnpm exec nx show projects --affected --files packages/tooling/ng-lib/src/test.j
 pnpm exec nx show projects --affected --files packages/tooling/conventions/src/lib-conventions.ts   # nur Tooling (Tags stehen in project.json)
 
 # 5. Tests interaktiv: Vitest UI (watch, headed Chromium mit Browser-Vorschau, MSW läuft wie im Test), bis Strg+C oder q
-pnpm test:ui booking-api                        # = nx run booking-api:test --ui → http://localhost:51204/__vitest__/
-pnpm exec nx run booking-api:test --ui --headless   # UI ohne Browserfenster (Tests laufen headless, Ergebnis in der UI)
-pnpm exec nx run booking-api:test --browsers=chromium --watch   # nur headed, ohne UI
+pnpm test:ui booking-data                       # = nx run booking-data:test --ui → http://localhost:51204/__vitest__/
+pnpm exec nx run booking-data:test --ui --headless   # UI ohne Browserfenster (Tests laufen headless, Ergebnis in der UI)
+pnpm exec nx run booking-data:test --browsers=chromium --watch   # nur headed, ohne UI
 
 # 6. neuen Client anlegen (Datei oder URL), nutzen, wieder entfernen
 cat > /tmp/demo.yaml <<'YAML'
@@ -886,7 +884,7 @@ components:
 YAML
 pnpm exec nx g @blueprint/tooling-openapi:client demo-client --spec=/tmp/demo.yaml   # shared; Domain: --domain=checkin, Adapter: --adapter=hey-api
 pnpm exec nx run-many -t build lint test typecheck
-#   nutzen: @blueprint/generated/demo-client/api im api-Layer, in Specs
+#   nutzen: @blueprint/generated/demo-client/api im data-Layer, in Specs
 #   import { demoClientHandlers, demoClientHttp } from '@blueprint/generated/demo-client/testing'
 pnpm exec nx g @blueprint/tooling-workspace:remove generated/demo-client
 git status                                      # wieder leer
@@ -894,9 +892,9 @@ git status                                      # wieder leer
 # 7. Adapter tauschen (booking-client)
 #   openapi-clients.json: "booking/generated/booking-client": { "adapter": "hey-api" }
 #   libs/booking/generated/booking-client/project.json: generate-Inputs auf hey-api (pnpm verify nennt die erwarteten)
-#   libs/booking/api/src/booking-api.ts: Variante B (siehe Abschnitt Adapter)
+#   libs/booking/data/src/booking-api.ts: Variante B (siehe Abschnitt Adapter)
 pnpm exec nx run-many -t build lint test typecheck
-git checkout openapi-clients.json libs/booking/api/src/booking-api.ts libs/booking/generated/booking-client/project.json
+git checkout openapi-clients.json libs/booking/data/src/booking-api.ts libs/booking/generated/booking-client/project.json
 
 # 8. Spec aktualisieren (nur Clients mit url)
 pnpm exec nx run generated-pet-client:update-spec   # "unchanged" oder "updated"
@@ -909,14 +907,14 @@ git checkout openapi-clients.json
 
 # 10. Negativprobe Boundaries
 printf "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';\nexport const x = BookingsService;\n" > libs/booking/ui/src/probe.ts
-pnpm exec nx lint booking-ui                    # rot: type:ui darf kein type:api
+pnpm exec nx lint booking-ui                    # rot: type:ui darf kein type:data
 mv libs/booking/ui/src/probe.ts libs/checkin/data/src/probe.ts
-pnpm exec nx lint checkin-data                  # rot: scope:checkin nur über den Port
+pnpm exec nx lint checkin-data                  # rot: scope:checkin nie ein fremder Slice
 rm libs/checkin/data/src/probe.ts
 
 # 11. Negativprobe fehlender Handler
-#   in libs/booking/api/src/booking-notifications.spec.ts die Zeile
+#   in libs/booking/data/src/booking-notifications.spec.ts die Zeile
 #   beforeEach(() => worker.use(...notificationClientHandlers)); auskommentieren
-pnpm exec nx test booking-api                   # rot: [MSW] … without a matching request handler
-git checkout libs/booking/api/src/booking-notifications.spec.ts
+pnpm exec nx test booking-data                  # rot: [MSW] … without a matching request handler
+git checkout libs/booking/data/src/booking-notifications.spec.ts
 ```
