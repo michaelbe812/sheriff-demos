@@ -100,6 +100,7 @@ nx g @blueprint/tooling-openapi:client things-client --domain=payment --spec=./t
 - `pnpm verify:nx-internals --update-snapshot`: 7/7 grün (run-many `--skip-nx-cache`, dist-Snapshot neu: 511 Dateien, Marker „App baut gegen dist“, MSW-Proben, Vitest-UI-Hasher, verify).
 - `nx sync:check` grün.
 - **Mutationsprobe:** Scope- und Feat-Constraints um alle Slices/Feats erweitert (= Ports durch die Hintertür) → 22 Fälle rot (`133/155`), danach zurückgesetzt.
+- **App im Browser** (`nx run client:serve`): `/bookings` (Bestätigen → Status `confirmed`), `/bookings/manage` (`describeCheck` aus `booking/utils`), `/checkin` („Agent: Michael“ aus `shared/data`, Walk-in → „Checked in today (1)“), `/checkin/history` (`describeDesk` aus `checkin/utils`) laufen ohne Konsolenfehler. „Load arrivals“ scheitert, weil die Demo kein Backend hat (Dev-Server liefert `index.html` für `/api/arrivals`). Auf dem Vorgänger-Branch war das bei `/api/bookings` genauso.
 - **Generator-E2E:** `domain payment`, `feat payment checkout --data --ui`, `layer payment utils`, `component`/`service`/`store`, `client things-client --domain=payment` (Facade, Adapter openapi-tools) + Nutzung in `payment/data` → `run-many` der payment-Projekte + `client`, `verify` (47 Libs), `sync:check` grün; `remove payment --force` → `git status` wie vorher.
 
 ## Trade-offs
