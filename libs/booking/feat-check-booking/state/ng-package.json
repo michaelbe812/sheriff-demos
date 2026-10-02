@@ -1,6 +1,6 @@
 {
   "$schema": "../../../../node_modules/ng-packagr/ng-package.schema.json",
-  "dest": "../../../../dist/libs/checkin/feat-checkin/data",
+  "dest": "../../../../dist/libs/booking/feat-check-booking/state",
   "lib": {
     "entryFile": "src/index.ts"
   }

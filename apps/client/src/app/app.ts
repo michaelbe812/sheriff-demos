@@ -7,7 +7,7 @@ import { BookingApi } from '@blueprint/booking/api';
 // Alle folgenden Zeilen einkommentieren ⇒ @nx/enforce-module-boundaries feuert.
 //
 // nx-violation-example: import { HttpBookingApi } from '@blueprint/booking/infra'; // type:app -> type:infra (Impl ist slice-privat)
-// nx-violation-example: import { BookingStore } from '@blueprint/booking/data';    // type:app -> type:data (am Port vorbei)
+// nx-violation-example: import { BookingStore } from '@blueprint/booking/state';    // type:app -> type:state (am Port vorbei)
 // nx-violation-example: import { BookingCard } from '@blueprint/booking/ui';       // type:app -> type:ui
 // nx-violation-example: import { bookingLabel } from '@blueprint/booking/utils';   // type:app -> type:utils (Slice-interna)
 

@@ -2,7 +2,7 @@ import { CheckinDto } from '@blueprint/checkin/api';
 import { CheckinRecord } from '@blueprint/checkin/types';
 
 /**
- * LIB-PRIVATE: not re-exported from the data lib's index.ts, so no other lib
+ * LIB-PRIVATE: not re-exported from the state lib's index.ts, so no other lib
  * can import it — the Nx public API (tsconfig path -> index.ts) is the
  * encapsulation. The `internal/` folder is a naming convention only.
  */

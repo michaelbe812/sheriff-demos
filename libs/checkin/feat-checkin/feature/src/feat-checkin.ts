@@ -3,13 +3,13 @@ import { Component, inject } from '@angular/core';
 import { AUTH_API } from '@blueprint/auth/api';
 import { AppButton } from '@blueprint/shared/ui';
 import { pluralize } from '@blueprint/shared/utils';
-import { CheckinStore } from '@blueprint/checkin/data';
+import { CheckinStore } from '@blueprint/checkin/state';
 import { GuestArrived } from '@blueprint/checkin/events';
 import { ArrivalList } from '@blueprint/checkin/ui';
-import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data';
+import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/state';
 
-// nx-violation-example: import { BookingStore } from '@blueprint/booking/data'; // foreign scope internals
-// nx-violation-example: import { AuthStore } from '@blueprint/auth/data'; // shared-feature internals
+// nx-violation-example: import { BookingStore } from '@blueprint/booking/state'; // foreign scope internals
+// nx-violation-example: import { AuthStore } from '@blueprint/auth/state'; // shared-feature internals
 
 /** Smart container: domain store + feat-private desk store + dumb ui. */
 @Component({

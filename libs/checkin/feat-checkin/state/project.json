@@ -1,9 +1,9 @@
 {
-  "name": "checkin-feat-checkin-data",
+  "name": "checkin-feat-checkin-state",
   "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "libs/checkin/feat-checkin/data/src",
-  "tags": ["scope:checkin/feat-checkin", "type:data"],
+  "sourceRoot": "libs/checkin/feat-checkin/state/src",
+  "tags": ["scope:checkin/feat-checkin", "type:state"],
   "targets": {
     "build": {
       "executor": "@nx/angular:ng-packagr-lite"

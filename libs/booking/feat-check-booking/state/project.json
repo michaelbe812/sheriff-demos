@@ -1,9 +1,9 @@
 {
-  "name": "booking-feat-check-booking-data",
+  "name": "booking-feat-check-booking-state",
   "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "libs/booking/feat-check-booking/data/src",
-  "tags": ["scope:booking/feat-check-booking", "type:data"],
+  "sourceRoot": "libs/booking/feat-check-booking/state/src",
+  "tags": ["scope:booking/feat-check-booking", "type:state"],
   "targets": {
     "build": {
       "executor": "@nx/angular:ng-packagr-lite"

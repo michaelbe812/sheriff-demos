@@ -8,7 +8,7 @@ import { isConfirmed } from '@blueprint/booking/utils';
 @Injectable({ providedIn: 'root' })
 export class BookingStore {
   // binds to the ABSTRACT class, not the impl — the store cannot name
-  // HttpBookingApi even if it wanted to (type:data has no clearance towards
+  // HttpBookingApi even if it wanted to (type:state has no clearance towards
   // type:infra). The slice root binds it via provideBooking().
   private readonly api = inject(BookingApi);
   private readonly bookings = signal<Booking[]>([

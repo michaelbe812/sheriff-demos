@@ -1,9 +1,9 @@
 {
-  "name": "booking-data",
+  "name": "auth-state",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "libs/booking/data/src",
-  "tags": ["scope:booking", "type:data"],
+  "sourceRoot": "libs/auth/state/src",
+  "tags": ["scope:auth", "type:state"],
   "targets": {
     "build": {
       "executor": "@nx/angular:ng-packagr-lite"

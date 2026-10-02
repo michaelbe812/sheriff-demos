@@ -9,22 +9,22 @@ Der Ansatz aus [`architecture.md`](./architecture.md) — gleiche Layer-Matrix, 
 ```
 libs/
   shared/{types,utils,api,ui}              scope:shared
-  auth/{api,data,shell}                    scope:auth       (Shared-Feature)
+  auth/{api,state,shell}                   scope:auth       (Shared-Feature)
   layout/{ui,shell}                        scope:layout     (Shared-Feature)
   booking/                                 scope:booking
-    types utils events api infra data ui   je eine Lib, slice-shared
+    types utils events api infra state ui  je eine Lib, slice-shared
     shell                                  Slice-Root: Routes + provideBooking()
     feat-check-booking/                    scope:booking/feat-check-booking
       feature                              Smart Container (lazy geladen)
       api                                  feat-port
-      data ui                              feat-lokal, nur weil vorhanden
+      state ui                             feat-lokal, nur weil vorhanden
     feat-manage-booking/feature
-  checkin/                                 analog; feat-checkin/{feature,api,data}, feat-history/feature
+  checkin/                                 analog; feat-checkin/{feature,api,state}, feat-history/feature
 apps/client                                type:app — nur app.ts, app.config.ts, app.routes.ts, main.ts
 ```
 
 - Jede Lib: `project.json` (Tags, `build`), `src/index.ts` (Public API), **ein** exakter Path in `tsconfig.base.json` → `index.ts`. Kein Wildcard. Dazu die Build-Dateien (siehe [Buildable](#buildable)).
-- Alias = Pfad ohne `libs/`: `@blueprint/booking/data`, `@blueprint/booking/feat-check-booking/feature`, `@blueprint/booking/feat-check-booking/api`. Das `/feature` bleibt im Alias, sonst baut ng-packagr nicht (siehe [Buildable](#buildable)).
+- Alias = Pfad ohne `libs/`: `@blueprint/booking/state`, `@blueprint/booking/feat-check-booking/feature`, `@blueprint/booking/feat-check-booking/api`. Das `/feature` bleibt im Alias, sonst baut ng-packagr nicht (siehe [Buildable](#buildable)).
 - Die **Shell-Lib** ist der Slice-Root: Sie verdrahtet Port → Impl (`provideX()`) und lädt die Feats lazy (`loadComponent`). Die App importiert Shells statisch. Die Lazy-Grenze ist die Feat-Lib.
 
 ## Tag-Schema
@@ -34,7 +34,7 @@ apps/client                                type:app — nur app.ts, app.config.t
 | `scope:<slice>` | slice-shared Libs + Shell | Domain oder Shared-Feature |
 | `scope:<slice>/feat-<f>` | alle Libs **eines** Feats | hierarchisch: Feat gehört zur Slice |
 | `scope:shared` | `libs/shared/*` | dummer Shared-Bereich |
-| `type:<layer>` | jede Lib genau einer | types, utils, events, api, infra, data, ui, feature, shell |
+| `type:<layer>` | jede Lib genau einer | types, utils, events, api, infra, state, ui, feature, shell |
 | `type:app` | Apps | Composition Root der App |
 | `type:tooling` | `packages/*` | außerhalb der App-Architektur, darf nur `type:tooling` |
 | `npm:private` / `npm:public` | automatisch von Nx aus `package.json` | ohne Constraint, wirkungslos |
@@ -51,8 +51,8 @@ apps/client                                type:app — nur app.ts, app.config.t
 | `types → types` (vorher `noDependencies`) | `onlyDependOnLibsWithTags: ['type:types']`; Scope-Achse gilt weiter: eigener Slice + `scope:shared`, fremde Slice-Types rot (`port` ist `type:api`) | `layerMatrix` |
 | **api ↛ infra** (Inversion) | `type:api` ohne `type:infra` **und** Nx-Zyklus-Check (infra → api existiert immer) | `layerMatrix` |
 | Self-Providing Port (`fe846c0`, api → infra erlaubt) | **nicht abbildbar**: api ↔ infra wäre ein Projekt-Zyklus. Zurückgedreht auf harte Inversion (`f54d797`) | – |
-| data ↛ infra | `type:data` ohne `type:infra` | `layerMatrix` |
-| ui ↛ api, data | `type:ui` ohne beide | `layerMatrix` |
+| state ↛ infra | `type:state` ohne `type:infra` | `layerMatrix` |
+| ui ↛ api, state | `type:ui` ohne beide | `layerMatrix` |
 | feat ↛ infra, nur Slice-Root wired (`inAnyFeat`-Pfadhack) | eigene Lib `type:shell`: darf infra, `type:feature` nicht. **Kein Pfadhack nötig** | `layerMatrix` |
 | `domain:*` mit `sameTag` (Scope-Isolation) | generiert: 1 Constraint pro Slice, Regex-Tag `/^scope:<s>(\/.*)?$/` → eigene Slice + `port` + `scope:shared` | `sliceIsolation` |
 | Port = Tag `port` auf `api/` | Tag `port` auf `<slice>/api` | `project.json` |
@@ -73,7 +73,7 @@ apps/client                                type:app — nur app.ts, app.config.t
 
 **Strenger als Sheriff** (bewusst):
 
-- `featPrivacy`: slice-shared Libs dürfen nicht in Feat-Libs greifen, nur die Shell. Sheriff hat das nicht verhindert (`data → feat-x/data` war erlaubt).
+- `featPrivacy`: slice-shared Libs dürfen nicht in Feat-Libs greifen, nur die Shell. Sheriff hat das nicht verhindert (`state → feat-x/state` war erlaubt).
 - `bannedExternalImports`: `@angular/common/http*` nur in `type:infra` und `type:app`.
 - Projekt-Zyklen, Lazy-Load-Check (statischer Import einer lazy geladenen Lib), relative Imports über Lib-Grenzen.
 
@@ -110,10 +110,10 @@ Nx kennt kein `sameTag` und keine Platzhalter, die sich auf das Quell-Tag bezieh
 
 ## Entscheidungen
 
-**Feat-lokale Unterordner → eigene Libs** (`feat-check-booking/{feature,api,data,ui}`), aber nur, wenn es den Bucket gibt.
+**Feat-lokale Unterordner → eigene Libs** (`feat-check-booking/{feature,api,state,ui}`), aber nur, wenn es den Bucket gibt.
 
 - Der **feat-port muss** eine eigene Lib sein: Er ist die einzige öffentliche Fläche des Feats gegenüber Geschwistern. Nx kann Sichtbarkeit nur zwischen Libs steuern.
-- `data`/`ui` im Feat als eigene Libs: Nur so greift die Layer-Matrix auch im Feat (feat-ui ↛ feat-data). Die Alternative wäre Sheriff nur für Feat-Interna. Das kostet eine zweite Regelsprache und eine zweite Tag-Zuordnung für Code, den Nx schon taggt. Im Beispiel sind es 3 zusätzliche Libs. Das ist billiger.
+- `state`/`ui` im Feat als eigene Libs: Nur so greift die Layer-Matrix auch im Feat (feat-ui ↛ feat-state). Die Alternative wäre Sheriff nur für Feat-Interna. Das kostet eine zweite Regelsprache und eine zweite Tag-Zuordnung für Code, den Nx schon taggt. Im Beispiel sind es 3 zusätzliche Libs. Das ist billiger.
 - Ein Feat **ohne** Unter-Buckets bleibt eine Lib (`feat-manage-booking/feature`). Darin gibt es keine Layer, also auch nichts zu prüfen.
 
 **Sheriff entfernt.** Alle intra-lib-Regeln des Blueprints sind weggefallen:
@@ -143,8 +143,8 @@ Gelöscht: `sheriff.config.ts`, `@softarc/eslint-plugin-sheriff`, `packages/sher
 | Keine Negation | Regex-Lookahead (`/^type:(?!shell$)/`). Das funktioniert, liest sich aber schlecht, deshalb kommentiert |
 | **Self-Providing Port** unmöglich (Zyklus) | harte Inversion + `provideX()` in der Shell. Alternative: api + infra in **einer** Lib, nur der Contract in `index.ts`. Dann ist infra lib-privat, aber `type:infra` nicht mehr separat taggbar und HttpClient wäre im Port erlaubt → verworfen |
 | **Zyklus-Meldung verdeckt Tag-Meldung**: Nx prüft Zyklen vor Tags. „api → infra" meldet „Circular dependency", nicht „type:api" | `verify-boundaries.mjs` wertet zusätzlich die Tag-Constraints direkt gegen den Projektgraph aus. Belegt: auch der Tag blockt |
-| **Deep Imports** (`@blueprint/x/data/src/…`) matchen keinen Path. Nx findet kein Zielprojekt und prüft **gar nicht** (nur tsc scheitert später) | ESLint-Core `no-restricted-imports` mit `@blueprint/**/src/**` |
-| `bannedExternalImports` sieht nur Imports: `fetch()` im data-Layer fällt nicht auf | Konvention/Review. HTTP-Clients gehören in infra |
+| **Deep Imports** (`@blueprint/x/state/src/…`) matchen keinen Path. Nx findet kein Zielprojekt und prüft **gar nicht** (nur tsc scheitert später) | ESLint-Core `no-restricted-imports` mit `@blueprint/**/src/**` |
+| `bannedExternalImports` sieht nur Imports: `fetch()` im state-Layer fällt nicht auf | Konvention/Review. HTTP-Clients gehören in infra |
 | Fehlermeldungen listen Tags statt Regelnamen | Kommentare in `eslint.config.mjs`; Tag-Namen sprechend gewählt |
 | Regel liest **nur den gecachten Projektgraph**. Ohne Cache (frischer Clone, `eslint` direkt, IDE) überspringt sie still mit Warnung (Exit 0). Mit veraltetem Cache kennt sie neue Libs nicht | `eslint.config.mjs` ruft beim Laden `await createProjectGraphAsync()` auf: Graph wird pro ESLint-Prozess gebaut/aktualisiert, Fehler brechen die Config ab statt zu überspringen. Kosten ≈0,4 s pro ESLint-Start ohne Daemon |
 | noTag-Fall braucht ein Projekt ohne Tags, alle echten Projekte sind getaggt | `verify-boundaries.mjs` legt `tools/verify-untagged/project.json` nur für den Lauf an und räumt danach auf |
@@ -173,7 +173,7 @@ Jede Lib hat ein `build`-Target mit `@nx/angular:ng-packagr-lite` (incremental b
 - `enforceBuildableLibDependency` ist an. Da jetzt alle Libs buildable sind, feuert es nur noch bei einer neuen Lib ohne `build`.
 - Output (`dist/libs/booking/shell`): `esm2022/*.js`, `*.d.ts`, `package.json` mit `exports`. Full-Compilation-Mode, kein FESM: für den Workspace, **nicht publizierbar** (`prepublishOnly` bricht ab, dazu `private`).
 
-**Alias-Änderung `…/feat-x` → `…/feat-x/feature`.** ng-packagr hält jeden Import `<eigener Paketname>/…` für einen Secondary Entry Point des eigenen Pakets. `@blueprint/booking/feat-check-booking` importiert `@blueprint/booking/feat-check-booking/data` → Build-Fehler „Entry point … doesn't exist". Kein Paketname darf Präfix eines anderen sein. Deshalb heißen alle vier Feat-Root-Libs jetzt wie ihr Pfad. Geändert: 4 Paths, die `loadComponent`-Imports in den Shells, 2 Import-Strings im Verify-Skript. depConstraints und Erwartungswerte unverändert.
+**Alias-Änderung `…/feat-x` → `…/feat-x/feature`.** ng-packagr hält jeden Import `<eigener Paketname>/…` für einen Secondary Entry Point des eigenen Pakets. `@blueprint/booking/feat-check-booking` importiert `@blueprint/booking/feat-check-booking/state` → Build-Fehler „Entry point … doesn't exist". Kein Paketname darf Präfix eines anderen sein. Deshalb heißen alle vier Feat-Root-Libs jetzt wie ihr Pfad. Geändert: 4 Paths, die `loadComponent`-Imports in den Shells, 2 Import-Strings im Verify-Skript. depConstraints und Erwartungswerte unverändert.
 
 **Kosten:** 4 Dateien mehr pro Lib (136 zusätzlich), `run-many -t build` für 34 Libs + App ≈17 s kalt (ohne Cache), danach aus dem Nx-Cache. Einzelne Lib: ≈0,4–2 s.
 
@@ -196,11 +196,11 @@ Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePa
 | 1 | feat -> infra | `booking/feat-check-booking/feature` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:feature |
 | 2 | shell -> infra (wiring) | `booking/shell` | `@blueprint/booking/infra` | green | ✅ green | allowed |
 | 3 | api -> infra | `booking/api` | `@blueprint/booking/infra` | red | ✅ red — cycle | blocked by type:api |
-| 4 | data -> infra | `booking/data` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:data |
-| 5 | data -> api (port) | `booking/data` | `@blueprint/booking/api` | green | ✅ green | allowed |
+| 4 | state -> infra | `booking/state` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:state |
+| 5 | state -> api (port) | `booking/state` | `@blueprint/booking/api` | green | ✅ green | allowed |
 | 6 | infra -> api (implements) | `booking/infra` | `@blueprint/booking/api` | green | ✅ green | allowed |
 | 7 | ui -> api | `booking/ui` | `@blueprint/booking/api` | red | ✅ red — tags | blocked by type:ui |
-| 8 | ui -> data | `booking/ui` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by type:ui |
+| 8 | ui -> state | `booking/ui` | `@blueprint/booking/state` | red | ✅ red — tags | blocked by type:ui |
 | 9 | ui -> events | `booking/ui` | `@blueprint/booking/events` | green | ✅ green | allowed |
 | 10 | types -> own-scope types | `booking/verify-types` | `@blueprint/booking/types` | green | ✅ green | allowed |
 | 11 | types -> shared types | `booking/types` | `@blueprint/shared/types` | green | ✅ green | allowed |
@@ -209,38 +209,38 @@ Das Skript lintet eine Import-Zeile per `ESLint#lintText` mit virtuellem `filePa
 | 14 | types -> foreign types | `checkin/types` | `@blueprint/booking/types` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin + /^type:(?!shell$)/ |
 | 15 | types -> foreign port | `checkin/types` | `@blueprint/booking/api` | red | ✅ red — tags | blocked by type:types |
 | 16 | utils -> events | `booking/utils` | `@blueprint/booking/events` | red | ✅ red — tags | blocked by type:utils |
-| 17 | events -> data | `booking/events` | `@blueprint/booking/data` | red | ✅ red — cycle | blocked by type:events |
-| 18 | infra -> data | `booking/infra` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by type:infra |
+| 17 | events -> state | `booking/events` | `@blueprint/booking/state` | red | ✅ red — cycle | blocked by type:events |
+| 18 | infra -> state | `booking/infra` | `@blueprint/booking/state` | red | ✅ red — tags | blocked by type:infra |
 | 19 | feature -> shell | `booking/feat-manage-booking/feature` | `@blueprint/booking/shell` | red | ✅ red — cycle | blocked by type:feature |
-| 20 | feature -> data/ui/events | `booking/feat-manage-booking/feature` | `@blueprint/booking/data` | green | ✅ green | allowed |
-| 21 | cross-scope internals | `checkin/data` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin + /^type:(?!shell$)/ |
-| 22 | cross-scope infra | `checkin/feat-checkin/data` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:data, /^scope:checkin(\/.*)?$/, scope:checkin/feat-checkin |
-| 23 | cross-scope via port | `checkin/data` | `@blueprint/booking/api` | green | ✅ green | allowed |
-| 24 | shared-feature internals | `checkin/feat-checkin/feature` | `@blueprint/auth/data` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin/feat-checkin |
+| 20 | feature -> state/ui/events | `booking/feat-manage-booking/feature` | `@blueprint/booking/state` | green | ✅ green | allowed |
+| 21 | cross-scope internals | `checkin/state` | `@blueprint/booking/state` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin + /^type:(?!shell$)/ |
+| 22 | cross-scope infra | `checkin/feat-checkin/state` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:state, /^scope:checkin(\/.*)?$/, scope:checkin/feat-checkin |
+| 23 | cross-scope via port | `checkin/state` | `@blueprint/booking/api` | green | ✅ green | allowed |
+| 24 | shared-feature internals | `checkin/feat-checkin/feature` | `@blueprint/auth/state` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/, scope:checkin/feat-checkin |
 | 25 | shared-feature via port | `checkin/feat-checkin/feature` | `@blueprint/auth/api` | green | ✅ green | allowed |
 | 26 | shell -> foreign shell | `checkin/shell` | `@blueprint/booking/shell` | red | ✅ red — tags | blocked by type:shell, /^scope:checkin(\/.*)?$/ |
-| 27 | sibling feat internals | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — tags | blocked by scope:booking/feat-manage-booking |
+| 27 | sibling feat internals | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/state` | red | ✅ red — tags | blocked by scope:booking/feat-manage-booking |
 | 28 | sibling feat root | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/feature` | red | ✅ red — tags | blocked by type:feature, scope:booking/feat-manage-booking |
-| 29 | feat -> own feat-local lib | `booking/feat-check-booking/feature` | `@blueprint/booking/feat-check-booking/data` | green | ✅ green | allowed |
-| 30 | feat-port -> own feat data | `booking/feat-check-booking/api` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — tags | blocked by type:api |
+| 29 | feat -> own feat-local lib | `booking/feat-check-booking/feature` | `@blueprint/booking/feat-check-booking/state` | green | ✅ green | allowed |
+| 30 | feat-port -> own feat state | `booking/feat-check-booking/api` | `@blueprint/booking/feat-check-booking/state` | red | ✅ red — tags | blocked by type:api |
 | 31 | sibling feat via feat-port | `booking/feat-manage-booking/feature` | `@blueprint/booking/feat-check-booking/api` | green | ✅ green | allowed |
 | 32 | foreign feat-port | `checkin/feat-history/feature` | `@blueprint/booking/feat-check-booking/api` | red | ✅ red — tags | blocked by /^scope:checkin(\/.*)?$/ |
-| 33 | slice-shared -> feat lib | `booking/data` | `@blueprint/booking/feat-check-booking/data` | red | ✅ red — cycle | blocked by scope:booking + /^type:(?!shell$)/ |
+| 33 | slice-shared -> feat lib | `booking/state` | `@blueprint/booking/feat-check-booking/state` | red | ✅ red — cycle | blocked by scope:booking + /^type:(?!shell$)/ |
 | 34 | shell -> feat (lazy) | `booking/shell` | `@blueprint/booking/feat-check-booking/feature` | green | ✅ green | allowed |
 | 35 | shared -> slice port | `shared/utils` | `@blueprint/booking/api` | red | ✅ red — tags | blocked by type:utils, scope:shared |
 | 36 | shared utils -> shared api | `shared/utils` | `@blueprint/shared/api` | red | ✅ red — tags | blocked by type:utils |
 | 37 | slice -> shared | `booking/utils` | `@blueprint/shared/utils` | green | ✅ green | allowed |
-| 38 | app -> data | `apps/client` | `@blueprint/booking/data` | red | ✅ red — tags | blocked by type:app |
+| 38 | app -> state | `apps/client` | `@blueprint/booking/state` | red | ✅ red — tags | blocked by type:app |
 | 39 | app -> infra | `apps/client` | `@blueprint/booking/infra` | red | ✅ red — tags | blocked by type:app |
 | 40 | app -> feat-port | `apps/client` | `@blueprint/booking/feat-check-booking/api` | red | ✅ red — tags | blocked by type:app |
 | 41 | app -> shell / port / shared | `apps/client` | `@blueprint/booking/shell` | green | ✅ green | allowed |
-| 42 | lib -> app | `booking/data` | `../../../../apps/client/src/app/app` | red | ✅ red — relative import | – |
-| 43 | relative import across libs | `booking/feat-manage-booking/feature` | `../../../data/src/booking.store` | red | ✅ red — relative import | – |
-| 44 | deep import into lib | `checkin/feat-history/feature` | `@blueprint/checkin/data/src/internal/checkin.mapper` | red | ✅ red — no-restricted-imports (deep) | – |
-| 45 | deep import cross-scope | `checkin/data` | `@blueprint/booking/data/src/booking.store` | red | ✅ red — no-restricted-imports (deep) | – |
+| 42 | lib -> app | `booking/state` | `../../../../apps/client/src/app/app` | red | ✅ red — relative import | – |
+| 43 | relative import across libs | `booking/feat-manage-booking/feature` | `../../../state/src/booking.store` | red | ✅ red — relative import | – |
+| 44 | deep import into lib | `checkin/feat-history/feature` | `@blueprint/checkin/state/src/internal/checkin.mapper` | red | ✅ red — no-restricted-imports (deep) | – |
+| 45 | deep import cross-scope | `checkin/state` | `@blueprint/booking/state/src/booking.store` | red | ✅ red — no-restricted-imports (deep) | – |
 | 46 | untagged project (noTag) | `tools/verify-untagged` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked (no constraint = noTag) |
 | 47 | tooling -> lib | `packages/sheriff-blueprint` | `@blueprint/shared/utils` | red | ✅ red — tags | blocked by type:tooling |
-| 48 | HttpClient in data | `booking/data` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
+| 48 | HttpClient in state | `booking/state` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
 | 49 | HttpClient in feature | `booking/feat-check-booking/feature` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
 | 50 | HttpClient in api | `booking/api` | `@angular/common/http` | red | ✅ red — bannedExternalImports | – |
 | 51 | HttpClient in infra | `booking/infra` | `@angular/common/http` | green | ✅ green | – |

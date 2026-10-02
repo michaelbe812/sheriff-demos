@@ -1,5 +1,5 @@
 {
-  "name": "@blueprint/checkin/data",
+  "name": "@blueprint/checkin/feat-checkin/state",
   "version": "0.0.1",
   "private": true,
   "peerDependencies": {

@@ -1,9 +1,9 @@
 {
-  "name": "auth-data",
+  "name": "checkin-state",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "libs/auth/data/src",
-  "tags": ["scope:auth", "type:data"],
+  "sourceRoot": "libs/checkin/state/src",
+  "tags": ["scope:checkin", "type:state"],
   "targets": {
     "build": {
       "executor": "@nx/angular:ng-packagr-lite"

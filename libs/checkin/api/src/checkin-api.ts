@@ -3,7 +3,7 @@ import { InjectionToken } from '@angular/core';
 /** PUBLIC PORT of the checkin domain — cross-domain types re-exported here. */
 export type { CheckinRecord } from '@blueprint/checkin/types';
 
-/** Raw backend shape; mapped to the domain model inside the data lib. */
+/** Raw backend shape; mapped to the domain model inside the state lib. */
 export interface CheckinDto {
   id: string;
   booking_id: string;

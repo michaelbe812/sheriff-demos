@@ -10,10 +10,10 @@ import { join } from "node:path";
  * Negative/positive tests: tools/verify-boundaries.mjs.
  *
  * Tag schema (every lib carries exactly one scope:* and one type:* tag):
- *   scope:<slice>              slice-shared lib (types, utils, api, data, ...)
- *   scope:<slice>/feat-<name>  lib of ONE feat (feature, feat-local api/data/ui)
+ *   scope:<slice>              slice-shared lib (types, utils, api, state, ...)
+ *   scope:<slice>/feat-<name>  lib of ONE feat (feature, feat-local api/state/ui)
  *   scope:shared               dumb shared area
- *   type:<layer>               types|utils|events|api|infra|data|ui|feature|shell
+ *   type:<layer>               types|utils|events|api|infra|state|ui|feature|shell
  *   port                       slice api — the only lib foreign scopes may use
  *   feat-port                  feat api — the only feat lib sibling feats may use
  *   type:app                   apps (composition root of the whole app)
@@ -44,15 +44,15 @@ const layerMatrix = {
     "type:api": ["type:types", "type:utils", "type:api"],
     "type:infra": ["type:types", "type:utils", "type:api", "type:infra"],
     // stores bind to the port, never to infra
-    "type:data": ["type:types", "type:utils", "type:api", "type:data", "type:events"],
-    // dumb components: NOT api, NOT data
+    "type:state": ["type:types", "type:utils", "type:api", "type:state", "type:events"],
+    // dumb components: NOT api, NOT state
     "type:ui": ["type:types", "type:utils", "type:ui", "type:events"],
     // smart containers (feat libs): everything except infra and shells
-    "type:feature": ["type:types", "type:utils", "type:events", "type:api", "type:data", "type:ui"],
+    "type:feature": ["type:types", "type:utils", "type:events", "type:api", "type:state", "type:ui"],
     // slice root = composition root of the slice: the ONLY lib that may wire infra
     "type:shell": [
         "type:types", "type:utils", "type:events", "type:api",
-        "type:infra", "type:data", "type:ui", "type:feature"
+        "type:infra", "type:state", "type:ui", "type:feature"
     ]
 };
 
@@ -173,7 +173,7 @@ export default [
                 }
             ],
             // Nx only checks imports it can map to a project: a deep import
-            // (`@blueprint/x/data/src/file`) matches no tsconfig path, so the
+            // (`@blueprint/x/state/src/file`) matches no tsconfig path, so the
             // boundary rule skips it and only tsc fails later. Make it an
             // architecture error instead — the lib's index.ts is its public API.
             "no-restricted-imports": [

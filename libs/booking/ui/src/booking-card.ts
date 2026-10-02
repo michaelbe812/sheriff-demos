@@ -4,7 +4,7 @@ import { Booking } from '@blueprint/booking/types';
 import { bookingLabel } from '@blueprint/booking/utils';
 import { BookingCardStore } from './booking-card.store';
 
-// nx-violation-example: import { BookingStore } from '@blueprint/booking/data'; // type:ui -> type:data
+// nx-violation-example: import { BookingStore } from '@blueprint/booking/state'; // type:ui -> type:state
 // nx-violation-example: import { BookingApi } from '@blueprint/booking/api'; // type:ui -> type:api
 
 /** Dumb component: types, utils, events, local store — nothing else. */
