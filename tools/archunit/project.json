@@ -1,0 +1,28 @@
+{
+  "name": "archunit",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "tools/archunit",
+  "tags": ["type:tooling"],
+  "implicitDependencies": ["*"],
+  "targets": {
+    "arch": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": ["^generate"],
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/tsconfig.base.json",
+        "{workspaceRoot}/tsconfig.archunit.json",
+        "{workspaceRoot}/libs/**/*.ts",
+        "{workspaceRoot}/apps/**/*.ts",
+        "{workspaceRoot}/packages/tooling/*/src/**/*.ts",
+        { "dependentTasksOutputFiles": "**/src/generated/**/*.ts", "transitive": true },
+        { "externalDependencies": ["archunit", "vitest"] }
+      ],
+      "options": {
+        "command": "vitest run --config tools/archunit/vitest.config.mts architecture"
+      }
+    }
+  }
+}
