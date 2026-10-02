@@ -15,40 +15,40 @@ describe('move generator', () => {
   });
 
   it('moves a lib and rewrites static imports', async () => {
-    await moveGenerator(tree, { from: 'booking/data', to: 'booking/feat-check-booking/data' });
+    await moveGenerator(tree, { from: 'booking/state', to: 'booking/feat-check-booking/state' });
 
-    expect(tree.exists('libs/booking/data/src/index.ts')).toBe(false);
-    expect(read(tree, 'libs/booking/feat-check-booking/data/src/booking.store.ts')).toContain(
+    expect(tree.exists('libs/booking/state/src/index.ts')).toBe(false);
+    expect(read(tree, 'libs/booking/feat-check-booking/state/src/booking.store.ts')).toContain(
       'export class BookingStore',
     );
     expect(read(tree, 'libs/booking/feat-check-booking/feature/src/feat-check-booking.ts')).toContain(
-      "from '@blueprint/booking/feat-check-booking/data'",
+      "from '@blueprint/booking/feat-check-booking/state'",
     );
   });
 
   it('keeps the config in step: name, tags, alias, relative paths, paths entry', async () => {
-    await moveGenerator(tree, { from: 'booking/data', to: 'booking/feat-check-booking/data' });
+    await moveGenerator(tree, { from: 'booking/state', to: 'booking/feat-check-booking/state' });
 
-    const root = 'libs/booking/feat-check-booking/data';
+    const root = 'libs/booking/feat-check-booking/state';
     expect(readJsonFile(tree, `${root}/project.json`)).toMatchObject({
-      name: 'booking-feat-check-booking-data',
+      name: 'booking-feat-check-booking-state',
       $schema: '../../../../node_modules/nx/schemas/project-schema.json',
       sourceRoot: `${root}/src`,
-      tags: ['scope:booking', 'type:data', 'feat:check-booking'],
+      tags: ['scope:booking', 'type:state', 'feat:check-booking'],
     });
     expect(readJsonFile(tree, `${root}/package.json`)).toMatchObject({
-      name: '@blueprint/booking/feat-check-booking/data',
+      name: '@blueprint/booking/feat-check-booking/state',
     });
     expect(readJsonFile(tree, `${root}/ng-package.json`)).toMatchObject({
-      dest: '../../../../dist/libs/booking/feat-check-booking/data',
+      dest: '../../../../dist/libs/booking/feat-check-booking/state',
     });
     expect(readJsonFile(tree, `${root}/tsconfig.json`)).toMatchObject({ extends: '../../../../tsconfig.base.json' });
     expect(readJsonFile(tree, `${root}/tsconfig.lib.json`)).toMatchObject({
       compilerOptions: { outDir: '../../../../dist/out-tsc' },
     });
     const paths = pathsOf(tree);
-    expect(paths['@blueprint/booking/data']).toBeUndefined();
-    expect(paths['@blueprint/booking/feat-check-booking/data']).toEqual([`./${root}/src/index.ts`]);
+    expect(paths['@blueprint/booking/state']).toBeUndefined();
+    expect(paths['@blueprint/booking/feat-check-booking/state']).toEqual([`./${root}/src/index.ts`]);
   });
 
   it('moves a feat within its domain and follows with route path + dynamic import', async () => {
@@ -76,7 +76,7 @@ describe('move generator', () => {
     await moveGenerator(tree, { from: 'booking', to: 'reservation' });
 
     expect(listLibPaths(tree, 'booking')).toEqual([]);
-    expect(read(tree, 'libs/reservation/data/src/booking.store.ts')).toContain("from '@blueprint/reservation/api'");
+    expect(read(tree, 'libs/reservation/state/src/booking.store.ts')).toContain("from '@blueprint/reservation/api'");
     const appRoutes = findLazyRoutes(read(tree, APP_ROUTES));
     expect(appRoutes.map((route) => [route.path, route.specifier])).toEqual([
       ['bookings', '@blueprint/reservation/shell'],
@@ -103,10 +103,10 @@ describe('move generator', () => {
   });
 
   it('rejects invalid targets', async () => {
-    await expect(moveGenerator(tree, { from: 'booking/data', to: 'booking/widgets' })).rejects.toThrow(
+    await expect(moveGenerator(tree, { from: 'booking/state', to: 'booking/widgets' })).rejects.toThrow(
       'lib convention',
     );
-    await expect(moveGenerator(tree, { from: 'booking/data', to: 'booking/api' })).rejects.toThrow('exists already');
+    await expect(moveGenerator(tree, { from: 'booking/state', to: 'booking/api' })).rejects.toThrow('exists already');
     await expect(moveGenerator(tree, { from: 'nope', to: 'other' })).rejects.toThrow('Nothing to move');
   });
 });

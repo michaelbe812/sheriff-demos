@@ -3,7 +3,7 @@
     "domain": {
       "factory": "./src/generators/domain/generator",
       "schema": "./src/generators/domain/schema.json",
-      "description": "Neue Domain: libs/<d>/{types,api,data,ui,shell} + testing + Beispiel-Spec, je mit Config-Dateien + paths, Lazy-Route, Scope-Liste."
+      "description": "Neue Domain: libs/<d>/{types,api,state,ui,shell} + testing + Beispiel-Spec, je mit Config-Dateien + paths, Lazy-Route, Scope-Liste."
     },
     "layer": {
       "factory": "./src/generators/layer/generator",
@@ -18,7 +18,7 @@
     "feat": {
       "factory": "./src/generators/feat/generator",
       "schema": "./src/generators/feat/schema.json",
-      "description": "Feat: libs/<d>/feat-<x>/feature (+ api/data/ui), Lazy-Route in den Shell-Routes."
+      "description": "Feat: libs/<d>/feat-<x>/feature (+ api/state/ui), Lazy-Route in den Shell-Routes."
     },
     "move": {
       "factory": "./src/generators/move/generator",

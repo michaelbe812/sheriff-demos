@@ -1,7 +1,7 @@
 import { names, type Tree } from '@nx/devkit';
 import { type ArtifactSchema, resolveArtifact, writeArtifact } from '../shared/artifact';
 
-export const STORE_LAYERS = ['data', 'ui', 'feature'];
+export const STORE_LAYERS = ['state', 'ui', 'feature'];
 
 /** Signal store (`<name>.store.ts`, class `<Name>Store`), provided where it is used. */
 export async function storeGenerator(tree: Tree, options: ArtifactSchema): Promise<void> {

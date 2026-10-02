@@ -1,6 +1,6 @@
 /**
  * Example sources per slice layer (libs/<slice>/<layer>), in the style of the booking/checkin
- * slices: api = port over ApiHttp, data = signal store, ui = dumb OnPush component, shell = routes +
+ * slices: api = port over ApiHttp, state = signal store, ui = dumb OnPush component, shell = routes +
  * providers + smart page. Each layer only imports what the depConstraints allow.
  */
 import { names } from '@nx/devkit';
@@ -19,14 +19,14 @@ export const SLICE_LAYER_REQUIRES: Record<string, string[]> = {
   utils: [],
   events: [],
   api: ['types'],
-  data: ['api', 'types'],
+  state: ['api', 'types'],
   ui: ['types'],
-  shell: ['data', 'ui'],
+  shell: ['state', 'ui'],
   testing: ['types'],
 };
 
 /** Order in which a new slice is generated (dependencies first). */
-export const SLICE_LAYER_ORDER = ['types', 'utils', 'events', 'api', 'data', 'ui', 'shell', 'testing'];
+export const SLICE_LAYER_ORDER = ['types', 'utils', 'events', 'api', 'state', 'ui', 'shell', 'testing'];
 
 export interface SliceNames {
   /** kebab-case slice name, e.g. `car-rental` */
@@ -73,7 +73,7 @@ const events = (n: SliceNames): LibFiles => ({
   files: {
     [`${n.scope}.events.ts`]: `/**
  * Domain events: definition-only (type + creator). ui and feature may emit
- * them, stores (data) handle them.
+ * them, stores (state) handle them.
  */
 export interface ${n.entity}Selected {
   readonly type: '${n.scope}.selected';
@@ -113,7 +113,7 @@ export class ${n.entity}Api {
   exports: [`${n.scope}-api`],
 });
 
-const data = (n: SliceNames): LibFiles => ({
+const state = (n: SliceNames): LibFiles => ({
   files: {
     [`${n.scope}.store.ts`]: `import { computed, inject, Injectable, signal } from '@angular/core';
 import { ${n.entity}Api } from '${alias(n, 'api')}';
@@ -167,7 +167,7 @@ export class ${n.entity}List {
 const shell = (n: SliceNames): LibFiles => ({
   files: {
     [`${n.scope}.providers.ts`]: `import { Provider } from '@angular/core';
-import { ${n.entity}Store } from '${alias(n, 'data')}';
+import { ${n.entity}Store } from '${alias(n, 'state')}';
 
 /** Slice root (entry): providers of the ${n.scope} slice, registered on its route. */
 export function provide${n.entity}(): Provider[] {
@@ -175,7 +175,7 @@ export function provide${n.entity}(): Provider[] {
 }
 `,
     [`${n.scope}-page.ts`]: `import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { ${n.entity}Store } from '${alias(n, 'data')}';
+import { ${n.entity}Store } from '${alias(n, 'state')}';
 import { ${n.entity}List } from '${alias(n, 'ui')}';
 
 /** Smart page of the slice root: slice store in, dumb ui out. */
@@ -213,10 +213,10 @@ export const ${n.property}Routes: Routes = [
   exports: [`${n.scope}.routes`, `${n.scope}.providers`],
 });
 
-export const SLICE_LAYER_TEMPLATES: Record<string, (n: SliceNames) => LibFiles> = { types, utils, events, api, data, ui, shell };
+export const SLICE_LAYER_TEMPLATES: Record<string, (n: SliceNames) => LibFiles> = { types, utils, events, api, state, ui, shell };
 
-/** Example spec for the data store: MSW defaults per `beforeEach(() => worker.use(...))`, deviations per test. */
-export function dataStoreSpec(n: SliceNames): { file: string; content: string } {
+/** Example spec for the state store: MSW defaults per `beforeEach(() => worker.use(...))`, deviations per test. */
+export function stateStoreSpec(n: SliceNames): { file: string; content: string } {
   return {
     file: `${n.scope}.store.spec.ts`,
     content: `import { TestBed } from '@angular/core/testing';

@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { CheckinStore } from '@blueprint/checkin/data';
+import { CheckinStore } from '@blueprint/checkin/state';
 // Sibling feat ONLY via its feat-port:
 import { describeDesk } from '@blueprint/checkin/feat-checkin/api';
 import { checkinLabel } from '@blueprint/checkin/utils';
 
-// boundary-violation-example: import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data'; // sibling feat internals
+// boundary-violation-example: import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/state'; // sibling feat internals
 
 @Component({
   selector: 'app-feat-history',

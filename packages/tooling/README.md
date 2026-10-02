@@ -46,7 +46,7 @@ Nx lädt Generatoren und Executoren direkt aus den Quellen (`main`/`exports` zei
 ```sh
 nx g @blueprint/tooling-workspace:domain payment
 nx g @blueprint/tooling-workspace:layer payment events
-nx g @blueprint/tooling-workspace:feat payment checkout --api --data --ui
+nx g @blueprint/tooling-workspace:feat payment checkout --api --state --ui
 nx g @blueprint/tooling-workspace:testing checkin
 nx g @blueprint/tooling-workspace:move booking/feat-rebook checkin/feat-rebook
 nx g @blueprint/tooling-workspace:rename payment billing

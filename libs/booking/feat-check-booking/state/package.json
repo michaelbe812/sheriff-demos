@@ -1,5 +1,5 @@
 {
-  "name": "@blueprint/auth/data",
+  "name": "@blueprint/booking/feat-check-booking/state",
   "version": "0.0.1",
   "private": true,
   "peerDependencies": {

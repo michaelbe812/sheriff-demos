@@ -51,7 +51,7 @@ describe('layer generator', () => {
   it('validates domain and layer (layer list from the conventions)', async () => {
     await expect(layerGenerator(tree, { domain: 'payment', layer: 'ui' })).rejects.toThrow('Unknown scope "payment"');
     await expect(layerGenerator(tree, { domain: 'booking', layer: 'widgets' })).rejects.toThrow(
-      'allowed: types, utils, events, api, data, ui, shell, testing',
+      'allowed: types, utils, events, api, state, ui, shell, testing',
     );
     await expect(layerGenerator(tree, { domain: 'booking', layer: 'feature' })).rejects.toThrow(
       'only exists inside a feat',
@@ -63,14 +63,14 @@ describe('layer generator', () => {
     addScope(tree, 'notes');
 
     await expect(layerGenerator(tree, { domain: 'notes', layer: 'shell' })).rejects.toThrow(
-      'needs libs/notes/data, libs/notes/ui',
+      'needs libs/notes/state, libs/notes/ui',
     );
   });
 
   it('registers a new shell in the app routes', async () => {
     addScope(tree, 'notes');
     tree.write('libs/notes/types/src/index.ts', 'export interface Notes {\n  id: string;\n  name: string;\n}\n');
-    for (const layer of ['api', 'data', 'ui', 'shell']) await layerGenerator(tree, { domain: 'notes', layer });
+    for (const layer of ['api', 'state', 'ui', 'shell']) await layerGenerator(tree, { domain: 'notes', layer });
 
     expect(findLazyRoutes(read(tree, APP_ROUTES)).map((route) => route.specifier)).toContain('@blueprint/notes/shell');
   });

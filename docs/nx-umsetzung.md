@@ -2,9 +2,11 @@
 
 Branch `feat/nx-blueprint-explicit-config` (abgezweigt von `feat/nx-blueprint` bei `8578b83`): das Regelwerk aus [`architecture.md`](./architecture.md) (Ausgangs-Blueprint, ohne `infra/`), aber **ohne Sheriff**. Die Grenzen erzwingen nur Nx-Libs, Tags und `@nx/enforce-module-boundaries` (Nx 23.1). Sheriff wird auch für Regeln *innerhalb* einer Lib nicht gebraucht (Begründung in [Entscheidung: Feat-Buckets als eigene Libs](#entscheidung-feat-buckets-als-eigene-libs)).
 
+**Layer `state`:** Stores, Business-Services und `internal/*.mapper.ts` liegen im Layer `state` (Tag `type:state`; in [`architecture.md`](./architecture.md) und auf `feat/nx-blueprint` heißt er `data`). `api` bleibt die öffentliche Schnittstelle (Port, Feat-Port). Regeln unverändert, nur der Name.
+
 ## Variante explizite Config
 
-Dieser Branch ist `feat/nx-blueprint` **ohne Crystal-Magie**: kein lokales Nx-Plugin inferiert Projekte oder Targets, jede Lib trägt ihre Config-Dateien wieder selbst. Regelwerk, Libs, Tags, Constraints, Testing/MSW und OpenAPI-Clients sind unverändert, dist ist byte-identisch (580 Dateien, Snapshot unverändert).
+Dieser Branch ist `feat/nx-blueprint` **ohne Crystal-Magie**: kein lokales Nx-Plugin inferiert Projekte oder Targets, jede Lib trägt ihre Config-Dateien wieder selbst. Regelwerk, Libs, Tags, Constraints, Testing/MSW und OpenAPI-Clients sind unverändert, dist ist byte-identisch (580 Dateien; Snapshot nach der Umbenennung `data` → `state` neu geschrieben, nur Pfade/Aliase der state-Libs anders).
 
 **Unterschiede zu `feat/nx-blueprint`:**
 
@@ -56,13 +58,13 @@ Dazu pro Client-Ordner `libs/[<d>/]generated/<client>/project.json`. Summe: 267 
 apps/client/src/            type:app            dünne Shell: main.ts, app.ts, app.config.ts, app.routes.ts
 libs/
   <slice>/                  booking, checkin (Domains) · auth, layout (Shared-Features)
-    types/ utils/ events/ data/ ui/         scope:<slice> type:<layer> feat:none
+    types/ utils/ events/ state/ ui/        scope:<slice> type:<layer> feat:none
     api/                                    + port        öffentliche API des Slices
     shell/                                  type:feature + entry   routes/providers/shell = Slice-Root
     feat-<feat>/
       feature/                              scope:<slice> type:feature feat:<feat>
       api/                                  + feat-port   öffentliche API für Geschwister-Feats
-      data/ ui/ …                           feat:<feat>
+      state/ ui/ …                          feat:<feat>
   shared/types|utils|api|ui                 scope:shared type:<layer> feat:none
   <domain>/testing, shared/testing          scope:<d>|shared type:testing feat:none   nur für Specs, siehe Testing & MSW
   generated/<client>/types|api|core|testing           scope:shared      ┐ generierte OpenAPI-Clients, Marker `generated`,
@@ -72,9 +74,9 @@ libs/
 - Jede Lib = Ordner + `src/index.ts` als **einzige** öffentliche API, daneben ihre Config-Dateien (`project.json`, `tsconfig*.json`, bei buildable Libs `package.json` + `ng-package.json`, siehe [Explizite Config pro Lib](#explizite-config-pro-lib)). `tooling-verify:verify` meldet jede fehlende oder falsche Datei.
 - Neue Domains, Libs und Feats legen die Generatoren an (siehe [Tooling & Generatoren](#tooling--generatoren)).
 - Alias: `@blueprint/<pfad-unter-libs>`, z.B. `@blueprint/booking/api` oder `@blueprint/checkin/feat-checkin/api`. Ein exakter Eintrag pro Lib in `tsconfig.base.json` (`@blueprint/booking/api` → `./libs/booking/api/src/index.ts`), kein Wildcard.
-- Projektname = Pfad mit `-` (`booking-feat-check-booking-data`), steht in `project.json`.
+- Projektname = Pfad mit `-` (`booking-feat-check-booking-state`), steht in `project.json`.
 - `booking.routes.ts`/`checkin.routes.ts` exportieren jetzt benannt (`bookingRoutes`), weil `export *` keinen Default re-exportiert.
-- Ein lib-privater Ordner `internal/` (z.B. `checkin/data/src/internal/checkin.mapper.ts`) ist bloße Konvention. Privat ist die Datei, weil `index.ts` sie nicht exportiert.
+- Ein lib-privater Ordner `internal/` (z.B. `checkin/state/src/internal/checkin.mapper.ts`) ist bloße Konvention. Privat ist die Datei, weil `index.ts` sie nicht exportiert.
 
 **Kosten:** 32 Libs (booking 12, checkin 11, auth 3, layout 2, shared 4) statt 2, dazu 3 Testing-Libs und 12 Libs der 3 Beispiel-Clients (je types/api/core/testing, nur `index.ts` committet). Pro Lib 2–7 Config-Dateien, Zählung siehe [Dateizählung](#dateizählung).
 
@@ -85,7 +87,7 @@ Jede Lib außer den Testing-Libs hat ein `build`-Target: `@nx/angular:ng-packagr
 - **Dateien der Lib:** `ng-package.json` (`dest`, `entryFile`), `package.json` (`name` = Alias, `private`, `peerDependencies`, `sideEffects: false`), `tsconfig.lib.json` (erweitert `tsconfig.json`, Declarations, ohne Specs), `tsconfig.lib.prod.json` (ohne `declarationMap`).
 - **Alias → dist:** Nx (`@nx/js` `calculateProjectBuildableDependencies`) nimmt den Import-Namen einer Abhängigkeit aus deren `package.json` (`metadata.js.packageName`). Beim Lib-Build und beim App-Build mit `buildLibsFromSource: false` schreibt Nx die Paths der gebauten Abhängigkeiten deshalb selbst auf `dist/` um. Auf `feat/nx-blueprint` fehlte die lib-`package.json`, dafür gab es die Wrapper `ng-lib:build`/`:application`; hier entfallen sie.
 - **peerDependencies nur aus Produktionscode:** der Generator leitet sie aus den Imports der Quellen ohne Specs ab (`^<major>.0.0` der Root-`package.json`, ohne `tslib`), `verify` prüft die Übereinstimmung bei jedem Lauf (sonst stand z.B. `vitest` aus Spec-Imports drin). Generierte Client-Teile haben keine (gitignored Code, dist wie vorher).
-- **dist ist byte-identisch** zu `feat/nx-blueprint` (580 Dateien, Snapshot `packages/tooling/verify/nx-internals/dist-hashes.json` unverändert), inkl. der `package.json` in dist (gleiche Schlüsselreihenfolge und peers).
+- **dist ist byte-identisch** zu `feat/nx-blueprint` (580 Dateien, Snapshot `packages/tooling/verify/nx-internals/dist-hashes.json`; seit `data` → `state` mit den neuen Pfaden/Aliasen neu geschrieben), inkl. der `package.json` in dist (gleiche Schlüsselreihenfolge und peers).
 - **Incremental:** Beim Lib-Build schreibt Nx die Pfade abhängiger Libs auf `dist/` um. Ohne gebaute Abhängigkeit schlägt der Build fehl (`TS2307`), `dependsOn: ^build` sorgt für die Reihenfolge.
 - **App:** `client:build` nutzt `@nx/angular:application` mit `buildLibsFromSource: false`, bündelt also die gebauten Libs aus `dist/`. Beleg (Marker-Test, auch in `verify:nx-internals`): Text in `dist/libs/layout/ui/esm2022/nav-bar.js` ersetzt, `nx run client:build --skip-nx-cache --exclude-task-dependencies` → Marker im `main-*.js`, nicht in den Quellen. `serve` (`@angular/build:dev-server`) baut weiterhin aus den Sources. Für `serve` gegen `dist/` bräuchte es `@nx/angular:dev-server` und damit `@angular-devkit/build-angular`, deshalb bewusst nicht umgesetzt.
 - **Source-Aliase bleiben:** `tsconfig.base.json` zeigt weiter auf `src/index.ts` (IDE, `typecheck`, Lint).
@@ -160,7 +162,7 @@ Gemeinsame Dateien liegen außerhalb von `{projectRoot}` und stehen deshalb expl
 | `client:build` (`targetDefaults`) | `production`, `^production`, `tsconfig.base.json` |
 | `tooling-verify:verify` | `libs/**`, `apps/**`, `eslint.config.mjs`, `nx.json`, `openapi-clients.json`, `lib-scopes.json`, `tsconfig.base.json`, Skript, Output von `client:build` (dependsOn), `eslint`, `@nx/eslint-plugin`, `nx` |
 
-Alle Lib-Targets hashen zusätzlich den generierten Code ihrer Abhängigkeiten (`dependentTasksOutputFiles`, siehe [OpenAPI-Clients](#targets-und-abhängigkeiten)). `production` schließt `tsconfig.spec.json` aus. Die Plugins sind kein Input mehr: Tags stehen in `project.json` (Input über `default`). `lib-conventions.ts` ist nur `lint`-Input, weil die Namensregeln daraus lesen. `nx show target booking-data:test --inputs` zeigt die aufgelösten Inputs.
+Alle Lib-Targets hashen zusätzlich den generierten Code ihrer Abhängigkeiten (`dependentTasksOutputFiles`, siehe [OpenAPI-Clients](#targets-und-abhängigkeiten)). `production` schließt `tsconfig.spec.json` aus. Die Plugins sind kein Input mehr: Tags stehen in `project.json` (Input über `default`). `lib-conventions.ts` ist nur `lint`-Input, weil die Namensregeln daraus lesen. `nx show target booking-state:test --inputs` zeigt die aufgelösten Inputs.
 
 ### Dateizählung
 
@@ -187,7 +189,7 @@ Alle Lib-Targets hashen zusätzlich den generierten Code ihrer Abhängigkeiten (
 | Achse | Tags | Wo |
 |---|---|---|
 | Scope | `scope:<slice>`, `scope:shared` | jede Lib |
-| Type | `type:types\|utils\|events\|api\|data\|ui\|feature`, `type:app`, `type:tooling`, `type:testing` | jede Lib/App/Package |
+| Type | `type:types\|utils\|events\|api\|state\|ui\|feature`, `type:app`, `type:tooling`, `type:testing` | jede Lib/App/Package |
 | Feat | `feat:<feat>` bzw. `feat:none` | jede Lib |
 | Marker | `port`, `feat-port`, `entry`, `generated` | Slice-api, Feat-api, Slice-shell, generierte Client-Libs (siehe [OpenAPI-Clients](#openapi-clients)) |
 | Tooling | `tooling:conventions\|workspace\|openapi\|ng-lib\|verify` | Tooling-Libs in `packages/tooling/*` (siehe [Tooling & Generatoren](#tooling--generatoren)) |
@@ -202,7 +204,7 @@ type:types   -> types                      + bannedExternalImports ['*']   (Scop
 type:utils   -> types, utils
 type:events  -> types, utils, events
 type:api     -> types, utils, api
-type:data    -> types, utils, api, data, events
+type:state   -> types, utils, api, state, events
 type:ui      -> types, utils, ui, events
 type:feature -> alle Produktions-Layer     (kein `type:*`-Glob mehr, er träfe type:testing)
 type:app     -> entry, port, scope:shared  UND nur Produktions-Layer
@@ -212,7 +214,7 @@ scope:shared -> scope:shared
 scope:<s>    -> scope:<s>, port, scope:shared           (je Slice)
 feat:<f>     -> feat:<f>, feat:none, feat-port          (je Feat)
 // Nx-Extra
-utils|events|data|ui|feature: bannedExternalImports ['@angular/common/http']
+utils|events|state|ui|feature: bannedExternalImports ['@angular/common/http']
 Produktions-Layer + app:      bannedExternalImports [msw, msw/*, vitest, vitest/*, @vitest/*, @testing-library/*, playwright, playwright/*]
 // Override für *.spec.ts, *.test.ts, test-setup.ts: dieselben Constraints + type:testing (siehe Testing & MSW)
 ```
@@ -241,9 +243,9 @@ Zusätzlich verbietet `no-restricted-imports` Deep-Imports: generiert aus den ex
 
 ## Entscheidung: Feat-Buckets als eigene Libs
 
-`feat-<x>/api`, `/data` und `/ui` sind **eigene Libs**. Sie sind nicht bloß Ordner einer Feat-Lib, deren Innenleben Sheriff regeln müsste. Gründe:
+`feat-<x>/api`, `/state` und `/ui` sind **eigene Libs**. Sie sind nicht bloß Ordner einer Feat-Lib, deren Innenleben Sheriff regeln müsste. Gründe:
 
-- Die Layer-Matrix gilt im Feat genauso (feat-ui darf feat-data nicht importieren). Innerhalb einer Lib sieht Nx nichts; dafür bräuchte man Sheriff als zweite Regelsprache.
+- Die Layer-Matrix gilt im Feat genauso (feat-ui darf feat-state nicht importieren). Innerhalb einer Lib sieht Nx nichts; dafür bräuchte man Sheriff als zweite Regelsprache.
 - `feat-port` wird ein Lib-Tag. Wäre das Feat eine einzige Lib, würde ihre `index.ts` Container **und** Port exportieren. Ein Geschwister-Feat käme dann auch an den Container.
 - Mit eigenen Libs gibt es keine Sheriff-Abhängigkeit und keinen Build-Zwang für das Config-Package. Eine Regelsprache genügt.
 - Preis: +7 Libs im Beispiel. Pro Feat kostet jeder genutzte Bucket eine Lib.
@@ -252,7 +254,7 @@ Alternative, falls die Lib-Anzahl stört: eine Lib pro Feat, dazu Sheriff nur mi
 
 ## Was Nx besser kann
 
-- **Cache/affected pro Layer:** Eine Änderung in `booking/ui` betrifft nur `ui`, `feature`, `shell` und die App, nicht `data`/`api`.
+- **Cache/affected pro Layer:** Eine Änderung in `booking/ui` betrifft nur `ui`, `feature`, `shell` und die App, nicht `state`/`api`.
 - **Zyklen** zwischen Libs werden erkannt (`noCircularDependencies`). Im Sheriff-Setup wurden sie nicht geprüft.
 - **`bannedExternalImports`:** npm-Regeln pro Tag, z.B. `types` framework-frei, HTTP nur in `api`. Sheriff Upstream kann das nicht, dafür bräuchte man den Fork (`externalRules`).
 - **Lazy-Load-Schutz:** Ein statischer Import einer lazy geladenen Lib würde das Lazy Loading still aushebeln. Nx meldet ihn im Lint.
@@ -267,11 +269,11 @@ Alternative, falls die Lib-Anzahl stört: eine Lib pro Feat, dazu Sheriff nur mi
 | Kein `sameTag`, keine Rückreferenz Quelle→Ziel | Constraints je Scope/Feat aus den Graph-Tags generiert (Workaround) |
 | Keine Negation („kein `feat-*`“); `notDependOnLibsWithTags` ist **transitiv** (prüft alle erreichbaren Libs) und taugt deshalb nicht für „nur direkt verboten“ | Positiver Marker `feat:none` auf allen Nicht-Feat-Libs (Konvention, im Verify-Skript geprüft) |
 | Tag-Tippfehler (`scope:bookng`) würde still einen neuen Scope erzeugen; Nx prüft Tags nicht gegen Ordner | `packages/tooling/verify/scripts/verify-boundaries.mjs` leitet die Tags unabhängig aus dem Pfad ab und vergleicht sie mit der `project.json` jeder Lib (Scope, Type, Feat, `entry`/`port`/`feat-port`, `generated`), prüft den Scope gegen `lib-scopes.json` (Ordner-Tippfehler `libs/bokking/…`), dass jede `src/index.ts` ein Projekt ist und die Liste keine Einträge ohne Lib hat. Die Generatoren schreiben die Tags aus dem Pfad (`deriveTags`), von Hand muss niemand Tags tippen |
-| Die Regel erkennt Deep-Imports über einen Alias nicht (`@blueprint/checkin/data/src/…` passiert die Tag-Prüfung) | `no-restricted-imports` generiert aus den `paths` (`@blueprint/<lib>/**`); TS löst den Import ohnehin nicht auf |
-| Zyklen werden **vor** Tags geprüft: ein Aufwärts-Import im Slice (api→data) meldet sich oft als „Circular dependency“ statt als Layer-Verstoß | geblockt ist er trotzdem, nur mit anderer Meldung. Das Verify-Skript testet beide Varianten |
+| Die Regel erkennt Deep-Imports über einen Alias nicht (`@blueprint/checkin/state/src/…` passiert die Tag-Prüfung) | `no-restricted-imports` generiert aus den `paths` (`@blueprint/<lib>/**`); TS löst den Import ohnehin nicht auf |
+| Zyklen werden **vor** Tags geprüft: ein Aufwärts-Import im Slice (api→state) meldet sich oft als „Circular dependency“ statt als Layer-Verstoß | geblockt ist er trotzdem, nur mit anderer Meldung. Das Verify-Skript testet beide Varianten |
 | Ohne gecachten Projekt-Graph **überspringt** die Nx-Regel still (nur eine Warnung), z.B. bei `eslint` direkt oder in der IDE nach frischem Clone/`nx reset` | `nx lint` baut den Graph selbst. Für alle anderen Aufrufer baut `eslint.config.mjs` ihn per `ensureProjectGraph()` (top-level `await`), falls er fehlt. Geprüft: echter Verstoß in `booking-ui`, leeres `workspace-data`, `eslint <datei>` → Fehler statt Skip |
 | App-interne Slices (Phase 1 des Sheriff-Blueprints) sind nicht prüfbar: eine App ist ein Projekt | alles, was Regeln braucht, lebt in Libs, die App ist dünne Shell (Konvention) |
-| Domain-shared → Feat-Lib (z.B. `booking/data` → `feat-check-booking/data`) ist erlaubt, wie bei Sheriff | bewusst 1:1 übernommen. Härtung wäre möglich per `allSourceTags: ['feat:none', 'type:data']` → `feat:none` |
+| Domain-shared → Feat-Lib (z.B. `booking/state` → `feat-check-booking/state`) ist erlaubt, wie bei Sheriff | bewusst 1:1 übernommen. Härtung wäre möglich per `allSourceTags: ['feat:none', 'type:state']` → `feat:none` |
 | Die Generatoren des `sheriff-blueprint`-Packages erzeugen das Sheriff-Layout (Ordner statt Libs). `@nx/angular:library` erzeugt `project.json`, `tsconfig*.json`, `ng-package.json` usw., aber nicht nach der Blueprint-Konvention (Tags, Pfad, `paths`, Scope-Liste, vitest-Setup) | eigene Generatoren in `packages/tooling` (domain, layer, feat, testing, move, rename, remove, store; component/service als Vorbelegung für die Nx-/Angular-Generatoren), siehe [Tooling & Generatoren](#tooling--generatoren) |
 
 ## Paket `packages/sheriff-blueprint`
@@ -296,7 +298,7 @@ vitest-base.config.mts        runnerConfig: msw-Prebundle-Fix, Browser-Condition
 ```
 
 - Domain-Testing-Libs importieren nur `msw` (nicht `msw/browser`), `type:types` und `shared/testing`. Deshalb liegt `CheckinDto` jetzt in `checkin/types` statt in `checkin/api`.
-- `test`-Target (`"test": {}` in `project.json`, Body in `targetDefaults`) hat jede Lib, deren `src/` eine `*.spec.ts` enthält (heute `booking-api`, `booking-data`, `checkin-api`, `checkin-data`, `checkin-feat-checkin-feature`, `shared-api`), dazu `tsconfig.spec.json`. Executor `@blueprint/tooling-ng-lib:test` (reicht an `@nx/angular:unit-test` durch, `--ui` für Vitest UI), `browsers: ["chromiumHeadless"]`, `runnerConfig: vitest-base.config.mts`, `tsConfig: {projectRoot}/tsconfig.spec.json`, `watch: false`. `verify` prüft: `test` genau bei Libs mit Specs.
+- `test`-Target (`"test": {}` in `project.json`, Body in `targetDefaults`) hat jede Lib, deren `src/` eine `*.spec.ts` enthält (heute `booking-api`, `booking-state`, `checkin-api`, `checkin-state`, `checkin-feat-checkin-feature`, `shared-api`), dazu `tsconfig.spec.json`. Executor `@blueprint/tooling-ng-lib:test` (reicht an `@nx/angular:unit-test` durch, `--ui` für Vitest UI), `browsers: ["chromiumHeadless"]`, `runnerConfig: vitest-base.config.mts`, `tsConfig: {projectRoot}/tsconfig.spec.json`, `watch: false`. `verify` prüft: `test` genau bei Libs mit Specs.
 - Einmalig: `pnpm exec playwright install chromium`.
 
 ### So sieht ein Test aus
@@ -330,7 +332,7 @@ describe('BookingStore', () => {
 - **Reihenfolge** (Vitest 4 löst Fixtures auch für `beforeEach` auf, Auto-Fixtures immer): Fixture-Setup (Worker läuft) → `beforeEach` (Defaults) → Test (`worker.use` wird vorangestellt, neuester Handler gewinnt) → Fixture-Teardown (`resetHandlers` entfernt Defaults und Overrides). Belegt per Probe-Spec (nicht eingecheckt): `fetch` im ersten `beforeEach` wird schon von MSW beantwortet; im Folgetest nach einem Override gilt wieder nur der Default (`listHandlers().length === 1`); ohne `resetHandlers` wird dieser Test rot (3 statt 1 Handler).
 - Ohne `beforeEach` gibt es keine Handler. Ein nicht gemockter Request wird von MSW geloggt und mit 500 beantwortet, der Test wird rot (`booking-api.spec.ts` prüft genau das).
 - Komponententest `feat-checkin.spec.ts`: rendert `FeatCheckin` per TestBed in Chromium, klickt über `page` aus `vitest/browser` und prüft das DOM (`expect.element`). Die Buchungen kommen dabei cross-domain aus `@blueprint/booking/testing`.
-- Mutationsproben: `beforeEach` mit den Default-Handlern in `booking.store.spec.ts` entfernt → `booking-data:test` rot (1 failed, `[MSW] Error: intercepted a request without a matching request handler`). Override gewinnt: die Tests mit `worker.use(...)` laufen trotz aktiver Defaults grün (`serverError` → 500, `withBookings` → nur `b-1`).
+- Mutationsproben: `beforeEach` mit den Default-Handlern in `booking.store.spec.ts` entfernt → `booking-state:test` rot (1 failed, `[MSW] Error: intercepted a request without a matching request handler`). Override gewinnt: die Tests mit `worker.use(...)` laufen trotz aktiver Defaults grün (`serverError` → 500, `withBookings` → nur `b-1`).
 
 ### Schutzschichten gegen Production-Leaks
 
@@ -347,21 +349,21 @@ describe('BookingStore', () => {
 
 ### Zyklen
 
-Nx zählt Spec-Imports als Projekt-Kante: `booking-data → booking-testing`. Damit das zyklenfrei bleibt:
+Nx zählt Spec-Imports als Projekt-Kante: `booking-state → booking-testing`. Damit das zyklenfrei bleibt:
 
 - Testing-Libs importieren nur `type:types`, `type:testing` und `scope:shared`. `types` importiert nur andere `types`, eine types-Spec gegen testing wäre ein Zyklus und ist blockiert (verify-Fall).
 - `shared/testing` importiert keine Blueprint-Lib. So dürfen auch Specs in `shared/*` es nutzen.
-- Import einer Testing-Lib in eine Lib, die schon Specs gegen diese Testing-Lib hat → Nx meldet „Circular dependency“ vor der Tag-Regel (verify: `testing -> data`).
+- Import einer Testing-Lib in eine Lib, die schon Specs gegen diese Testing-Lib hat → Nx meldet „Circular dependency“ vor der Tag-Regel (verify: `testing -> state`).
 - `^build`: Testing-Libs haben kein `build`, Nx überspringt sie. `test` hat kein `dependsOn`. `run-many -t build` läuft ohne Task-Zyklus.
 
 ### Runner-Entscheidung: `@nx/angular:unit-test`
 
-Gewünscht war `@angular/build:unit-test`. Direkt eingetragen scheitert er für die Libs, **Beleg** (`nx run booking-data:test`):
+Gewünscht war `@angular/build:unit-test`. Direkt eingetragen scheitert er für die Libs, **Beleg** (`nx run booking-state:test`):
 
 ```
 The 'buildTarget' is configured to use '@nx/angular:ng-packagr-lite', which is not supported.
 The 'unit-test' builder is designed to work with '@angular/build:application' or '@angular/build:ng-packagr'.
-Could not load build target options for "booking-data:build:development". … no schema with key or ref "https://json-schema.org/schema"
+Could not load build target options for "booking-state:build:development". … no schema with key or ref "https://json-schema.org/schema"
 ```
 
 Mit `buildTarget: client:build:development` gleiche Warnung für `@nx/angular:application`, dazu koppelt es jede Lib an die App.
@@ -375,7 +377,7 @@ Mit `buildTarget: client:build:development` gleiche Warnung für `@nx/angular:ap
 | Angular pre-bundelt `msw` (`optimizeDeps.include`), Vitest Browser schließt es aus → esbuild: „The entry point "msw" cannot be marked as external“ | Plugin `blueprint:msw-not-prebundled` in `vitest-base.config.mts` entfernt die Überschneidung aus `include` |
 | Der Builder mischt seine Resolve-Conditions (`browser`, …) in die Node-Defaults von Vitest, das Browser-Projekt löst also auch mit `node` auf. msw 3 mappt `msw/browser` unter `node` auf `null` → „No known conditions for "./browser" specifier in "msw" package“ | Plugin `blueprint:browser-conditions` in `vitest-base.config.mts` entfernt `node` aus den Client-Conditions, wenn `browser` gesetzt ist |
 | Vitest Browser serviert `/mockServiceWorker.js` selbst aus dem msw-Paket (`vitest:browser:resolve-virtual` → `msw/mockServiceWorker.js`) | seit msw 3 genutzt: kein `publicDir`, keine committete Kopie, kein `msw init`/`msw.workerDirectory`. Beleg per Probe-Spec: ohne beides serviert der Dev-Server `/mockServiceWorker.js` mit `PACKAGE_VERSION 3.0.0`, Checksumme = `node_modules/msw/lib/mockServiceWorker.js` (12 754 Bytes + Inline-Sourcemap), alle Tests grün. Weil das ein Vitest-Interna ist, prüft `pnpm verify:nx-internals` es bei jedem Update (Schritt „MSW worker“). `msw/vite` (`mode: 'worker-only'`) ist damit nicht nötig |
-| Spec-Imports sind Graph-Kanten: `nx graph`/`affected` zeigen `booking-data → booking-testing`, `^production` von `booking-data:build` enthält die Testing-Lib | Build-Output unberührt (tsconfig.lib, Bundle-Check). Cache-Invalidierung etwas breiter als nötig |
+| Spec-Imports sind Graph-Kanten: `nx graph`/`affected` zeigen `booking-state → booking-testing`, `^production` von `booking-state:build` enthält die Testing-Lib | Build-Output unberührt (tsconfig.lib, Bundle-Check). Cache-Invalidierung etwas breiter als nötig |
 | Buildable Lib → Testing-Lib meldet zuerst `enforceBuildableLibDependency`, die Tag-Meldung erscheint erst danach | verify prüft die Tag-Constraints zusätzlich isoliert (`tags only`) |
 | `type:types`-Libs können keine Testing-Libs in Specs nutzen (Zyklus) | reine Interfaces, nichts zu testen |
 | `@angular/build` 22 verlangt `vitest ^4`, deshalb nicht Vitest 5 | beim nächsten Update prüfen |
@@ -391,7 +393,7 @@ nx g @blueprint/tooling-workspace:testing <d>     # für eine bestehende Domain;
 
 1. Erzeugt `libs/<d>/testing/src/fixtures/<d>.fixture.ts` (Builder `a<D>()`), `src/handlers/<d>.handlers.ts` (`<d>Handlers`, `<d>Scenarios`: `withItems`, `empty`, `serverError`), `src/index.ts`, `project.json` (`<d>-testing`, `scope:<d>`, `type:testing`, `feat:none`, Targets `lint` + `typecheck`, **kein** `build`), `tsconfig.json` und den `paths`-Eintrag `@blueprint/<d>/testing`.
 2. Importiert nur `msw`, `@blueprint/<d>/types` und `@blueprint/shared/testing`. Exportiert `<d>/types` kein `<D>`, deklariert die Fixture die Backend-Form selbst (Hinweis im Kommentar: nach `<d>/types` verschieben).
-3. Specs: `*.spec.ts` in `src/` einer Lib ablegen, dazu `tsconfig.spec.json` + `"test": {}` in `project.json` (sonst meldet `verify` beides). Vorlage: `libs/<d>/data/src/<d>.store.spec.ts` aus dem Domain-Generator, der auch die Spec-Config schreibt.
+3. Specs: `*.spec.ts` in `src/` einer Lib ablegen, dazu `tsconfig.spec.json` + `"test": {}` in `project.json` (sonst meldet `verify` beides). Vorlage: `libs/<d>/state/src/<d>.store.spec.ts` aus dem Domain-Generator, der auch die Spec-Config schreibt.
 4. `tooling-verify:verify` prüft Tag-Schema, dass das Testing-Projekt kein `build` hat und `test` genau bei Libs mit Specs existiert.
 
 ## OpenAPI-Clients
@@ -448,7 +450,7 @@ libs/<domain>/generated/<client>/          scope:<domain>  Client-Projekt <domai
 - **`generated` ist ein reservierter Ordner**, kein Scope und kein Layer. `libs/generated/…` gehört zu `shared`, die Scope-Liste bleibt unverändert. `domain generated` wird abgelehnt, einen falschen Pfad (`libs/generated/x/ui`) lehnen Generatoren ab und `verify` meldet ihn (Tags passen zu keinem Teil).
 - **Kein `port`:** Ein generierter Client ist nie die öffentliche API eines Slices. Fremde Domains kommen nur über den Port an `booking/generated/**`.
 - **`core` ist `type:api`**, weil die Runtime `@angular/common/http` importiert (in `utils` verboten).
-- `type:types` → `type:types` gilt (Domain-Types dürfen generierte Models nutzen). `data`/`feature` dürfen generierte Services laut Matrix direkt nutzen, Konvention bleibt „über den Port“.
+- `type:types` → `type:types` gilt (Domain-Types dürfen generierte Models nutzen). `state`/`feature` dürfen generierte Services laut Matrix direkt nutzen, Konvention bleibt „über den Port“.
 - **Kein Pflicht-Wrapper für shared Clients:** der Domain-Port ist der Wrapper (`BookingNotifications`, `CheckinNotifications`), für den pet-client ist es `PetApi` in `shared/api`.
 - Config-Wächter: im Client-Ordner liegen nur `project.json` und die Spec; `openapi.(yaml|json)` an jeder anderen Stelle in `libs/` meldet `tooling-verify:verify` als Config-Datei außerhalb einer Lib.
 
@@ -491,7 +493,7 @@ Die Datei liest zur Laufzeit die Executoren (`resolveClient`), beim Anlegen der 
 |---|---|
 | pet-client: `"options": { "providedIn": "root" }` (= Default, gleicher Code) | nur `generated-pet-client:generate` (152/155) |
 | notification-client: `url` ergänzt | nur `generated-notification-client:generate` (152/155) |
-| pet-client: `"options": { "enumPropertyNaming": "original" }` (anderer Code) | pet-client (generate, Teile, testing), `shared-api` und dessen Abhängige (`checkin-api`, `checkin-data`, `checkin-feat-*`, `checkin-shell`); booking, notification, layout, auth aus dem Cache (116/155) |
+| pet-client: `"options": { "enumPropertyNaming": "original" }` (anderer Code) | pet-client (generate, Teile, testing), `shared-api` und dessen Abhängige (`checkin-api`, `checkin-state`, `checkin-feat-*`, `checkin-shell`); booking, notification, layout, auth aus dem Cache (116/155) |
 | booking-client-Spec: `description` am Schema | booking-client, booking-Libs, `checkin-feat-*`, `checkin-shell`, `client:build` (106/155) |
 | zurück | 153/155 |
 
@@ -509,7 +511,7 @@ Vor dem Umbau auf den `json`-Input liefen im ersten Fall 41 Tasks neu (`shared-a
 | `client:build` | Input (`targetDefaults`) | ebenfalls `dependentTasksOutputFiles` (die App bündelt die Libs aus `dist`) |
 
 - **Gitignored = für Nx unsichtbar.** Nx hasht keine gitignored Dateien und analysiert ihre Imports nicht. Deshalb der `dependentTasksOutputFiles`-Input (sonst kämen Konsumenten nach einer Spec-Änderung aus einem veralteten Cache) und die impliziten Kanten (sonst kein `affected` und keine Build-Reihenfolge). Beleg: Property `guestName` in der booking-Spec umbenannt → `booking-api:typecheck` rot; `description` ergänzt → auch `client:build` läuft neu (vor dem Fix blieb es im Cache).
-- `^generate` reicht über den ganzen Graph: `nx run booking-data:typecheck` generiert vorher den booking-client. Specs, die eine Testing-Lib importieren, sind Graph-Kanten, `^generate` erzeugt also auch die Testing-Libs.
+- `^generate` reicht über den ganzen Graph: `nx run booking-state:typecheck` generiert vorher den booking-client. Specs, die eine Testing-Lib importieren, sind Graph-Kanten, `^generate` erzeugt also auch die Testing-Libs.
 - **`nx affected`**: Spec-Änderung → Client, Teile, Port, Konsumenten, App (per impliziter Kante). Eine Änderung an `openapi-clients.json` gehört keinem Projekt; sie ist Input von `update-spec` (nicht gecacht, also nur für `affected`) → alle Clients + Abhängige. Der Cache von `generate` bleibt pro Eintrag.
 - **IDE:** `pnpm openapi:generate` (= `nx run-many -t generate`) nach dem Checkout, sonst meldet die IDE `Cannot find module './generated'`. Kein `postinstall`: `pnpm install` bräuchte dann Java und Netz. Build, Lint, Typecheck und Test generieren selbst.
 - Deterministisch: zweimal `generate --skip-nx-cache` ergibt byte-gleiche Dateien, die dist der Client-Libs steht im Snapshot von `verify:nx-internals`.
@@ -544,7 +546,7 @@ nx g @blueprint/tooling-openapi:client <name> [--domain=<d>] --spec=<datei|url> 
 | `{ "adapter": "nx-plugin-openapi", "options": { "plugin": "hey-api" } }` | 1/3/12 | Variante B | grün |
 | `{ "adapter": "nx-plugin-openapi" }` (Backend openapi-tools) | 3/2/7 | Variante A | grün |
 
-`git status` zeigte jeweils nur `openapi-clients.json` und `libs/booking/api/src/booking-api.ts` (Beweis auf `feat/nx-blueprint`; hier kommen die Adapter-Inputs in `libs/booking/generated/booking-client/project.json` dazu). Alle Konsumenten (data, feature, checkin, Tests, MSW-Handler) blieben unverändert:
+`git status` zeigte jeweils nur `openapi-clients.json` und `libs/booking/api/src/booking-api.ts` (Beweis auf `feat/nx-blueprint`; hier kommen die Adapter-Inputs in `libs/booking/generated/booking-client/project.json` dazu). Alle Konsumenten (state, feature, checkin, Tests, MSW-Handler) blieben unverändert:
 
 ```ts
 // A (openapi-tools): Observable + HttpErrorResponse
@@ -608,12 +610,12 @@ worker.use(bookingClientHttp.get('/bookings', ({ response }) => response('defaul
 | Fälle | erwartet |
 |---|---|
 | Port → eigener Client (api, types, core), Port/`shared/api` → shared Client | erlaubt |
-| fremde Domain (api, types, feat-data) → `booking/generated/**`, shared → Domain-Client | blockiert (`scope:checkin`, `scope:shared`) |
+| fremde Domain (api, types, feat-state) → `booking/generated/**`, shared → Domain-Client | blockiert (`scope:checkin`, `scope:shared`) |
 | ui → Client api/core (Domain + shared), utils → api, Domain-types → api, app → Domain-Client, Deep-Import | blockiert |
-| ui → Client types, data/feature → Client api (Matrix), types → types | erlaubt |
+| ui → Client types, state/feature → Client api (Matrix), types → types | erlaubt |
 | Produktion/App → Client-testing, testing → Client api, fremdes testing → Domain-Client-testing, `openapi-msw`/`@faker-js/faker` in Produktion | blockiert |
 | Spec → eigenes/shared Client-testing, Domain-testing → eigenes Client-testing | erlaubt; shared-Spec → Domain-Client-testing blockiert |
-| aus generiertem Code (mit Header): types → api/core desselben Clients, types → `@angular/core`, shared → Domain-Client, api → data/events, Deep-Import, testing → api | blockiert; api → core, api/core → `@angular/common/http`, testing → `openapi-msw` erlaubt |
+| aus generiertem Code (mit Header): types → api/core desselben Clients, types → `@angular/core`, shared → Domain-Client, api → state/events, Deep-Import, testing → api | blockiert; api → core, api/core → `@angular/common/http`, testing → `openapi-msw` erlaubt |
 
 Dazu der Check „Generierte Clients“: Eintrag ↔ Ordner ↔ eine Spec ↔ vier Libs, `index.ts`-Inhalt, `generate`-Optionen nur `{ client }` + `json`-Input, Adapter-Inputs in `project.json` ↔ Adapter des Eintrags (`registry.json`), `update-spec` vorhanden, Kanten Teil → Client (→ Teile darunter) exakt, `^generate` + `dependentTasksOutputFiles` an jedem Lib-Target und an `client:build`, Testing-`generate` gecacht und vor `lint`/`typecheck`, nichts unter `src/generated/` committet, alles gitignored.
 
@@ -630,7 +632,7 @@ Dazu der Check „Generierte Clients“: Eintrag ↔ Ordner ↔ eine Spec ↔ vi
 | `nx-plugin-openapi` bringt `@nx/devkit` 19 mit | `peerDependencyRules` (`@nx/devkit>nx: 23`), funktional ok |
 | `formatFiles` von Nx ignoriert `.prettierignore` (übergibt kein `ignorePath`) | Specs und `openapi-clients.json` sind Prettier-formatiert, `update-spec` formatiert genauso nach |
 | `type:testing` → `scope:shared` erlaubt auch shared Client-api in Testing-Libs | bestehende Regel (für `shared/testing`), nicht verschärft |
-| `data`/`feature` dürfen generierte Services laut Matrix nutzen | Konvention „über den Port“, bewusst so gelassen |
+| `state`/`feature` dürfen generierte Services laut Matrix nutzen | Konvention „über den Port“, bewusst so gelassen |
 
 ## Namensschema
 
@@ -640,12 +642,12 @@ Die Namen der Libs, Dateien und Symbole sind keine Kosmetik: Tags, Aliase, Proje
 
 | Regelart | Schema | Beispiel | Mechanismus | Status |
 |---|---|---|---|---|
-| Lib-Ordner | `libs/<scope>/<layer>`, `libs/<scope>/feat-<feat>/<layer>`, `libs/[<d>/]generated/<client>/{types,api,core,testing}`; Layer aus `KNOWN_LAYERS`, Scope aus `lib-scopes.json`, alles kebab-case | `libs/booking/feat-check-booking/data` | Generatoren (`libPathError`, `assertKebabCase`) lehnen ab; von Hand angelegt (`project.json`) meldet `tooling-verify:verify` die Lib (Ordnerregel im Tag-Schema: Form, Layer, kebab-case für Scope/Feat/Client, unabhängig vom Konventions-Code abgeleitet wie die Tags). Neu: kebab-case auch für Feat- und Client-Ordner (`feat-CheckIn` rutschte vorher durch) | umgesetzt |
-| Nx-Projektname | Pfad unter `libs/` mit `-` | `booking-feat-check-booking-data` | Generatoren schreiben ihn in `project.json` (`projectNameFor`), `verify` (Config-Wächter) prüft | besteht |
+| Lib-Ordner | `libs/<scope>/<layer>`, `libs/<scope>/feat-<feat>/<layer>`, `libs/[<d>/]generated/<client>/{types,api,core,testing}`; Layer aus `KNOWN_LAYERS`, Scope aus `lib-scopes.json`, alles kebab-case | `libs/booking/feat-check-booking/state` | Generatoren (`libPathError`, `assertKebabCase`) lehnen ab; von Hand angelegt (`project.json`) meldet `tooling-verify:verify` die Lib (Ordnerregel im Tag-Schema: Form, Layer, kebab-case für Scope/Feat/Client, unabhängig vom Konventions-Code abgeleitet wie die Tags). Neu: kebab-case auch für Feat- und Client-Ordner (`feat-CheckIn` rutschte vorher durch) | umgesetzt |
+| Nx-Projektname | Pfad unter `libs/` mit `-` | `booking-feat-check-booking-state` | Generatoren schreiben ihn in `project.json` (`projectNameFor`), `verify` (Config-Wächter) prüft | besteht |
 | Import-Alias | `@blueprint/<pfad>` | `@blueprint/booking/api` | exakter `paths`-Eintrag pro Lib + `package.json`-Name (`aliasFor`), von den Generatoren geschrieben, `verify` prüft | besteht |
-| Public API | nur `src/index.ts`, `internal/` wird nicht exportiert | `checkin/data/src/internal/checkin.mapper.ts` | Deep-Import: `no-restricted-imports` (besteht). `internal/` in `index.ts`: `blueprint/no-internal-export` | umgesetzt |
+| Public API | nur `src/index.ts`, `internal/` wird nicht exportiert | `checkin/state/src/internal/checkin.mapper.ts` | Deep-Import: `no-restricted-imports` (besteht). `internal/` in `index.ts`: `blueprint/no-internal-export` | umgesetzt |
 | Ordner unter `src/` | kebab-case | `fixtures/`, `internal/` | `blueprint/lib-file-naming` | umgesetzt |
-| Dateinamen je Layer | `<name>.ts` (Komponente, Service, Port) oder `<name>.<kind>.ts`; Kind nur im Layer: model/dto → types, utils → utils, events → events, mapper/store → data, store → ui/feature, routes/providers/shell → shell, fixture/handlers → testing (in `fixtures/`/`handlers/`); Slice-`types`/`utils`/`events` nur mit Kind; Specs wie die Datei + `.spec` | `booking.store.ts`, `booking-card.ts`, `layout.shell.ts` | `blueprint/lib-file-naming` (Tabelle `FILE_KINDS` in den Konventionen) | umgesetzt |
+| Dateinamen je Layer | `<name>.ts` (Komponente, Service, Port) oder `<name>.<kind>.ts`; Kind nur im Layer: model/dto → types, utils → utils, events → events, mapper/store → state, store → ui/feature, routes/providers/shell → shell, fixture/handlers → testing (in `fixtures/`/`handlers/`); Slice-`types`/`utils`/`events` nur mit Kind; Specs wie die Datei + `.spec` | `booking.store.ts`, `booking-card.ts`, `layout.shell.ts` | `blueprint/lib-file-naming` (Tabelle `FILE_KINDS` in den Konventionen) | umgesetzt |
 | Store | `<n>.store.ts` → `<N>Store`, `*Store` nur in `.store.ts` | `CheckinDeskStore` | `blueprint/layer-symbol-naming` | umgesetzt |
 | Port-Klasse | `<n>-api.ts` → `<N>Api`, `*Api`-Klasse nur in `-api.ts` | `BookingApi` | `blueprint/layer-symbol-naming` | umgesetzt |
 | Feat-Container | feature-Lib: `feat-<feat>.ts` → `Feat<Feat>` des Feats der Lib | `FeatCheckBooking` | `blueprint/layer-symbol-naming` | umgesetzt |
@@ -672,7 +674,7 @@ Ausnahmen, bewusst: Shared-Buckets dürfen in `types`/`utils` Einzeldateien ohne
 | Sync-Generator (`nx sync`) | – | – | ja | – | **verworfen** für Namen: Umbenennen ist keine idempotente Reparatur. Bleibt für Routen |
 | `verify` | Verdrahtung | nein | nein | gecacht | **umgesetzt**: 14 Fälle `naming: …` beweisen, dass die Regeln in der echten Config greifen (Loader, `files`/`ignores`, Präfix, Ausnahme generierter Code). Die Regellogik testen die RuleTester-Specs |
 | Nx Conformance (`@nx/conformance`) | Workspace-weite Regeln gegen den Graph | nein | nein | eigenes Kommando | **verworfen**: Nx Powerpack/Enterprise (Lizenz), kein Editor-Feedback, Ordner/Tags deckt `verify` ab |
-| Generatoren | erzeugen korrekte Namen | – | – | – | **Quelle**, validieren den Pfad vorab (`libPathError`, kebab-case: `feat booking CheckIn` → *Feat "CheckIn" must be kebab-case*). Beweis: `domain payment` + `feat payment checkout --api --data --ui` + `layer payment events`/`utils` + `component`/`store`/`service` → `nx lint` (13 Projekte + `client`) und `verify` grün, danach `remove payment` → `git status` unverändert |
+| Generatoren | erzeugen korrekte Namen | – | – | – | **Quelle**, validieren den Pfad vorab (`libPathError`, kebab-case: `feat booking CheckIn` → *Feat "CheckIn" must be kebab-case*). Beweis: `domain payment` + `feat payment checkout --api --state --ui` + `layer payment events`/`utils` + `component`/`store`/`service` → `nx lint` (13 Projekte + `client`) und `verify` grün, danach `remove payment` → `git status` unverändert |
 | TypeScript (Template-Literal-Typen) | – | ja | – | – | **verworfen**: Dateinamen unerreichbar, Symbolnamen nur mit Typ-Gymnastik pro Datei |
 
 ### Laufzeit
@@ -709,12 +711,12 @@ Abhängigkeiten (Paket-Imports, `depConstraints` + 20 Verify-Fälle, zyklenfrei)
 ### Anleitungen
 
 ```sh
-# neue Domain: types, api, data, ui, shell + testing + Beispiel-Spec, je mit Config-Dateien + paths, Lazy-Route, Scope in lib-scopes.json
+# neue Domain: types, api, state, ui, shell + testing + Beispiel-Spec, je mit Config-Dateien + paths, Lazy-Route, Scope in lib-scopes.json
 nx g @blueprint/tooling-workspace:domain payment
 # neue Lib in bestehender Domain (Layer-Liste aus den Konventionen)
 nx g @blueprint/tooling-workspace:layer payment events
-# neues Feat: feature-Container + optional api (feat-port), data, ui; Lazy-Route in den Shell-Routes
-nx g @blueprint/tooling-workspace:feat payment checkout --api --data
+# neues Feat: feature-Container + optional api (feat-port), state, ui; Lazy-Route in den Shell-Routes
+nx g @blueprint/tooling-workspace:feat payment checkout --api --state
 # testing-Gerüst für eine bestehende Domain
 nx g @blueprint/tooling-workspace:testing checkin
 # generierter OpenAPI-Client (shared oder --domain), Spec als Datei oder URL
@@ -730,7 +732,7 @@ nx g @blueprint/tooling-workspace:component libs/booking/ui/src/booking-badge   
 nx g @nx/angular:component libs/booking/ui/src/booking-badge --export          # geht jetzt auch direkt (ohne Layer-Prüfung)
 ```
 
-`@nx/angular:component` funktioniert mit `project.json` wieder (getestet: erzeugt `booking-badge.ts` und exportiert es aus `index.ts`). Nx hat keinen Service-Generator; `@schematics/angular:service` läuft über Nx' Angular-CLI-Adapter mit `--project booking-data --path libs/booking/data/src` (getestet). Die Blueprint-Generatoren `component`/`service` bleiben als **dünne Vorbelegung**: Layer-Prüfung (component nur in ui/feature/shell, service in api/data/feature/shell, nie in generierten Clients), Pfad statt Projekt + Name, inline Template/Styles, `app`-Präfix, ohne Spec, Export aus `index.ts`, dann delegieren sie an den Nx- bzw. Angular-Generator (Templates von dort, z.B. Angular 22 `@Service()`). `store` behält sein Template (Nx kennt keinen Signal-Store-Generator). `nx.json` → `generators["@nx/angular:component"].style` ist gesetzt, sonst schreibt der Nx-Generator ihn beim ersten Aufruf in `nx.json` (Cache-Invalidierung).
+`@nx/angular:component` funktioniert mit `project.json` wieder (getestet: erzeugt `booking-badge.ts` und exportiert es aus `index.ts`). Nx hat keinen Service-Generator; `@schematics/angular:service` läuft über Nx' Angular-CLI-Adapter mit `--project booking-state --path libs/booking/state/src` (getestet). Die Blueprint-Generatoren `component`/`service` bleiben als **dünne Vorbelegung**: Layer-Prüfung (component nur in ui/feature/shell, service in api/state/feature/shell, nie in generierten Clients), Pfad statt Projekt + Name, inline Template/Styles, `app`-Präfix, ohne Spec, Export aus `index.ts`, dann delegieren sie an den Nx- bzw. Angular-Generator (Templates von dort, z.B. Angular 22 `@Service()`). `store` behält sein Template (Nx kennt keinen Signal-Store-Generator). `nx.json` → `generators["@nx/angular:component"].style` ist gesetzt, sonst schreibt der Nx-Generator ihn beim ersten Aufruf in `nx.json` (Cache-Invalidierung).
 
 ### Wächter
 
@@ -760,32 +762,32 @@ Beweise für die explizite Variante (tatsächlich ausgeführt, eigener Nx-Cache,
 
 - **Tags/Targets vorher/nachher** (`nx show projects --json` + `nx show project <p> --json` aller 57 Projekte vor und nach dem Umbau): dieselben Projekte, Tags gleich bis auf `+npm:private` an den 41 buildable Libs (Nx liest die lib-`package.json`). Targets gleich bis auf die gewollten Änderungen: `build` → `@nx/angular:ng-packagr-lite` mit `project`/`tsConfig` der Lib (production → `tsconfig.lib.prod.json` statt `compilerOptions`), `typecheck` → `tsc -p {projectRoot}/tsconfig.json`, `test` → `tsConfig: {projectRoot}/tsconfig.spec.json`, `client:build` → `@nx/angular:application`; Inputs ohne Plugin-, `libs/tsconfig*.json`- und `typecheck-lib`-Dateien, `lint` + `tsconfig.base.json`; `metadata.description` der Client-Targets entfällt. `dependsOn`, Outputs, Kanten, Testing-`generate`, Client-Targets unverändert.
 - `run-many -t build lint test typecheck --skip-nx-cache`: 163 Tasks grün, dieselben wie vorher; `tooling-openapi:test` 96 Tests, Coverage 100 % Lines/Statements/Functions, 98,4 % Branches.
-- **dist:** 580 Dateien identisch zum Snapshot (unverändert von `feat/nx-blueprint`), inkl. der dist-`package.json` (peers aus den lib-`package.json` = vorher aus dem Graph berechnet). Marker-Test: App baut gegen dist.
+- **dist:** 580 Dateien identisch zum Snapshot (von `feat/nx-blueprint`, nach `data` → `state` neu geschrieben), inkl. der dist-`package.json` (peers aus den lib-`package.json` = vorher aus dem Graph berechnet). Marker-Test: App baut gegen dist.
 - `pnpm verify` 151/151, `nx sync:check` grün, `pnpm verify:nx-internals` 7/7 (Stand nach den Namensregeln: `run-many --skip-nx-cache` 160 Tasks grün, `nx test tooling-eslint-rules` grün, dist unverändert 580 Dateien).
-- **Mutationsprobe Config-Wächter:** Tag `scope:bookng` in `booking-ui`, `paths`-Eintrag von `shared/ui` gelöscht, peers aus `booking-data` gelöscht, `layout` aus `lib-scopes.json` genommen + `zombie` ergänzt → alle Fälle gemeldet, Exit 1.
-- **Generator-E2E:** `domain payment` + `feat payment checkout --api --data --ui` + `layer payment events` → 11 Libs mit 67 Config-Dateien, `paths`, Scope, Routen; `run-many`, `verify` (58 Libs), `sync:check` grün; `remove payment` → `git status` leer. `client demo-client --spec=demo.yaml` → Client-`project.json` + 4 Libs; `run-many` (inkl. `generate`), `verify` grün; `remove generated/demo-client` → `git status` leer.
+- **Mutationsprobe Config-Wächter:** Tag `scope:bookng` in `booking-ui`, `paths`-Eintrag von `shared/ui` gelöscht, peers aus `booking-state` gelöscht, `layout` aus `lib-scopes.json` genommen + `zombie` ergänzt → alle Fälle gemeldet, Exit 1.
+- **Generator-E2E:** `domain payment` + `feat payment checkout --api --state --ui` + `layer payment events` → 11 Libs mit 67 Config-Dateien, `paths`, Scope, Routen; `run-many`, `verify` (58 Libs), `sync:check` grün; `remove payment` → `git status` leer. `client demo-client --spec=demo.yaml` → Client-`project.json` + 4 Libs; `run-many` (inkl. `generate`), `verify` grün; `remove generated/demo-client` → `git status` leer.
 - **Fresh Clone:** `git clone`, `pnpm install --frozen-lockfile`, leerer Cache → `sync:check`, `run-many`, `verify` grün, dist 580 Dateien = Snapshot.
 - **Vitest UI:** `nx run booking-api:test --ui --headless` → `http://localhost:51204/__vitest__/` antwortet 200, danach beendet.
 - **Keine Inferenz-Reste:** kein `createNodes*` im Code, kein `plugins`-Eintrag in `nx.json`, keine `libs/tsconfig*.json`.
 - Plain `eslint` mit leerem `NX_WORKSPACE_DATA_DIRECTORY` baut den Graphen selbst (`ensureProjectGraph()`, unverändert).
-- MSW: Default-Handler (`beforeEach`) in `booking.store.spec.ts` entfernt → `booking-data:test` rot (`verify:nx-internals`).
+- MSW: Default-Handler (`beforeEach`) in `booking.store.spec.ts` entfernt → `booking-state:test` rot (`verify:nx-internals`).
 
 Die 4 Lint-Warnungen in `sheriff-blueprint` (`no-non-null-assertion` in Tests) gab es schon vorher.
 
 Beobachtung: einmal fehlte nach `domain` + `feat` + `layer` direkt hintereinander die dynamische Kante `payment-shell → payment-feat-checkout-feature` im Graphen (Build rot: Feat aus den Quellen statt dist); nach Löschen von `NX_WORKSPACE_DATA_DIRECTORY` da, bei Wiederholung nicht reproduzierbar. Nx-File-Map-Cache, unabhängig von expliziter/inferierter Config.
 
-`packages/tooling/verify/scripts/verify-boundaries.mjs` lintet für jeden Fall eine virtuelle Datei (`ESLint#lintText` mit `filePath` in der echten Lib) gegen die echte Config. Mutationsprobe: `type:ui` testweise `type:data` erlaubt → Fall „ui -> data“ rot, Exit 1.
+`packages/tooling/verify/scripts/verify-boundaries.mjs` lintet für jeden Fall eine virtuelle Datei (`ESLint#lintText` mit `filePath` in der echten Lib) gegen die echte Config. Mutationsprobe: `type:ui` testweise `type:state` erlaubt → Fall „ui -> state“ rot, Exit 1.
 
 | Regel | erwartet | Ergebnis |
 |---|---|---|
-| layer: ui → data / ui → api | blockiert | ✅ `type:ui` |
+| layer: ui → state / ui → api | blockiert | ✅ `type:ui` |
 | layer: utils → api (shared) | blockiert | ✅ `type:utils` |
 | layer: types → types (eigener Scope, shared) | erlaubt | ✅ |
 | layer: types → utils | blockiert | ✅ `type:types` |
 | layer: types → fremde Domain-types, shared types → Domain-types | blockiert | ✅ `scope:<s>` / `scope:shared` |
-| layer: events → data / api → data | blockiert | ✅ als Zyklus; ohne Zyklus `type:events`/`type:api` |
-| layer: data → ui | blockiert | ✅ `type:data` |
-| layer: ui → events, data → api, feature → ui | erlaubt | ✅ |
+| layer: events → state / api → state | blockiert | ✅ als Zyklus; ohne Zyklus `type:events`/`type:api` |
+| layer: state → ui | blockiert | ✅ `type:state` |
+| layer: ui → events, state → api, feature → ui | erlaubt | ✅ |
 | scope: fremde Domain-Interna / Shared-Feature-Interna / fremder entry | blockiert | ✅ `scope:<s>` |
 | scope: fremde Domain / Shared-Feature via port | erlaubt | ✅ |
 | scope: shared → Domain | blockiert | ✅ `scope:shared` |
@@ -793,35 +795,35 @@ Beobachtung: einmal fehlte nach `domain` + `feat` + `layer` direkt hintereinande
 | feat: Geschwister-Interna / Geschwister-Container | blockiert | ✅ `feat:<f>` |
 | feat: Geschwister via feat-port, eigene Interna, Domain-shared | erlaubt | ✅ |
 | feat: fremder feat-port (andere Domain) | blockiert | ✅ `scope:<s>` |
-| app: Shell → ui / data | blockiert | ✅ `type:app` |
+| app: Shell → ui / state | blockiert | ✅ `type:app` |
 | app: Shell → entry / port | erlaubt | ✅ |
 | app: statischer Import einer lazy entry | blockiert | ✅ lazy-loaded |
 | app: Lib → App | blockiert | ✅ relative/absolute Import |
 | encapsulation: relativ in fremde Lib / Deep-Alias | blockiert | ✅ Nx-Builtin / `no-restricted-imports` |
 | nx: HTTP außerhalb api / types → `@angular/core` | blockiert | ✅ `bannedExternalImports` |
 | nx: HTTP in api | erlaubt | ✅ |
-| nx: Zyklus data ↔ feat-data | blockiert | ✅ Circular |
+| nx: Zyklus state ↔ feat-state | blockiert | ✅ Circular |
 | nx: Lib ohne Tags | blockiert | ✅ `without tags` |
-| testing: Produktion → testing (Lib / Feature / App) | blockiert | ✅ non-buildable bzw. `type:app`; nur Tags: `type:data`/`type:feature` |
+| testing: Produktion → testing (Lib / Feature / App) | blockiert | ✅ non-buildable bzw. `type:app`; nur Tags: `type:state`/`type:feature` |
 | testing: Spec → eigenes / fremdes Domain-testing / shared/testing | erlaubt | ✅ |
-| testing: shared-Spec → Domain-testing, types-Spec → testing, Spec ui → data | blockiert | ✅ `scope:shared` / Circular / `type:ui` |
-| testing: testing → data (mit/ohne Zyklus), → api, → fremdes testing | blockiert | ✅ Circular / `type:testing` / `scope:<s>` |
+| testing: shared-Spec → Domain-testing, types-Spec → testing, Spec ui → state | blockiert | ✅ `scope:shared` / Circular / `type:ui` |
+| testing: testing → state (mit/ohne Zyklus), → api, → fremdes testing | blockiert | ✅ Circular / `type:testing` / `scope:<s>` |
 | testing: testing → types / shared/testing | erlaubt | ✅ |
 | testing: msw, msw/browser, vitest, @vitest/* in Produktion/App | blockiert | ✅ `bannedExternalImports` |
 | testing: msw in testing-Lib / Spec | erlaubt | ✅ |
 | neue Lib (mit den Dateien der Generatoren, `booking/feat-tmpverify/ui`): ui → api, → fremdes Feat, Geschwister-Feat → neue Lib, fremder Slice → neue Lib, Deep-Alias | blockiert | ✅ `type:ui` / `feat:tmpverify` / `feat:check-booking` / `scope:checkin` / `no-restricted-imports` |
 | neue Lib → shared | erlaubt | ✅ |
 
-Zusätzlich wurden echte Verstöße in Quelldateien eingebaut, per `nx lint <projekt>` geprüft und danach zurückgebaut: `booking-ui`, `checkin-feat-history-feature`, `client` und `checkin-feat-checkin-data` schlugen jeweils mit `@nx/enforce-module-boundaries` fehl. Die Kommentare `// boundary-violation-example: …` in den Quellen markieren weitere Verstöße zum Einkommentieren.
+Zusätzlich wurden echte Verstöße in Quelldateien eingebaut, per `nx lint <projekt>` geprüft und danach zurückgebaut: `booking-ui`, `checkin-feat-history-feature`, `client` und `checkin-feat-checkin-state` schlugen jeweils mit `@nx/enforce-module-boundaries` fehl. Die Kommentare `// boundary-violation-example: …` in den Quellen markieren weitere Verstöße zum Einkommentieren.
 
 Negativproben Namensschema (je `nx lint <projekt>` rot, danach zurückgebaut):
 
 | Verstoß | Projekt | Meldung |
 |---|---|---|
-| `booking.store.ts` in `booking/utils` | `booking-utils` | `blueprint/lib-file-naming`: belongs into a data/ui/feature lib |
-| `export class Bookings` in `booking/data/src/bookings.store.ts` | `booking-data` | `blueprint/layer-symbol-naming`: must be named "BookingsStore" |
+| `booking.store.ts` in `booking/utils` | `booking-utils` | `blueprint/lib-file-naming`: belongs into a state/ui/feature lib |
+| `export class Bookings` in `booking/state/src/bookings.store.ts` | `booking-state` | `blueprint/layer-symbol-naming`: must be named "BookingsStore" |
 | Selektor `bk-booking-card` | `booking-ui` | `@angular-eslint/component-selector`: should start with … "app" |
-| `export * from './internal/checkin.mapper'` in `index.ts` | `checkin-data` | `blueprint/no-internal-export`: internal/ is lib-private |
+| `export * from './internal/checkin.mapper'` in `index.ts` | `checkin-state` | `blueprint/no-internal-export`: internal/ is lib-private |
 | Lib-Ordner `booking/feat-CheckIn/feature` (Kopie einer Feature-Lib, `project.json`, Tags und `paths` passend) | – | Graph und `nx lint` laufen; `tooling-verify:verify` rot: *folder "CheckIn" must be kebab-case*. Der Generator lehnt `feat booking CheckIn` ab. (`checkin/feat-CheckIn` geht auf macOS nicht: APFS ist case-insensitiv, `feat-checkin` existiert) |
 
 ## Selbst ausprobieren
@@ -848,7 +850,7 @@ pnpm exec nx sync:check
 # 4. ansehen
 pnpm exec nx graph                              # Projekte generated-*, Kanten Teil → Client
 pnpm exec nx show project booking-generated-booking-client   # Targets generate/update-spec, Inputs (aus libs/booking/generated/booking-client/project.json)
-cat libs/booking/data/project.json                # Tags + leere Targets, Bodies: nx.json → targetDefaults
+cat libs/booking/state/project.json                # Tags + leere Targets, Bodies: nx.json → targetDefaults
 pnpm exec nx show projects --affected --files libs/generated/notification-client/openapi.yaml
 pnpm exec nx graph --focus=tooling-workspace     # Tooling-Libs: workspace → conventions, openapi; openapi → conventions
 pnpm exec nx run-many -t lint test typecheck -p 'tooling-*'   # Specs der Tooling-Libs
@@ -910,9 +912,9 @@ git checkout openapi-clients.json
 # 10. Negativprobe Boundaries
 printf "import { BookingsService } from '@blueprint/booking/generated/booking-client/api';\nexport const x = BookingsService;\n" > libs/booking/ui/src/probe.ts
 pnpm exec nx lint booking-ui                    # rot: type:ui darf kein type:api
-mv libs/booking/ui/src/probe.ts libs/checkin/data/src/probe.ts
-pnpm exec nx lint checkin-data                  # rot: scope:checkin nur über den Port
-rm libs/checkin/data/src/probe.ts
+mv libs/booking/ui/src/probe.ts libs/checkin/state/src/probe.ts
+pnpm exec nx lint checkin-state                  # rot: scope:checkin nur über den Port
+rm libs/checkin/state/src/probe.ts
 
 # 11. Negativprobe fehlender Handler
 #   in libs/booking/api/src/booking-notifications.spec.ts die Zeile

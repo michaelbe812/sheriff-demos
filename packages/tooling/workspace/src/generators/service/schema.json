@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/schema",
   "$id": "BlueprintService",
   "title": "Service in einer Lib",
-  "description": "Dünne Vorbelegung für @schematics/angular:service: Layer-Prüfung (api/data/feature/shell, kein generierter Client), Pfad statt Projekt, ohne Spec, Export aus index.ts.",
+  "description": "Dünne Vorbelegung für @schematics/angular:service: Layer-Prüfung (api/state/feature/shell, kein generierter Client), Pfad statt Projekt, ohne Spec, Export aus index.ts.",
   "type": "object",
   "properties": {
     "path": {

@@ -1,6 +1,6 @@
 /**
  * Example sources of a feat (libs/<slice>/feat-<feat>/…): feature = smart container (lazy route of
- * the slice shell), api = feat-port for sibling feats, data = feat store, ui = dumb view.
+ * the slice shell), api = feat-port for sibling feats, state = feat store, ui = dumb view.
  */
 import { names } from '@nx/devkit';
 import { aliasFor } from '@blueprint/tooling-conventions';
@@ -27,7 +27,7 @@ export function featNames(scope: string, feat: string): FeatNames {
 
 export interface FeatParts {
   api: boolean;
-  data: boolean;
+  state: boolean;
   ui: boolean;
 }
 
@@ -51,7 +51,7 @@ export function describe${n.className}(summary: ${n.className}Summary): string {
   exports: [`${n.feat}-api`],
 });
 
-export const featData = (n: FeatNames, parts: FeatParts): LibFiles => {
+export const featState = (n: FeatNames, parts: FeatParts): LibFiles => {
   const apiImport = parts.api ? `import { describe${n.className} } from '${alias(n, 'api')}';\n` : '';
   const summary = parts.api ? `\n  readonly summary = computed(() => describe${n.className}({ selected: this.selected() }));\n` : '';
   return {
@@ -107,30 +107,30 @@ export class ${n.className}View {
 
 export const featFeature = (n: FeatNames, parts: FeatParts): LibFiles => {
   const imports = [
-    `import { ChangeDetectionStrategy, Component${parts.data ? ', inject' : ''} } from '@angular/core';`,
-    parts.data ? `import { ${n.className}Store } from '${alias(n, 'data')}';` : '',
+    `import { ChangeDetectionStrategy, Component${parts.state ? ', inject' : ''} } from '@angular/core';`,
+    parts.state ? `import { ${n.className}Store } from '${alias(n, 'state')}';` : '',
     parts.ui ? `import { ${n.className}View } from '${alias(n, 'ui')}';` : '',
   ].filter(Boolean);
   const view = parts.ui
-    ? `<app-${n.feat}-view [items]="${parts.data ? 'store.items()' : '[]'}"${parts.data ? ' (selected)="store.select($event)"' : ''} />`
-    : parts.data
+    ? `<app-${n.feat}-view [items]="${parts.state ? 'store.items()' : '[]'}"${parts.state ? ' (selected)="store.select($event)"' : ''} />`
+    : parts.state
       ? `<p>{{ store.items().length }} entries</p>`
       : `<p>feat-${n.feat} works.</p>`;
-  const summary = parts.data && parts.api ? `\n    <p>{{ store.summary() }}</p>` : '';
+  const summary = parts.state && parts.api ? `\n    <p>{{ store.summary() }}</p>` : '';
   return {
     files: {
       [`feat-${n.feat}.ts`]: `${imports.join('\n')}
 
 /** Smart container of feat-${n.feat} (lazy route of the ${n.scope} shell). */
 @Component({
-  selector: 'app-feat-${n.feat}',${parts.ui ? `\n  imports: [${n.className}View],` : ''}${parts.data ? `\n  providers: [${n.className}Store],` : ''}
+  selector: 'app-feat-${n.feat}',${parts.ui ? `\n  imports: [${n.className}View],` : ''}${parts.state ? `\n  providers: [${n.className}Store],` : ''}
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: \`
     <h2>${n.className}</h2>
     ${view}${summary}
   \`,
 })
-export class ${n.container} {${parts.data ? `\n  protected readonly store = inject(${n.className}Store);\n` : ''}}
+export class ${n.container} {${parts.state ? `\n  protected readonly store = inject(${n.className}Store);\n` : ''}}
 `,
     },
     exports: [`feat-${n.feat}`],

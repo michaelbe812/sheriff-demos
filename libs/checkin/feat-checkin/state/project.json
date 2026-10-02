@@ -1,9 +1,9 @@
 {
-  "name": "booking-feat-check-booking-data",
+  "name": "checkin-feat-checkin-state",
   "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "libs/booking/feat-check-booking/data/src",
-  "tags": ["scope:booking", "type:data", "feat:check-booking"],
+  "sourceRoot": "libs/checkin/feat-checkin/state/src",
+  "tags": ["scope:checkin", "type:state", "feat:checkin"],
   "targets": {
     "build": {},
     "lint": {},

@@ -1,9 +1,9 @@
 {
-  "name": "booking-data",
+  "name": "checkin-state",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "libs/booking/data/src",
-  "tags": ["scope:booking", "type:data", "feat:none"],
+  "sourceRoot": "libs/checkin/state/src",
+  "tags": ["scope:checkin", "type:state", "feat:none"],
   "targets": {
     "build": {},
     "lint": {},

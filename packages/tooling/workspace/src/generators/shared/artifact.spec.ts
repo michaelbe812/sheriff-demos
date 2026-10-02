@@ -29,13 +29,13 @@ describe('component / service / store wrappers', () => {
   });
 
   it('service: @schematics/angular:service (project from the path), path without src/ works too', async () => {
-    await serviceGenerator(tree, { path: 'booking/data/booking-cache', export: false, skipFormat: true });
+    await serviceGenerator(tree, { path: 'booking/state/booking-cache', export: false, skipFormat: true });
 
-    expect(read(tree, 'libs/booking/data/src/booking-cache.ts')).toContain('export class BookingCache');
+    expect(read(tree, 'libs/booking/state/src/booking-cache.ts')).toContain('export class BookingCache');
     // Angular 22 default: @Service() (root-provided)
-    expect(read(tree, 'libs/booking/data/src/booking-cache.ts')).toContain('@Service()');
-    expect(tree.exists('libs/booking/data/src/booking-cache.spec.ts')).toBe(false);
-    expect(read(tree, 'libs/booking/data/src/index.ts')).toBe("export * from './booking.store';\n");
+    expect(read(tree, 'libs/booking/state/src/booking-cache.ts')).toContain('@Service()');
+    expect(tree.exists('libs/booking/state/src/booking-cache.spec.ts')).toBe(false);
+    expect(read(tree, 'libs/booking/state/src/index.ts')).toBe("export * from './booking.store';\n");
 
     await serviceGenerator(tree, { path: 'libs/booking/api/src/cache/api-cache', skipFormat: true });
     expect(read(tree, 'libs/booking/api/src/cache/api-cache.ts')).toContain('export class ApiCache');
@@ -53,11 +53,11 @@ describe('component / service / store wrappers', () => {
   });
 
   it('validates lib, layer and existing files', async () => {
-    await expect(componentGenerator(tree, { path: 'libs/booking/data/src/card' })).rejects.toThrow(
+    await expect(componentGenerator(tree, { path: 'libs/booking/state/src/card' })).rejects.toThrow(
       'ui/feature/shell lib',
     );
     await expect(componentGenerator(tree, { path: 'libs/nope/ui/src/card' })).rejects.toThrow('is no lib');
-    await storeGenerator(tree, { path: 'booking/data/src/booking-cache' });
-    await expect(storeGenerator(tree, { path: 'booking/data/src/booking-cache' })).rejects.toThrow('exists already');
+    await storeGenerator(tree, { path: 'booking/state/src/booking-cache' });
+    await expect(storeGenerator(tree, { path: 'booking/state/src/booking-cache' })).rejects.toThrow('exists already');
   });
 });

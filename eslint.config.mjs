@@ -8,7 +8,7 @@ import { join } from "node:path";
  * Blueprint architecture as pure Nx module boundaries — see
  * docs/nx-umsetzung.md. One lib per slice x layer, tags:
  *   scope:<slice>   booking, checkin, auth, layout, ... | shared
- *   type:<layer>    types, utils, events, api, data, ui, feature | app
+ *   type:<layer>    types, utils, events, api, state, ui, feature | app
  *                   | testing (test-only libs: MSW handlers, fixtures)
  *   feat:<feat>     lib belongs to feat-<feat>/ ; feat:none = outside any feat
  *   port            the slice's public api lib (foreign slices may import it)
@@ -32,7 +32,7 @@ const tagsWithPrefix = (tags, prefix, ...excluded) =>
     [...new Set(tags)].filter((tag) => tag.startsWith(prefix) && !excluded.includes(tag)).sort();
 
 /** Layers that ship to production — everything except `type:testing`. */
-const productionLayers = ["type:types", "type:utils", "type:events", "type:api", "type:data", "type:ui", "type:feature"];
+const productionLayers = ["type:types", "type:utils", "type:events", "type:api", "type:state", "type:ui", "type:feature"];
 
 /** Layer matrix (type axis): X may only depend on the listed layers. */
 const layerConstraints = [
@@ -41,7 +41,7 @@ const layerConstraints = [
     { sourceTag: "type:utils", onlyDependOnLibsWithTags: ["type:types", "type:utils"] },
     { sourceTag: "type:events", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:events"] },
     { sourceTag: "type:api", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:api"] },
-    { sourceTag: "type:data", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:api", "type:data", "type:events"] },
+    { sourceTag: "type:state", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:api", "type:state", "type:events"] },
     { sourceTag: "type:ui", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:ui", "type:events"] },
     // every production layer — no `type:*` glob, it would match type:testing
     { sourceTag: "type:feature", onlyDependOnLibsWithTags: productionLayers },
@@ -65,7 +65,7 @@ const noTestPackagesInProduction = [...productionLayers, "type:app"].map((source
 }));
 
 /** Nx-only extra: HTTP is the api layer's job (api = http in the blueprint). */
-const httpOnlyInApi = ["type:utils", "type:events", "type:data", "type:ui", "type:feature"].map((sourceTag) => ({
+const httpOnlyInApi = ["type:utils", "type:events", "type:state", "type:ui", "type:feature"].map((sourceTag) => ({
     sourceTag,
     bannedExternalImports: ["@angular/common/http"],
 }));

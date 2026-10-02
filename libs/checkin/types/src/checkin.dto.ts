@@ -1,4 +1,4 @@
-/** Raw backend shape of a check-in; mapped to CheckinRecord in data/internal. */
+/** Raw backend shape of a check-in; mapped to CheckinRecord in state/internal. */
 export interface CheckinDto {
   id: string;
   booking_id: string;

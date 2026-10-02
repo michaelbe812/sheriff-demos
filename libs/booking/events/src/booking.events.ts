@@ -1,7 +1,7 @@
 /**
  * Domain events: definition-only (type + creator). ui and feature may emit
- * them, stores (data) handle them — that's why events is its own bucket that
- * ui may import, unlike data.
+ * them, stores (state) handle them — that's why events is its own bucket that
+ * ui may import, unlike state.
  */
 export interface BookingConfirmed {
   readonly type: 'booking.confirmed';

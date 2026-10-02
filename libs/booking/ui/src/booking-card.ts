@@ -4,7 +4,7 @@ import { Booking } from '@blueprint/booking/types';
 import { bookingLabel } from '@blueprint/booking/utils';
 import { BookingCardStore } from './booking-card.store';
 
-// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // ui -> data
+// boundary-violation-example: import { BookingStore } from '@blueprint/booking/state'; // ui -> state
 // boundary-violation-example: import { BookingApi } from '@blueprint/booking/api'; // ui -> api
 
 /** Dumb component: types, utils, events, local store — nothing else. */

@@ -108,7 +108,7 @@ describe('openapi-clients.json on the Tree', () => {
     tree.write('libs/booking/api/src/a.ts', 'demoClientHttp;\n');
     expect(renameClientExports(tree, 'generated/demo-client', 'booking/generated/demo-client')).toEqual([]);
     expect(renameClientExports(tree, 'booking/api', 'booking/generated/x-client')).toEqual([]);
-    expect(renameClientExports(tree, 'generated/demo-client', 'booking/data')).toEqual([]);
+    expect(renameClientExports(tree, 'generated/demo-client', 'booking/state')).toEqual([]);
     expect(read(tree, 'libs/booking/api/src/a.ts')).toBe('demoClientHttp;\n');
   });
 

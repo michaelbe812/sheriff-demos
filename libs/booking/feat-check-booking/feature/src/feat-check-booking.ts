@@ -1,8 +1,8 @@
 import { Component, inject } from '@angular/core';
-import { BookingStore } from '@blueprint/booking/data';
+import { BookingStore } from '@blueprint/booking/state';
 import { BookingConfirmed } from '@blueprint/booking/events';
 import { BookingCard } from '@blueprint/booking/ui';
-import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/data';
+import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/state';
 import { CheckResult } from '@blueprint/booking/feat-check-booking/ui';
 
 /** Smart container: wires domain-shared + feat-private state into dumb ui. */

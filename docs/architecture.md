@@ -1,6 +1,6 @@
 # Sheriff Blueprint — Architektur & Regelwerk
 
-> **Branch `feat/nx-blueprint`:** Das Regelwerk unten ist hier **ohne Sheriff** umgesetzt, mit einer Nx-Lib pro Slice × Layer, Tags und `@nx/enforce-module-boundaries`. Siehe [`nx-umsetzung.md`](./nx-umsetzung.md). Pfade, `sheriff.config.ts` und die Verifikation weiter unten beschreiben den Sheriff-Stand.
+> **Branch `feat/nx-blueprint`:** Das Regelwerk unten ist hier **ohne Sheriff** umgesetzt, mit einer Nx-Lib pro Slice × Layer, Tags und `@nx/enforce-module-boundaries`. Siehe [`nx-umsetzung.md`](./nx-umsetzung.md). Pfade, `sheriff.config.ts` und die Verifikation weiter unten beschreiben den Sheriff-Stand. Auf `feat/nx-blueprint-explicit-config` heißt der Layer `data` `state` (Tag `type:state`).
 
 Skalierbare `sheriff.config.ts` für alle Projekte. Funktioniert identisch für app-interne Domains (`apps/<app>/src/app/domains/…`) und extrahierte Nx-Libs (`libs/domains/…`) — Extraktion = reiner Folder-Move, null Regeländerung.
 

@@ -15,7 +15,7 @@ Alle Status­angaben stammen aus tatsächlich ausgeführtem `sheriff verify` bzw
 | `feat/sheriff-config-blueprint` | sheriff-blue-print · `9af33b9` | ✅ verify grün | nein |
 | `feat/deny-rules-config` | sheriff-hexagonal · `5d7941d` | ❌ läuft nicht | ja (nicht installiert) |
 | `feat/nx-blueprint` | nx-blueprint | ✅ 38/38 Boundary-Fälle, run-many grün | nein (ganz ohne Sheriff) |
-| `feat/nx-blueprint-explicit-config` | – | ✅ 135/135 verify-Fälle, run-many grün | nein (wie 5, explizite Config statt Crystal-Plugins) |
+| `feat/nx-blueprint-explicit-config` | – | ✅ 151/151 verify-Fälle, run-many grün | nein (wie 5, explizite Config statt Crystal-Plugins) |
 
 `feat/deny-rules-config` importiert in `sheriff.config.ts` aus `@lambda-solutions/sheriff-core`, die `package.json` listet aber nur `@softarc/sheriff-core`, und der Fork ist nicht installiert → `Cannot find module '@lambda-solutions/sheriff-core'`. War als Fork-Branch gedacht; in dem Zustand aber weder mit noch ohne Fork benutzbar.
 
@@ -114,7 +114,7 @@ Der ursprüngliche Vertical-Slice-Blueprint als teilbares Package (`@berger-engi
 
 Dasselbe Regelwerk wie Ansatz 4, aber **ohne Sheriff**: eine Nx-Lib pro Slice × Layer (32 Libs), Tags `scope:` / `type:` / `feat:` plus die Marker `port`, `feat-port` und `entry`, erzwungen durch `@nx/enforce-module-boundaries`. `sameTag` gibt es in Nx nicht; es wird durch eine generierte Constraint pro Scope bzw. Feat ersetzt. Was Nx zusätzlich kann: Zyklen, `bannedExternalImports`, affected/Cache pro Layer. Der Preis sind viele Libs und viel Boilerplate. Details, Limitierungen und Testergebnisse in [`nx-umsetzung.md`](./nx-umsetzung.md).
 
-**Variante `feat/nx-blueprint-explicit-config`:** dasselbe ohne Crystal-Plugins: jede Lib trägt `project.json`, `package.json`, `ng-package.json` und `tsconfig*.json` selbst (Generatoren schreiben und pflegen sie, `verify` prüft sie), Standard-Executoren statt Wrapper, exakte `paths` statt Wildcard. Unterschiede, Vor- und Nachteile oben in [`nx-umsetzung.md`](./nx-umsetzung.md#variante-explizite-config).
+**Variante `feat/nx-blueprint-explicit-config`:** dasselbe ohne Crystal-Plugins: jede Lib trägt `project.json`, `package.json`, `ng-package.json` und `tsconfig*.json` selbst (Generatoren schreiben und pflegen sie, `verify` prüft sie), Standard-Executoren statt Wrapper, exakte `paths` statt Wildcard, Layer `state` statt `data`. Unterschiede, Vor- und Nachteile oben in [`nx-umsetzung.md`](./nx-umsetzung.md#variante-explizite-config).
 
 
 ---

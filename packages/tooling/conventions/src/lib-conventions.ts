@@ -32,7 +32,7 @@ export const FEATURE_LAYERS = ['shell', 'feature'];
 /** Test-only libs (MSW handlers, fixtures): never built, never shipped. */
 export const TESTING_LAYER = 'testing';
 /** Every layer folder the depConstraints know. Anything else would get an unconstrained `type:` tag. */
-export const KNOWN_LAYERS = ['types', 'utils', 'events', 'api', 'data', 'ui', ...FEATURE_LAYERS, TESTING_LAYER];
+export const KNOWN_LAYERS = ['types', 'utils', 'events', 'api', 'state', 'ui', ...FEATURE_LAYERS, TESTING_LAYER];
 /** Layers of a slice root (`libs/<scope>/<layer>`): `feature` only exists inside a feat. */
 export const SLICE_LAYERS = KNOWN_LAYERS.filter((layer) => layer !== 'feature');
 /** Layers inside a feat (`libs/<scope>/feat-<feat>/<layer>`): no shell, no testing. */
@@ -70,8 +70,8 @@ export const FILE_KINDS: Record<string, string[]> = {
   dto: ['types'],
   utils: ['utils'],
   events: ['events'],
-  mapper: ['data'],
-  store: ['data', 'ui', 'feature'],
+  mapper: ['state'],
+  store: ['state', 'ui', 'feature'],
   routes: ['shell'],
   providers: ['shell'],
   shell: ['shell'],
