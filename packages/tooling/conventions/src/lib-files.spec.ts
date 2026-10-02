@@ -38,7 +38,7 @@ describe('libConfigFiles', () => {
     expect(Object.keys(testing)).toEqual(['project.json', 'tsconfig.json']);
     expect(testing['project.json']['targets']).toEqual({ lint: {}, typecheck: {} });
 
-    const withSpecs = libConfigFiles('shared/api', {
+    const withSpecs = libConfigFiles('shared/data', {
       scopes,
       hasSpecs: true,
       implicitDependencies: ['x'],

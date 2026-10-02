@@ -1,7 +1,7 @@
 /**
  * Thin preset for `@schematics/angular:service` (Nx has no own service generator; the Angular schematic
  * runs through Nx' Angular CLI adapter and needs the project — found again via project.json). The wrapper
- * adds the blueprint rules (api/data/feature/shell lib, never a generated client), takes a path instead of
+ * adds the blueprint rules (data/feature/shell lib, never a generated client), takes a path instead of
  * project + name, skips the spec and exports the service from index.ts.
  */
 import { formatFiles, type Tree } from '@nx/devkit';
@@ -10,7 +10,7 @@ import { LIBS_DIR, projectNameFor } from '@blueprint/tooling-conventions';
 import { type ArtifactSchema, resolveArtifact } from '../shared/artifact';
 import { addExport } from '../shared/workspace';
 
-export const SERVICE_LAYERS = ['api', 'data', 'feature', 'shell'];
+export const SERVICE_LAYERS = ['data', 'feature', 'shell'];
 
 export async function serviceGenerator(tree: Tree, options: ArtifactSchema): Promise<void> {
   const target = resolveArtifact(tree, options.path, 'service', SERVICE_LAYERS);

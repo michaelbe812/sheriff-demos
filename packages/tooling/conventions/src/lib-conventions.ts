@@ -6,9 +6,12 @@
  *   libs/<scope>/<layer>                  scope:<scope> type:<layer> feat:none
  *   libs/<scope>/feat-<feat>/<layer>      scope:<scope> type:<layer> feat:<feat>
  *
+ * Reduced blueprint: layers types, utils, data, ui, feature (+ testing); no port markers. A slice is closed
+ * towards every other slice — shared code lives in `shared`, the app composes slices via their shell (`entry`).
+ *
  * Generated OpenAPI clients (`generated` is a reserved folder, never a scope or layer):
- *   libs/generated/<client>/<part>          scope:shared   ┐ type:types | type:api (api, core) | type:testing,
- *   libs/<domain>/generated/<client>/<part> scope:<domain> ┘ feat:none, marker `generated` (never port/entry)
+ *   libs/generated/<client>/<part>          scope:shared   ┐ type:types | type:data (api, core) | type:testing,
+ *   libs/<domain>/generated/<client>/<part> scope:<domain> ┘ feat:none, marker `generated` (never entry)
  *   The client folder itself holds the committed spec (openapi.yaml|json); its options live in
  *   openapi-clients.json (workspace root), see packages/tooling/openapi.
  */
@@ -32,7 +35,7 @@ export const FEATURE_LAYERS = ['shell', 'feature'];
 /** Test-only libs (MSW handlers, fixtures): never built, never shipped. */
 export const TESTING_LAYER = 'testing';
 /** Every layer folder the depConstraints know. Anything else would get an unconstrained `type:` tag. */
-export const KNOWN_LAYERS = ['types', 'utils', 'events', 'api', 'data', 'ui', ...FEATURE_LAYERS, TESTING_LAYER];
+export const KNOWN_LAYERS = ['types', 'utils', 'data', 'ui', ...FEATURE_LAYERS, TESTING_LAYER];
 /** Layers of a slice root (`libs/<scope>/<layer>`): `feature` only exists inside a feat. */
 export const SLICE_LAYERS = KNOWN_LAYERS.filter((layer) => layer !== 'feature');
 /** Layers inside a feat (`libs/<scope>/feat-<feat>/<layer>`): no shell, no testing. */
@@ -47,11 +50,11 @@ export const CLIENTS_CONFIG_FILE = 'openapi-clients.json';
 /** Committed spec in the client folder — exactly one of them. */
 export const CLIENT_SPEC_FILES = ['openapi.yaml', 'openapi.json'];
 /**
- * Parts of a client = libs below its folder, part → layer. `core` is `api`, not `utils`: the
- * generated runtime (Configuration, encoder, client) imports @angular/common/http.
+ * Parts of a client = libs below its folder, part → layer. `api` and `core` are `data` (HTTP is the data
+ * layer's job), not `utils`: the generated runtime (Configuration, encoder, client) imports @angular/common/http.
  * `testing`: MSW handlers, faker factories and the typed `<client>Http` — generated from the spec only.
  */
-export const CLIENT_PARTS: Record<string, string> = { types: 'types', api: 'api', core: 'api', testing: TESTING_LAYER };
+export const CLIENT_PARTS: Record<string, string> = { types: 'types', api: 'data', core: 'data', testing: TESTING_LAYER };
 /** Parts written by the code generator adapter (the facade); `testing` has its own generate target. */
 export const CLIENT_CODE_PARTS = ['types', 'api', 'core'];
 
@@ -60,7 +63,7 @@ export const KEBAB_CASE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 /**
  * File names inside a lib (below `src/`, checked by the ESLint rule `blueprint/lib-file-naming`):
- *   `<name>.ts`           plain file: component, service, class, port — named after its main symbol
+ *   `<name>.ts`           plain file: component, service, class — named after its main symbol
  *   `<name>.<kind>.ts`    kind file, the kind belongs to the listed layers only
  *   `<name>[.<kind>].spec.ts`  spec of such a file
  * `<name>` is kebab-case. `src/index.ts` is the public API, `src/generated/**` is excluded.
@@ -69,7 +72,7 @@ export const FILE_KINDS: Record<string, string[]> = {
   model: ['types'],
   dto: ['types'],
   utils: ['utils'],
-  events: ['events'],
+  events: ['data'],
   mapper: ['data'],
   store: ['data', 'ui', 'feature'],
   routes: ['shell'],
@@ -82,7 +85,7 @@ export const FILE_KINDS: Record<string, string[]> = {
  * Layers of a slice whose files all carry a kind (`booking.model.ts`, no plain `booking.ts`).
  * Shared buckets are exempt: one helper per file, named after it (`shared/utils/src/format-date.ts`).
  */
-export const KIND_ONLY_LAYERS = ['types', 'utils', 'events'];
+export const KIND_ONLY_LAYERS = ['types', 'utils'];
 /** Folder below `src/` a kind lives in (testing libs: `fixtures/booking.fixture.ts`, `handlers/booking.handlers.ts`). */
 export const KIND_FOLDERS: Record<string, string> = { fixture: 'fixtures', handlers: 'handlers' };
 /** Lib-private folder below `src/`: never exported from `index.ts`. */
@@ -126,7 +129,7 @@ export function parseClientPath(clientPath: string): ClientPath | undefined {
     : { path: clientPath, name, scope: segments[0], placement: { domain: segments[0] } };
 }
 
-/** `booking/feat-check-booking/api` → { scope, feat, layer }; undefined if the shape is wrong. */
+/** `booking/feat-check-booking/data` → { scope, feat, layer }; undefined if the shape is wrong. */
 export function parseLibPath(libPath: string): LibPath | undefined {
   if (libPath.split('/').includes(GENERATED_FOLDER)) return parseGeneratedLibPath(libPath);
   const [scope, ...rest] = libPath.split('/');
@@ -137,7 +140,7 @@ export function parseLibPath(libPath: string): LibPath | undefined {
   return { scope, layer, feat: featFolder?.slice(FEAT_PREFIX.length) };
 }
 
-/** `generated/pet-client/api` → part `api` of the shared client; undefined if the shape is wrong. */
+/** `generated/pet-client/api` → part `api` (layer data) of the shared client; undefined if the shape is wrong. */
 function parseGeneratedLibPath(libPath: string): LibPath | undefined {
   const segments = libPath.split('/');
   const part = segments.pop() as string;
@@ -180,21 +183,20 @@ export function scopesOfFile(content: unknown): string[] | undefined {
   return Array.isArray(scopes) ? scopes : undefined;
 }
 
-/** Tags of a lib, derived purely from its path below `libs/` (e.g. `booking/feat-check-booking/api`). */
+/** Tags of a lib, derived purely from its path below `libs/` (e.g. `booking/feat-check-booking/data`). */
 export function deriveTags(libPath: string, options: BlueprintLibsOptions = {}): string[] {
   const error = libPathError(libPath, options);
   // fail instead of silently creating an unconstrained lib (the old tag-typo problem)
   if (error) throw new Error(error);
   const { scope, feat, layer, client } = parseLibPath(libPath) as LibPath;
-  // no port: a generated client is never a slice's public API — foreign slices only reach it via the port
   if (client) return [`scope:${scope}`, `type:${layer}`, 'feat:none', GENERATED_TAG];
   const tags = [
     `scope:${scope}`,
     `type:${FEATURE_LAYERS.includes(layer) ? 'feature' : layer}`,
     feat ? `feat:${feat}` : 'feat:none',
   ];
+  // the only marker: the slice root the app shell composes (no ports — slices never import each other)
   if (layer === 'shell') tags.push('entry');
-  if (layer === 'api' && scope !== SHARED_SCOPE) tags.push(feat ? 'feat-port' : 'port');
   return tags;
 }
 

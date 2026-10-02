@@ -10,12 +10,12 @@ ruleTester.run(RULE_NAME, layerSymbolNaming, {
     { code: 'export class BookingStore {}', filename: libFile('booking/data/src/booking.store.ts') },
     { code: 'export class BookingCardStore {}', filename: libFile('booking/ui/src/booking-card.store.ts') },
     { code: 'export class CheckinDeskStore {}', filename: libFile('checkin/feat-checkin/data/src/checkin-desk.store.ts') },
-    { code: 'export class BookingApi {}', filename: libFile('booking/api/src/booking-api.ts') },
-    { code: 'export interface PetSummary {}\nexport class PetApi {}', filename: libFile('shared/api/src/pet-api.ts') },
-    { code: 'export interface AuthApi {}\nexport const AUTH_API = 1;', filename: libFile('auth/api/src/auth-api.ts') },
-    { code: 'export class ApiHttp {}', filename: libFile('shared/api/src/http-client.ts') },
-    { code: 'export class BookingNotifications {}', filename: libFile('booking/api/src/booking-notifications.ts') },
-    { code: 'export function describeCheck() {}', filename: libFile('booking/feat-check-booking/api/src/check-booking-api.ts') },
+    { code: 'export class BookingApi {}', filename: libFile('booking/data/src/booking-api.ts') },
+    { code: 'export interface PetSummary {}\nexport class PetApi {}', filename: libFile('shared/data/src/pet-api.ts') },
+    { code: 'export class AuthStore {}', filename: libFile('shared/data/src/auth.store.ts') },
+    { code: 'export class ApiHttp {}', filename: libFile('shared/data/src/http-client.ts') },
+    { code: 'export class BookingNotifications {}', filename: libFile('booking/data/src/booking-notifications.ts') },
+    { code: 'export function describeCheck() {}', filename: libFile('booking/utils/src/booking.utils.ts') },
     { code: component('app-feat-check-booking', 'FeatCheckBooking'), filename: libFile('booking/feat-check-booking/feature/src/feat-check-booking.ts') },
     { code: component('app-booking-card', 'BookingCard'), filename: libFile('booking/ui/src/booking-card.ts') },
     { code: component('app-layout-shell', 'LayoutShell'), filename: libFile('layout/shell/src/layout.shell.ts') },
@@ -32,7 +32,7 @@ ruleTester.run(RULE_NAME, layerSymbolNaming, {
     // shell
     { code: 'export const bookingRoutes = [];', filename: libFile('booking/shell/src/booking.routes.ts') },
     { code: 'export const carRentalRoutes = [];', filename: libFile('car-rental/shell/src/car-rental.routes.ts') },
-    { code: 'export function provideAuth() { return []; }', filename: libFile('auth/shell/src/auth.providers.ts') },
+    { code: 'export function provideBooking() { return []; }', filename: libFile('booking/shell/src/booking.providers.ts') },
     // testing
     {
       code: 'export function aBooking() {}\nexport const anOrder = () => ({});',
@@ -61,12 +61,12 @@ ruleTester.run(RULE_NAME, layerSymbolNaming, {
     },
     {
       code: 'export class BookingPort {}',
-      filename: libFile('booking/api/src/booking-api.ts'),
+      filename: libFile('booking/data/src/booking-api.ts'),
       errors: [{ messageId: 'apiClass', data: { file: 'booking-api.ts', name: 'BookingPort', expected: 'BookingApi' } }],
     },
     {
       code: 'export class BookingApi {}',
-      filename: libFile('booking/api/src/bookings.ts'),
+      filename: libFile('booking/data/src/bookings.ts'),
       errors: [{ messageId: 'apiFile', data: { name: 'BookingApi', expected: 'booking-api.ts' } }],
     },
     {
@@ -145,9 +145,9 @@ ruleTester.run(RULE_NAME, layerSymbolNaming, {
       errors: [{ messageId: 'sliceFile', data: { file: 'bookings.routes.ts', lib: 'libs/booking/shell', expected: 'booking.routes.ts' } }],
     },
     {
-      code: 'export function authProviders() { return []; }',
-      filename: libFile('auth/shell/src/auth.providers.ts'),
-      errors: [{ messageId: 'providerName', data: { name: 'authProviders', expected: 'provideAuth' } }],
+      code: 'export function bookingProviders() { return []; }',
+      filename: libFile('booking/shell/src/booking.providers.ts'),
+      errors: [{ messageId: 'providerName', data: { name: 'bookingProviders', expected: 'provideBooking' } }],
     },
     {
       code: 'export function createBooking() {}',

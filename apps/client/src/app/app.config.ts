@@ -2,7 +2,6 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { appRoutes } from './app.routes';
-import { provideAuth } from '@blueprint/auth/shell';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -10,6 +9,5 @@ export const appConfig: ApplicationConfig = {
     provideRouter(appRoutes),
     // the generated OpenAPI clients use HttpClient; fetch backend (Angular 22 default, explicit here)
     provideHttpClient(withFetch()),
-    provideAuth(),
   ],
 };

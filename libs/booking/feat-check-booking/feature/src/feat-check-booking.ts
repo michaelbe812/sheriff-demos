@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
 import { BookingStore } from '@blueprint/booking/data';
-import { BookingConfirmed } from '@blueprint/booking/events';
 import { BookingCard } from '@blueprint/booking/ui';
 import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/data';
 import { CheckResult } from '@blueprint/booking/feat-check-booking/ui';
@@ -21,7 +20,7 @@ export class FeatCheckBooking {
   protected readonly bookingStore = inject(BookingStore);
   protected readonly checkStore = inject(CheckBookingStore);
 
-  protected onConfirmed(event: BookingConfirmed): void {
-    this.checkStore.confirm(event.bookingId);
+  protected onConfirmed(bookingId: string): void {
+    this.checkStore.confirm(bookingId);
   }
 }

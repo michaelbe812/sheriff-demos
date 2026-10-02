@@ -5,19 +5,21 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * Blueprint architecture as pure Nx module boundaries — see
- * docs/nx-umsetzung.md. One lib per slice x layer, tags:
- *   scope:<slice>   booking, checkin, auth, layout, ... | shared
- *   type:<layer>    types, utils, events, api, data, ui, feature | app
+ * REDUCED blueprint as pure Nx module boundaries — see docs/nx-umsetzung.md.
+ * One lib per slice x layer, tags:
+ *   scope:<slice>   booking, checkin, layout, ... | shared
+ *   type:<layer>    types, utils, data, ui, feature | app
  *                   | testing (test-only libs: MSW handlers, fixtures)
  *   feat:<feat>     lib belongs to feat-<feat>/ ; feat:none = outside any feat
- *   port            the slice's public api lib (foreign slices may import it)
- *   feat-port       a feat's api lib (sibling feats may import it)
- *   entry           the slice root lib (shell: routes/providers)
+ *   entry           the slice root lib (shell: routes/providers) — the only marker
+ *
+ * No ports: a slice never imports another slice (only itself + shared), a feat
+ * never imports a sibling feat. The app shell composes slices via their entry.
+ * data = HTTP + stores + domain events (no api/events layers).
  *
  * Nx combines ALL constraints matching the source's tags with AND; inside one
  * constraint the target needs ANY of the listed tags — the same semantics as
- * sheriff's depRules, minus the need for transparent marker rules.
+ * sheriff's depRules.
  */
 
 /**
@@ -32,21 +34,21 @@ const tagsWithPrefix = (tags, prefix, ...excluded) =>
     [...new Set(tags)].filter((tag) => tag.startsWith(prefix) && !excluded.includes(tag)).sort();
 
 /** Layers that ship to production — everything except `type:testing`. */
-const productionLayers = ["type:types", "type:utils", "type:events", "type:api", "type:data", "type:ui", "type:feature"];
+const productionLayers = ["type:types", "type:utils", "type:data", "type:ui", "type:feature"];
 
 /** Layer matrix (type axis): X may only depend on the listed layers. */
 const layerConstraints = [
     // types build on other types only (own slice or shared — the scope constraints still apply), no npm at all
     { sourceTag: "type:types", onlyDependOnLibsWithTags: ["type:types"], bannedExternalImports: ["*"] },
     { sourceTag: "type:utils", onlyDependOnLibsWithTags: ["type:types", "type:utils"] },
-    { sourceTag: "type:events", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:events"] },
-    { sourceTag: "type:api", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:api"] },
-    { sourceTag: "type:data", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:api", "type:data", "type:events"] },
-    { sourceTag: "type:ui", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:ui", "type:events"] },
+    // HTTP, stores, domain events (generated client services/core are data, too)
+    { sourceTag: "type:data", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:data"] },
+    // dumb components: no data — plain values out via outputs, the container makes the event
+    { sourceTag: "type:ui", onlyDependOnLibsWithTags: ["type:types", "type:utils", "type:ui"] },
     // every production layer — no `type:*` glob, it would match type:testing
     { sourceTag: "type:feature", onlyDependOnLibsWithTags: productionLayers },
-    // app shell (main.ts + app/): only slice entries, ports and shared ...
-    { sourceTag: "type:app", onlyDependOnLibsWithTags: ["entry", "port", "scope:shared"] },
+    // app shell (main.ts + app/): only slice entries and shared ...
+    { sourceTag: "type:app", onlyDependOnLibsWithTags: ["entry", "scope:shared"] },
     // ... and of those only production libs (scope:shared alone would allow shared/testing)
     { sourceTag: "type:app", onlyDependOnLibsWithTags: productionLayers },
     // test-only libs: handlers + fixtures build on types and other testing libs, nothing else
@@ -64,8 +66,8 @@ const noTestPackagesInProduction = [...productionLayers, "type:app"].map((source
     bannedExternalImports: testOnlyPackages,
 }));
 
-/** Nx-only extra: HTTP is the api layer's job (api = http in the blueprint). */
-const httpOnlyInApi = ["type:utils", "type:events", "type:data", "type:ui", "type:feature"].map((sourceTag) => ({
+/** Nx-only extra: HTTP is the data layer's job (no api layer in the reduced blueprint). */
+const httpOnlyInData = ["type:utils", "type:ui", "type:feature"].map((sourceTag) => ({
     sourceTag,
     bannedExternalImports: ["@angular/common/http"],
 }));
@@ -82,10 +84,10 @@ function sameTagConstraints(tags) {
     return [
         // shared area only knows itself
         { sourceTag: "scope:shared", onlyDependOnLibsWithTags: ["scope:shared"] },
-        // own slice freely, foreign slices (domains + shared features) only via port
-        ...slices.map((scope) => ({ sourceTag: scope, onlyDependOnLibsWithTags: [scope, "port", "scope:shared"] })),
-        // own feat, everything outside feats, sibling feats only via feat-port
-        ...feats.map((feat) => ({ sourceTag: feat, onlyDependOnLibsWithTags: [feat, "feat:none", "feat-port"] })),
+        // own slice + shared — never a foreign slice (no port)
+        ...slices.map((scope) => ({ sourceTag: scope, onlyDependOnLibsWithTags: [scope, "scope:shared"] })),
+        // own feat + everything outside feats — never a sibling feat (no feat-port)
+        ...feats.map((feat) => ({ sourceTag: feat, onlyDependOnLibsWithTags: [feat, "feat:none"] })),
     ];
 }
 
@@ -142,7 +144,7 @@ async function ensureProjectGraph() {
 
 export const blueprintDepConstraints = [
     ...layerConstraints,
-    ...httpOnlyInApi,
+    ...httpOnlyInData,
     ...noTestPackagesInProduction,
     ...sameTagConstraints(allProjectTags()),
     // tooling packages (packages/*) are outside the app architecture
@@ -151,19 +153,20 @@ export const blueprintDepConstraints = [
 ];
 
 /**
- * Specs (+ test setup files): the same architecture, plus `type:testing` —
- * also a foreign domain's testing lib (a feature spec may need the booking
- * handlers behind the booking port). Test packages are allowed.
- * Unchanged: `scope:shared` (shared never knows a domain, so only
- * shared/testing), `type:types` (testing libs build on types: a types spec
- * importing them would be a cycle), `type:tooling` + `tooling:*`, feat isolation.
+ * Specs (+ test setup files): the same architecture, plus `type:testing` of the
+ * own slice and shared (the scope constraints stay: no foreign slice's testing
+ * lib — there is no cross-slice code to test against). Test packages are allowed.
+ * Unchanged: every `scope:*` (closed slices), `type:types` (testing libs build on
+ * types: a types spec importing them would be a cycle), `type:tooling` + `tooling:*`,
+ * feat isolation.
  */
-const keepsItsTargetsInSpecs = ["type:types", "type:testing", "scope:shared", "type:tooling"];
+const keepsItsTargetsInSpecs = ["type:types", "type:testing", "type:tooling"];
 export const specDepConstraints = blueprintDepConstraints
     .filter((constraint) => !noTestPackagesInProduction.includes(constraint))
     .map((constraint) =>
         constraint.onlyDependOnLibsWithTags &&
         !keepsItsTargetsInSpecs.includes(constraint.sourceTag) &&
+        !constraint.sourceTag.startsWith("scope:") &&
         !constraint.sourceTag.startsWith("feat:") &&
         !constraint.sourceTag.startsWith("tooling:")
             ? { ...constraint, onlyDependOnLibsWithTags: [...constraint.onlyDependOnLibsWithTags, "type:testing"] }

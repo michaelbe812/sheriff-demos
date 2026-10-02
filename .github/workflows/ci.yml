@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main, feat/nx-blueprint, feat/nx-blueprint-explicit-config]
+    branches: [main, feat/nx-blueprint, feat/nx-blueprint-explicit-config, feat/nx-reduced-blueprint]
   pull_request:
 
 concurrency:

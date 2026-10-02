@@ -1,7 +1,8 @@
 /**
  * Example sources per slice layer (libs/<slice>/<layer>), in the style of the booking/checkin
- * slices: api = port over ApiHttp, data = signal store, ui = dumb OnPush component, shell = routes +
- * providers + smart page. Each layer only imports what the depConstraints allow.
+ * slices: data = HTTP access over ApiHttp + signal store, ui = dumb OnPush component, shell = routes +
+ * providers + smart page. Each layer only imports what the depConstraints allow. No port: a slice is
+ * only reachable through its shell (app routes).
  */
 import { names } from '@nx/devkit';
 import { aliasFor } from '@blueprint/tooling-conventions';
@@ -17,16 +18,14 @@ export interface LibFiles {
 export const SLICE_LAYER_REQUIRES: Record<string, string[]> = {
   types: [],
   utils: [],
-  events: [],
-  api: ['types'],
-  data: ['api', 'types'],
+  data: ['types'],
   ui: ['types'],
   shell: ['data', 'ui'],
   testing: ['types'],
 };
 
 /** Order in which a new slice is generated (dependencies first). */
-export const SLICE_LAYER_ORDER = ['types', 'utils', 'events', 'api', 'data', 'ui', 'shell', 'testing'];
+export const SLICE_LAYER_ORDER = ['types', 'utils', 'data', 'ui', 'shell', 'testing'];
 
 export interface SliceNames {
   /** kebab-case slice name, e.g. `car-rental` */
@@ -35,7 +34,7 @@ export interface SliceNames {
   entity: string;
   /** camelCase, e.g. `carRental` */
   property: string;
-  /** backend url of the example port */
+  /** backend url of the example data access */
   url: string;
 }
 
@@ -48,7 +47,7 @@ const alias = (n: SliceNames, layer: string): string => aliasFor(`${n.scope}/${l
 
 const types = (n: SliceNames): LibFiles => ({
   files: {
-    [`${n.scope}.model.ts`]: `/** Domain model of the ${n.scope} slice. Other slices get it re-exported via the api port. */
+    [`${n.scope}.model.ts`]: `/** Domain model of the ${n.scope} slice — private to the slice (no port, no foreign importer). */
 export interface ${n.entity} {
   id: string;
   name: string;
@@ -69,37 +68,13 @@ export function normalize${n.entity}Name(name: string): string {
   exports: [`${n.scope}.utils`],
 });
 
-const events = (n: SliceNames): LibFiles => ({
-  files: {
-    [`${n.scope}.events.ts`]: `/**
- * Domain events: definition-only (type + creator). ui and feature may emit
- * them, stores (data) handle them.
- */
-export interface ${n.entity}Selected {
-  readonly type: '${n.scope}.selected';
-  readonly id: string;
-}
-
-export function ${n.property}Selected(id: string): ${n.entity}Selected {
-  return { type: '${n.scope}.selected', id };
-}
-`,
-  },
-  exports: [`${n.scope}.events`],
-});
-
-const api = (n: SliceNames): LibFiles => ({
+const data = (n: SliceNames): LibFiles => ({
   files: {
     [`${n.scope}-api.ts`]: `import { inject, Injectable } from '@angular/core';
 import { ${n.entity} } from '${alias(n, 'types')}';
-import { ApiHttp } from '@blueprint/shared/api';
+import { ApiHttp } from '@blueprint/shared/data';
 
-/**
- * PUBLIC PORT of the ${n.scope} slice: the only lib other slices may import.
- * Types they need are re-exported here — the types lib itself stays private.
- */
-export type { ${n.entity} } from '${alias(n, 'types')}';
-
+/** HTTP access of the ${n.scope} slice (data layer): only its own stores and feats use it. */
 @Injectable({ providedIn: 'root' })
 export class ${n.entity}Api {
   private readonly http = inject(ApiHttp);
@@ -109,15 +84,9 @@ export class ${n.entity}Api {
   }
 }
 `,
-  },
-  exports: [`${n.scope}-api`],
-});
-
-const data = (n: SliceNames): LibFiles => ({
-  files: {
     [`${n.scope}.store.ts`]: `import { computed, inject, Injectable, signal } from '@angular/core';
-import { ${n.entity}Api } from '${alias(n, 'api')}';
 import { ${n.entity} } from '${alias(n, 'types')}';
+import { ${n.entity}Api } from './${n.scope}-api';
 
 /** Slice store: provided on the slice route (provide${n.entity}() in the shell), never used by ui. */
 @Injectable()
@@ -134,7 +103,7 @@ export class ${n.entity}Store {
 }
 `,
   },
-  exports: [`${n.scope}.store`],
+  exports: [`${n.scope}-api`, `${n.scope}.store`],
 });
 
 const ui = (n: SliceNames): LibFiles => ({
@@ -142,7 +111,7 @@ const ui = (n: SliceNames): LibFiles => ({
     [`${n.scope}-list.ts`]: `import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { ${n.entity} } from '${alias(n, 'types')}';
 
-/** Dumb component: renders what it gets, knows only types (and utils/events). */
+/** Dumb component: renders what it gets, knows only types (and utils). */
 @Component({
   selector: 'app-${n.scope}-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -213,7 +182,7 @@ export const ${n.property}Routes: Routes = [
   exports: [`${n.scope}.routes`, `${n.scope}.providers`],
 });
 
-export const SLICE_LAYER_TEMPLATES: Record<string, (n: SliceNames) => LibFiles> = { types, utils, events, api, data, ui, shell };
+export const SLICE_LAYER_TEMPLATES: Record<string, (n: SliceNames) => LibFiles> = { types, utils, data, ui, shell };
 
 /** Example spec for the data store: MSW defaults per `beforeEach(() => worker.use(...))`, deviations per test. */
 export function dataStoreSpec(n: SliceNames): { file: string; content: string } {

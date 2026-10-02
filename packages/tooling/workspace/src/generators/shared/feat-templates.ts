@@ -1,6 +1,7 @@
 /**
  * Example sources of a feat (libs/<slice>/feat-<feat>/…): feature = smart container (lazy route of
- * the slice shell), api = feat-port for sibling feats, data = feat store, ui = dumb view.
+ * the slice shell), data = feat store, ui = dumb view. No feat-port: sibling feats never import each
+ * other — what they share lives in the slice root libs (types/utils/data/ui).
  */
 import { names } from '@nx/devkit';
 import { aliasFor } from '@blueprint/tooling-conventions';
@@ -26,38 +27,16 @@ export function featNames(scope: string, feat: string): FeatNames {
 }
 
 export interface FeatParts {
-  api: boolean;
   data: boolean;
   ui: boolean;
 }
 
 const alias = (n: FeatNames, layer: string): string => aliasFor(`${n.featPath}/${layer}`);
 
-export const featApi = (n: FeatNames): LibFiles => ({
+export const featData = (n: FeatNames): LibFiles => ({
   files: {
-    [`${n.feat}-api.ts`]: `/**
- * FEAT-PORT: the only lib sibling feats may import from feat-${n.feat}.
- * Never visible outside the ${n.scope} slice.
- */
-export interface ${n.className}Summary {
-  selected: string | null;
-}
+    [`${n.feat}.store.ts`]: `import { Injectable, signal } from '@angular/core';
 
-export function describe${n.className}(summary: ${n.className}Summary): string {
-  return summary.selected ? \`Selected: \${summary.selected}\` : 'Nothing selected';
-}
-`,
-  },
-  exports: [`${n.feat}-api`],
-});
-
-export const featData = (n: FeatNames, parts: FeatParts): LibFiles => {
-  const apiImport = parts.api ? `import { describe${n.className} } from '${alias(n, 'api')}';\n` : '';
-  const summary = parts.api ? `\n  readonly summary = computed(() => describe${n.className}({ selected: this.selected() }));\n` : '';
-  return {
-    files: {
-      [`${n.feat}.store.ts`]: `import { ${parts.api ? 'computed, ' : ''}Injectable, signal } from '@angular/core';
-${apiImport}
 /** Feat-private store, provided by the feat container (${n.container}.providers). */
 @Injectable()
 export class ${n.className}Store {
@@ -65,16 +44,15 @@ export class ${n.className}Store {
 
   readonly items = this.entries.asReadonly();
   readonly selected = signal<string | null>(null);
-${summary}
+
   select(item: string): void {
     this.selected.set(item);
   }
 }
 `,
-    },
-    exports: [`${n.feat}.store`],
-  };
-};
+  },
+  exports: [`${n.feat}.store`],
+});
 
 export const featUi = (n: FeatNames): LibFiles => ({
   files: {
@@ -116,7 +94,6 @@ export const featFeature = (n: FeatNames, parts: FeatParts): LibFiles => {
     : parts.data
       ? `<p>{{ store.items().length }} entries</p>`
       : `<p>feat-${n.feat} works.</p>`;
-  const summary = parts.data && parts.api ? `\n    <p>{{ store.summary() }}</p>` : '';
   return {
     files: {
       [`feat-${n.feat}.ts`]: `${imports.join('\n')}
@@ -127,7 +104,7 @@ export const featFeature = (n: FeatNames, parts: FeatParts): LibFiles => {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: \`
     <h2>${n.className}</h2>
-    ${view}${summary}
+    ${view}
   \`,
 })
 export class ${n.container} {${parts.data ? `\n  protected readonly store = inject(${n.className}Store);\n` : ''}}

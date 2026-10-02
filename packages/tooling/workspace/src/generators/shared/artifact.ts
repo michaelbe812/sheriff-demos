@@ -35,7 +35,7 @@ export function resolveArtifact(tree: Tree, path: string, kind: string, allowedL
   }
   if (lib.client) {
     throw new Error(
-      `${LIBS_DIR}/${libPart} is generated from ${lib.client.path}'s spec — wrap it in a port instead of adding a ${kind}.`,
+      `${LIBS_DIR}/${libPart} is generated from ${lib.client.path}'s spec — wrap it in a data lib instead of adding a ${kind}.`,
     );
   }
   if (!allowedLayers.includes(lib.layer)) {

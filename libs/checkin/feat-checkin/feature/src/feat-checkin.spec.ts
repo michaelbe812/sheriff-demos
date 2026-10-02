@@ -1,29 +1,21 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { AUTH_API, AuthApi } from '@blueprint/auth/api';
-import { aBooking, bookingScenarios } from '@blueprint/booking/testing';
+import { anArrival, arrivalScenarios } from '@blueprint/checkin/testing';
 import { test, worker } from '@blueprint/shared/testing';
 import { beforeEach, describe, expect } from 'vitest';
 import { page } from 'vitest/browser';
 import { FeatCheckin } from './feat-checkin';
 
-const signedInAgent: AuthApi = {
-  user: signal({ id: 'u-1', name: 'Test Agent' }),
-  isAuthenticated: signal(true),
-};
-
 function renderDesk(): void {
-  TestBed.configureTestingModule({ providers: [{ provide: AUTH_API, useValue: signedInAgent }] });
   TestBed.createComponent(FeatCheckin);
 }
 
 describe('FeatCheckin (rendered in Chromium, backend via MSW)', () => {
-  // cross-domain: the desk loads arrivals through the booking port (BookingApi)
+  // the desk loads arrivals through checkin's own data layer (CheckinApi) — no booking import
   beforeEach(() =>
     worker.use(
-      bookingScenarios.withBookings([
-        aBooking({ id: 'b-7', guestName: 'Grace Hopper' }),
-        aBooking({ id: 'b-8', guestName: 'Ada Lovelace' }),
+      arrivalScenarios.withArrivals([
+        anArrival({ bookingId: 'b-7', guestName: 'Grace Hopper' }),
+        anArrival({ bookingId: 'b-8', guestName: 'Ada Lovelace' }),
       ]),
     ),
   );
@@ -50,7 +42,7 @@ describe('FeatCheckin (rendered in Chromium, backend via MSW)', () => {
   });
 
   test('shows no arrivals when the backend has none', async ({ worker }) => {
-    worker.use(bookingScenarios.empty());
+    worker.use(arrivalScenarios.empty());
     renderDesk();
 
     await page.getByRole('button', { name: 'Load arrivals' }).click();

@@ -40,7 +40,7 @@ const MARKER_FILE = 'dist/libs/layout/ui/esm2022/nav-bar.js';
 const MARKER_TEXT = 'Bookings';
 const SPEC_FILE = 'libs/booking/data/src/booking.store.spec.ts';
 const DEFAULT_HANDLERS_LINE = '  beforeEach(() => worker.use(...bookingHandlers));\n';
-const WORKER_PROBE_SPEC = 'libs/booking/api/src/tmp-msw-worker.spec.ts';
+const WORKER_PROBE_SPEC = 'libs/booking/data/src/tmp-msw-worker.spec.ts';
 
 const args = process.argv.slice(2);
 const reference = args.includes('--reference') ? args[args.indexOf('--reference') + 1] : undefined;
@@ -169,7 +169,7 @@ test('serves the worker of the installed msw package', async () => {
 `,
   );
   try {
-    nx('run', 'booking-api:test', '--skip-nx-cache');
+    nx('run', 'booking-data:test', '--skip-nx-cache');
     return `msw ${version} (checksum ${checksum}) served by Vitest`;
   } finally {
     rmSync(WORKER_PROBE_SPEC, { force: true });

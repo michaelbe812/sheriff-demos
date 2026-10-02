@@ -1,13 +1,11 @@
 import { Component, inject, input, output } from '@angular/core';
-import { BookingConfirmed, bookingConfirmed } from '@blueprint/booking/events';
 import { Booking } from '@blueprint/booking/types';
 import { bookingLabel } from '@blueprint/booking/utils';
 import { BookingCardStore } from './booking-card.store';
 
-// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // ui -> data
-// boundary-violation-example: import { BookingApi } from '@blueprint/booking/api'; // ui -> api
+// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // ui -> data (store, http, events)
 
-/** Dumb component: types, utils, events, local store — nothing else. */
+/** Dumb component: types, utils, local store — nothing else. Emits the booking id, the container makes the event. */
 @Component({
   selector: 'app-booking-card',
   providers: [BookingCardStore],
@@ -23,7 +21,7 @@ import { BookingCardStore } from './booking-card.store';
 })
 export class BookingCard {
   readonly booking = input.required<Booking>();
-  readonly confirmed = output<BookingConfirmed>();
+  readonly confirmed = output<string>();
 
   protected readonly store = inject(BookingCardStore);
 
@@ -33,6 +31,6 @@ export class BookingCard {
 
   protected confirm(event: Event): void {
     event.stopPropagation();
-    this.confirmed.emit(bookingConfirmed(this.booking().id));
+    this.confirmed.emit(this.booking().id);
   }
 }

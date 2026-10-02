@@ -1,9 +1,8 @@
 import { Component, input, output } from '@angular/core';
-import { GuestArrived, guestArrived } from '@blueprint/checkin/events';
-import { CheckinRecord } from '@blueprint/checkin/types';
+import { Arrival, CheckinRecord } from '@blueprint/checkin/types';
 import { checkinLabel } from '@blueprint/checkin/utils';
 
-// boundary-violation-example: import { CheckinStore } from '@blueprint/checkin/data'; // ui -> data
+// boundary-violation-example: import { CheckinStore } from '@blueprint/checkin/data'; // ui -> data (store, http, events)
 // boundary-violation-example: import { toCheckinRecord } from '../../../data/src/internal/checkin.mapper'; // module-private internal/
 
 @Component({
@@ -19,13 +18,14 @@ import { checkinLabel } from '@blueprint/checkin/utils';
 })
 export class ArrivalList {
   readonly records = input.required<CheckinRecord[]>();
-  readonly arrived = output<GuestArrived>();
+  /** plain value out — the container turns it into the domain event */
+  readonly arrived = output<Arrival>();
 
   protected label(record: CheckinRecord): string {
     return checkinLabel(record);
   }
 
   protected reportWalkIn(): void {
-    this.arrived.emit(guestArrived('walk-in', 'Walk-in guest'));
+    this.arrived.emit({ bookingId: 'walk-in', guestName: 'Walk-in guest' });
   }
 }

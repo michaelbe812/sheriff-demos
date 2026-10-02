@@ -39,7 +39,7 @@ export type Part = 'types' | 'api' | 'core';
 
 /**
  * Files relative to outDir, posix. Files not listed are dropped (README, .openapi-generator/, root index.ts …).
- * models → lib `types` (type:types), apis → lib `api` (type:api), core → lib `core` (type:api, contains HTTP).
+ * models → lib `types` (type:types), apis → lib `api` (type:data), core → lib `core` (type:data, contains HTTP).
  */
 export interface Classification {
   models: string[];

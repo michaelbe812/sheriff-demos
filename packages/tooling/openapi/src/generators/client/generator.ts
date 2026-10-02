@@ -124,7 +124,7 @@ export async function clientGenerator(tree: Tree, options: ClientGeneratorSchema
     );
     logger.info(`Generate: nx run-many -t generate (build/lint/test/typecheck do it on their own).`);
     logger.info(
-      `Use: ${alias}/api (services) + /types in the ${domain ?? 'shared'} api layer (the port), specs: ${alias}/testing (${prefix}Handlers, ${prefix}Http).`,
+      `Use: ${alias}/api (services) + /types in the ${domain ?? 'shared'} data layer, specs: ${alias}/testing (${prefix}Handlers, ${prefix}Http).`,
     );
   };
 }

@@ -1,17 +1,16 @@
 import { Component, inject } from '@angular/core';
-// Shared-feature ONLY via its port:
-import { AUTH_API } from '@blueprint/auth/api';
+import { AuthStore } from '@blueprint/shared/data';
 import { AppButton } from '@blueprint/shared/ui';
 import { pluralize } from '@blueprint/shared/utils';
-import { CheckinStore } from '@blueprint/checkin/data';
-import { GuestArrived } from '@blueprint/checkin/events';
+import { CheckinStore, guestArrived } from '@blueprint/checkin/data';
+import { Arrival } from '@blueprint/checkin/types';
 import { ArrivalList } from '@blueprint/checkin/ui';
 import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data';
 
-// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // foreign domain internals
-// boundary-violation-example: import { AuthStore } from '@blueprint/auth/data'; // shared-feature internals
+// boundary-violation-example: import { BookingStore } from '@blueprint/booking/data'; // foreign slice (never, no port)
+// boundary-violation-example: import { CheckBookingStore } from '@blueprint/booking/feat-check-booking/data'; // foreign feat
 
-/** Smart container: domain store + feat-private desk store + dumb ui. */
+/** Smart container: domain store + feat-private desk store + shared auth + dumb ui. */
 @Component({
   selector: 'app-feat-checkin',
   imports: [AppButton, ArrivalList],
@@ -22,15 +21,15 @@ import { CheckinDeskStore } from '@blueprint/checkin/feat-checkin/data';
     }
     <app-button (clicked)="desk.loadArrivals()">Load arrivals</app-button>
     <p>{{ desk.openArrivals() }} {{ arrivalsLabel }}</p>
-    @for (booking of desk.arrivals(); track booking.id) {
-      <app-button (clicked)="desk.checkIn(booking)">Check in {{ booking.guestName }}</app-button>
+    @for (arrival of desk.arrivals(); track arrival.bookingId) {
+      <app-button (clicked)="desk.checkIn(arrival)">Check in {{ arrival.guestName }}</app-button>
     }
     <h3>Checked in today ({{ checkinStore.count() }})</h3>
     <app-arrival-list [records]="checkinStore.all()" (arrived)="onWalkIn($event)" />
   `,
 })
 export class FeatCheckin {
-  protected readonly auth = inject(AUTH_API);
+  protected readonly auth = inject(AuthStore);
   protected readonly desk = inject(CheckinDeskStore);
   protected readonly checkinStore = inject(CheckinStore);
 
@@ -38,7 +37,7 @@ export class FeatCheckin {
     return pluralize(this.desk.openArrivals(), 'arrival', 'arrivals');
   }
 
-  protected onWalkIn(event: GuestArrived): void {
-    this.checkinStore.handle(event);
+  protected onWalkIn(arrival: Arrival): void {
+    this.checkinStore.handle(guestArrived(arrival.bookingId, arrival.guestName));
   }
 }

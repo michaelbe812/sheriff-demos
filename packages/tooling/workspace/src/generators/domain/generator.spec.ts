@@ -18,7 +18,6 @@ describe('domain generator', () => {
 
     const libs = listLibPaths(tree, 'payment');
     expect(libs).toEqual([
-      'payment/api',
       'payment/data',
       'payment/shell',
       'payment/testing',
@@ -48,20 +47,24 @@ describe('domain generator', () => {
       targets: { build: {}, lint: {}, typecheck: {}, test: {} },
     });
     expect(tree.exists('libs/payment/data/tsconfig.spec.json')).toBe(true);
-    expect(tree.exists('libs/payment/api/tsconfig.spec.json')).toBe(false);
+    expect(tree.exists('libs/payment/ui/tsconfig.spec.json')).toBe(false);
+    for (const removed of ['api', 'events']) expect(tree.exists(`libs/payment/${removed}`)).toBe(false);
     expect(readJsonFile(tree, 'libs/payment/shell/package.json')).toMatchObject({
       peerDependencies: { '@angular/core': '^22.0.0', '@angular/router': '^22.0.0' },
     });
   });
 
-  it('writes examples in the slice style (port over ApiHttp, store, OnPush ui, routes + providers)', async () => {
+  it('writes examples in the slice style (data = HTTP over ApiHttp + store, OnPush ui, routes + providers)', async () => {
     await domainGenerator(tree, { name: 'payment' });
 
-    expect(read(tree, 'libs/payment/api/src/payment-api.ts')).toContain(
-      "import { ApiHttp } from '@blueprint/shared/api';",
+    expect(read(tree, 'libs/payment/data/src/payment-api.ts')).toContain(
+      "import { ApiHttp } from '@blueprint/shared/data';",
     );
-    expect(read(tree, 'libs/payment/api/src/index.ts')).toBe("export * from './payment-api';\n");
+    expect(read(tree, 'libs/payment/data/src/index.ts')).toBe(
+      "export * from './payment-api';\nexport * from './payment.store';\n",
+    );
     expect(read(tree, 'libs/payment/data/src/payment.store.ts')).toContain('export class PaymentStore');
+    expect(read(tree, 'libs/payment/data/src/payment.store.ts')).toContain("import { PaymentApi } from './payment-api';");
     expect(read(tree, 'libs/payment/ui/src/payment-list.ts')).toContain('ChangeDetectionStrategy.OnPush');
     expect(read(tree, 'libs/payment/shell/src/index.ts')).toBe(
       "export * from './payment.routes';\nexport * from './payment.providers';\n",

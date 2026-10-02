@@ -9,14 +9,14 @@ const invalid = (path: string, messageId: string, data?: Record<string, string>)
 
 ruleTester.run(RULE_NAME, libFileNaming, {
   valid: [
-    // every file of the example slices (booking/checkin/auth/layout/shared)
+    // every file of the example slices (booking/checkin/layout/shared)
     file('booking/types/src/booking.model.ts'),
     file('checkin/types/src/checkin.dto.ts'),
     file('booking/utils/src/booking.utils.ts'),
-    file('booking/events/src/booking.events.ts'),
-    file('booking/api/src/booking-api.ts'),
-    file('booking/api/src/booking-notifications.ts'),
-    file('booking/api/src/booking-api.spec.ts'),
+    file('booking/data/src/booking.events.ts'),
+    file('booking/data/src/booking-api.ts'),
+    file('booking/data/src/booking-notifications.ts'),
+    file('booking/data/src/booking-api.spec.ts'),
     file('booking/data/src/booking.store.ts'),
     file('booking/data/src/booking.store.spec.ts'),
     file('checkin/data/src/internal/checkin.mapper.ts'),
@@ -25,7 +25,7 @@ ruleTester.run(RULE_NAME, libFileNaming, {
     file('booking/feat-check-booking/feature/src/feat-check-booking.ts'),
     file('booking/feat-check-booking/data/src/check-booking.store.ts'),
     file('booking/shell/src/booking.routes.ts'),
-    file('auth/shell/src/auth.providers.ts'),
+    file('booking/shell/src/booking.providers.ts'),
     file('layout/shell/src/layout.shell.ts'),
     file('booking/shell/src/booking-page.ts'),
     file('booking/testing/src/fixtures/booking.fixture.ts'),
@@ -34,6 +34,7 @@ ruleTester.run(RULE_NAME, libFileNaming, {
     // shared buckets: plain helper files also in types/utils
     file('shared/utils/src/format-date.ts'),
     file('shared/types/src/entity-id.ts'),
+    file('shared/data/src/auth.store.ts'),
     // public API, generated code, generated client libs, outside libs: not this rule's business
     file('booking/types/src/index.ts'),
     file('booking/generated/booking-client/api/src/generated/api/Booking_Service.ts'),
@@ -59,12 +60,13 @@ ruleTester.run(RULE_NAME, libFileNaming, {
       expected: 'booking.model.ts | booking.dto.ts',
     }),
     invalid('booking/utils/src/format.ts', 'plainFile'),
-    invalid('booking/events/src/booking-confirmed.ts', 'plainFile'),
+    // events are a kind of the data layer (no events layer)
+    invalid('booking/ui/src/booking.events.ts', 'kindLayer'),
     invalid('booking/data/src/booking.service.ts', 'unknownKind', {
       file: 'booking.service.ts',
       kind: 'service',
       layer: 'data',
-      allowed: 'booking.ts | booking.mapper.ts | booking.store.ts',
+      allowed: 'booking.ts | booking.events.ts | booking.mapper.ts | booking.store.ts',
     }),
     invalid('booking/ui/src/booking-card.component.ts', 'unknownKind'),
     invalid('booking/ui/src/BookingCard.ts', 'fileCase', { file: 'BookingCard.ts', name: 'BookingCard' }),

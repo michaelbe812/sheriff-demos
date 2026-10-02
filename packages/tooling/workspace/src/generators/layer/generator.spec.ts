@@ -12,10 +12,10 @@ describe('layer generator', () => {
   });
 
   it('adds a lib with an example to an existing domain', async () => {
-    await layerGenerator(tree, { domain: 'booking', layer: 'events' });
+    await layerGenerator(tree, { domain: 'booking', layer: 'utils' });
 
-    expect(read(tree, 'libs/booking/events/src/index.ts')).toBe("export * from './booking.events';\n");
-    expect(read(tree, 'libs/booking/events/src/booking.events.ts')).toContain('export interface BookingSelected');
+    expect(read(tree, 'libs/booking/utils/src/index.ts')).toBe("export * from './booking.utils';\n");
+    expect(read(tree, 'libs/booking/utils/src/booking.utils.ts')).toContain('export function normalizeBookingName');
   });
 
   it('writes the explicit config: project.json (tags from the path), build files, paths entry', async () => {
@@ -43,16 +43,18 @@ describe('layer generator', () => {
   });
 
   it('leaves an existing lib untouched', async () => {
-    await layerGenerator(tree, { domain: 'booking', layer: 'api' });
+    await layerGenerator(tree, { domain: 'booking', layer: 'data' });
 
-    expect(read(tree, 'libs/booking/api/src/booking-api.ts')).toContain('export class BookingApi {}');
+    expect(read(tree, 'libs/booking/data/src/booking-api.ts')).toContain('all: Booking[] = [];');
   });
 
   it('validates domain and layer (layer list from the conventions)', async () => {
     await expect(layerGenerator(tree, { domain: 'payment', layer: 'ui' })).rejects.toThrow('Unknown scope "payment"');
     await expect(layerGenerator(tree, { domain: 'booking', layer: 'widgets' })).rejects.toThrow(
-      'allowed: types, utils, events, api, data, ui, shell, testing',
+      'allowed: types, utils, data, ui, shell, testing',
     );
+    for (const removed of ['api', 'events'])
+      await expect(layerGenerator(tree, { domain: 'booking', layer: removed })).rejects.toThrow(`Unknown layer "${removed}"`);
     await expect(layerGenerator(tree, { domain: 'booking', layer: 'feature' })).rejects.toThrow(
       'only exists inside a feat',
     );
@@ -70,7 +72,7 @@ describe('layer generator', () => {
   it('registers a new shell in the app routes', async () => {
     addScope(tree, 'notes');
     tree.write('libs/notes/types/src/index.ts', 'export interface Notes {\n  id: string;\n  name: string;\n}\n');
-    for (const layer of ['api', 'data', 'ui', 'shell']) await layerGenerator(tree, { domain: 'notes', layer });
+    for (const layer of ['data', 'ui', 'shell']) await layerGenerator(tree, { domain: 'notes', layer });
 
     expect(findLazyRoutes(read(tree, APP_ROUTES)).map((route) => route.specifier)).toContain('@blueprint/notes/shell');
   });

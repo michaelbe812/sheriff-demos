@@ -35,12 +35,14 @@ describe('component / service / store wrappers', () => {
     // Angular 22 default: @Service() (root-provided)
     expect(read(tree, 'libs/booking/data/src/booking-cache.ts')).toContain('@Service()');
     expect(tree.exists('libs/booking/data/src/booking-cache.spec.ts')).toBe(false);
-    expect(read(tree, 'libs/booking/data/src/index.ts')).toBe("export * from './booking.store';\n");
+    expect(read(tree, 'libs/booking/data/src/index.ts')).toBe(
+      "export * from './booking-api';\nexport * from './booking.store';\n",
+    );
 
-    await serviceGenerator(tree, { path: 'libs/booking/api/src/cache/api-cache', skipFormat: true });
-    expect(read(tree, 'libs/booking/api/src/cache/api-cache.ts')).toContain('export class ApiCache');
-    expect(read(tree, 'libs/booking/api/src/index.ts')).toContain("export * from './cache/api-cache';");
-    await expect(serviceGenerator(tree, { path: 'libs/booking/api/src/cache/api-cache' })).rejects.toThrow(
+    await serviceGenerator(tree, { path: 'libs/booking/data/src/cache/api-cache', skipFormat: true });
+    expect(read(tree, 'libs/booking/data/src/cache/api-cache.ts')).toContain('export class ApiCache');
+    expect(read(tree, 'libs/booking/data/src/index.ts')).toContain("export * from './cache/api-cache';");
+    await expect(serviceGenerator(tree, { path: 'libs/booking/data/src/cache/api-cache' })).rejects.toThrow(
       'exists already',
     );
   });

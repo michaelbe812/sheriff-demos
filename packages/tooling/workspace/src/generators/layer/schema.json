@@ -13,12 +13,12 @@
     },
     "layer": {
       "type": "string",
-      "description": "Layer: types, utils, events, api, data, ui, shell, testing.",
+      "description": "Layer: types, utils, data, ui, shell, testing.",
       "$default": { "$source": "argv", "index": 1 },
       "x-prompt": {
         "message": "Layer?",
         "type": "list",
-        "items": ["types", "utils", "events", "api", "data", "ui", "shell", "testing"]
+        "items": ["types", "utils", "data", "ui", "shell", "testing"]
       }
     },
     "appRoutesFile": { "type": "string", "default": "apps/client/src/app/app.routes.ts" },

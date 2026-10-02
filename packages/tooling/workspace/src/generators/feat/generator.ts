@@ -1,6 +1,6 @@
 import { formatFiles, logger, type Tree } from '@nx/devkit';
 import { aliasFor, FEAT_PREFIX } from '@blueprint/tooling-conventions';
-import { featApi, featData, featFeature, featNames, type FeatParts, featUi } from '../shared/feat-templates';
+import { featData, featFeature, featNames, type FeatParts, featUi } from '../shared/feat-templates';
 import { findExportedRoutes, findLazyRoutes, insertRoute, lazyRouteSource, updateFile } from '../shared/routes';
 import { writeLib } from '../shared/slice';
 import { assertKebabCase, assertSliceExists } from '../shared/workspace';
@@ -8,23 +8,21 @@ import { assertKebabCase, assertSliceExists } from '../shared/workspace';
 export interface FeatGeneratorSchema {
   domain: string;
   name: string;
-  api?: boolean;
   data?: boolean;
   ui?: boolean;
   skipFormat?: boolean;
 }
 
-/** libs/<domain>/feat-<name>/feature (+ api/data/ui), lazy route in the domain shell routes. */
+/** libs/<domain>/feat-<name>/feature (+ data/ui), lazy route in the domain shell routes. */
 export async function featGenerator(tree: Tree, options: FeatGeneratorSchema): Promise<void> {
   const feat = options.name.startsWith(FEAT_PREFIX) ? options.name.slice(FEAT_PREFIX.length) : options.name;
   assertKebabCase(feat, 'Feat');
   assertSliceExists(tree, options.domain);
   const n = featNames(options.domain, feat);
-  const parts: FeatParts = { api: Boolean(options.api), data: Boolean(options.data), ui: Boolean(options.ui) };
+  const parts: FeatParts = { data: Boolean(options.data), ui: Boolean(options.ui) };
 
   // sub-libs first: the container imports them
-  if (parts.api) writeLib(tree, `${n.featPath}/api`, featApi(n));
-  if (parts.data) writeLib(tree, `${n.featPath}/data`, featData(n, parts));
+  if (parts.data) writeLib(tree, `${n.featPath}/data`, featData(n));
   if (parts.ui) writeLib(tree, `${n.featPath}/ui`, featUi(n));
   writeLib(tree, `${n.featPath}/feature`, featFeature(n, parts));
   registerFeatRoute(tree, n.scope, feat, n.container);

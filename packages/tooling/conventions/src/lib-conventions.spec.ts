@@ -1,20 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { deriveTags, libPathError, parseClientPath, parseLibPath, scopesOfFile } from './lib-conventions';
 
-const scopes = ['auth', 'booking', 'checkin', 'layout', 'shared'];
+const scopes = ['booking', 'checkin', 'layout', 'shared'];
 
 describe('deriveTags', () => {
-  it('derives scope/type/feat + markers from the path', () => {
-    expect(deriveTags('booking/api', { scopes })).toEqual(['scope:booking', 'type:api', 'feat:none', 'port']);
+  it('derives scope/type/feat + entry marker from the path, no ports', () => {
+    expect(deriveTags('booking/data', { scopes })).toEqual(['scope:booking', 'type:data', 'feat:none']);
     expect(deriveTags('booking/shell', { scopes })).toEqual(['scope:booking', 'type:feature', 'feat:none', 'entry']);
-    expect(deriveTags('booking/feat-check-booking/api', { scopes })).toEqual([
+    expect(deriveTags('booking/feat-check-booking/data', { scopes })).toEqual([
       'scope:booking',
-      'type:api',
+      'type:data',
       'feat:check-booking',
-      'feat-port',
     ]);
-    expect(deriveTags('shared/api', { scopes })).toEqual(['scope:shared', 'type:api', 'feat:none']);
+    expect(deriveTags('booking/feat-check-booking/feature', { scopes })).toEqual([
+      'scope:booking',
+      'type:feature',
+      'feat:check-booking',
+    ]);
+    expect(deriveTags('shared/data', { scopes })).toEqual(['scope:shared', 'type:data', 'feat:none']);
     expect(deriveTags('booking/testing', { scopes })).toEqual(['scope:booking', 'type:testing', 'feat:none']);
+  });
+
+  it('knows no api/events layer (reduced blueprint)', () => {
+    expect(() => deriveTags('booking/api', { scopes })).toThrow('not a blueprint lib path');
+    expect(() => deriveTags('booking/events', { scopes })).toThrow('not a blueprint lib path');
+    expect(() => deriveTags('booking/feat-check-booking/api', { scopes })).toThrow('not a blueprint lib path');
   });
 
   it('rejects an unknown layer or a wrong shape', () => {
@@ -49,16 +59,16 @@ describe('deriveTags', () => {
 });
 
 describe('generated OpenAPI clients', () => {
-  it('derives scope from the placement, type from the part, marker `generated`, never port', () => {
+  it('derives scope from the placement, type from the part (api/core = data), marker `generated`', () => {
     expect(deriveTags('generated/pet-client/api', { scopes })).toEqual([
       'scope:shared',
-      'type:api',
+      'type:data',
       'feat:none',
       'generated',
     ]);
     expect(deriveTags('generated/pet-client/core', { scopes })).toEqual([
       'scope:shared',
-      'type:api',
+      'type:data',
       'feat:none',
       'generated',
     ]);

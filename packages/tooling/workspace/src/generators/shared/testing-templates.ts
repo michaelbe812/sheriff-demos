@@ -7,7 +7,7 @@ import type { LibFiles, SliceNames } from './slice-templates';
 
 /**
  * @param entityInTypes true if `libs/<slice>/types` exports the entity interface; otherwise the
- *   fixture declares the backend shape itself (a testing lib may not import api/data).
+ *   fixture declares the backend shape itself (a testing lib may not import data).
  */
 export function testingFiles(n: SliceNames, entityInTypes: boolean): LibFiles {
   const entityImport = entityInTypes

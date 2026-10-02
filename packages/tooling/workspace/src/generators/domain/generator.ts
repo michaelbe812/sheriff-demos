@@ -19,14 +19,14 @@ import {
 
 export interface DomainGeneratorSchema {
   name: string;
-  /** comma-separated or list, default types,api,data,ui,shell */
+  /** comma-separated or list, default types,data,ui,shell */
   layers?: string | string[];
   testing?: boolean;
   appRoutesFile?: string;
   skipFormat?: boolean;
 }
 
-export const DEFAULT_DOMAIN_LAYERS = ['types', 'api', 'data', 'ui', 'shell'];
+export const DEFAULT_DOMAIN_LAYERS = ['types', 'data', 'ui', 'shell'];
 
 export function parseLayers(layers: string | string[] | undefined, fallback: string[]): string[] {
   if (layers === undefined || layers.length === 0) return fallback;
@@ -65,7 +65,7 @@ export async function domainGenerator(tree: Tree, options: DomainGeneratorSchema
     logger.info(
       `Domain "${scope}": libs/${scope}/{${[...layers, ...(withTesting ? [TESTING_LAYER] : [])].join(',')}} (+ config files, paths), scope in lib-scopes.json.`,
     );
-    logger.info(`Next: nx g @blueprint/tooling-workspace:feat ${scope} <name> --api --data --ui`);
+    logger.info(`Next: nx g @blueprint/tooling-workspace:feat ${scope} <name> --data --ui`);
   };
 }
 

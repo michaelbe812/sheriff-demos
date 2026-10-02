@@ -1,10 +1,8 @@
 import { CheckinDto, CheckinRecord } from '@blueprint/checkin/types';
 
 /**
- * MODULE-PRIVATE (sheriff `encapsulationPattern: 'internal'`, the default):
- * a top-level `internal/` folder inside a module is only importable from
- * within that module (here: `data`). Even sibling modules of the SAME domain
- * get an encapsulation violation — no config or tag needed.
+ * LIB-PRIVATE: `internal/` is never exported from index.ts (blueprint/no-internal-export), so no other
+ * lib can reach it — deep imports are banned, relative imports across libs too.
  */
 export function toCheckinRecord(dto: CheckinDto): CheckinRecord {
   return {

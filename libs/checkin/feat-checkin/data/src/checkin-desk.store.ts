@@ -1,24 +1,24 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-// Foreign domain ONLY via its public port (identical for app-internal or lib):
-import { Booking, BookingApi } from '@blueprint/booking/api';
-import { CheckinStore } from '@blueprint/checkin/data';
-import { guestArrived } from '@blueprint/checkin/events';
+import { CheckinApi, CheckinStore, guestArrived } from '@blueprint/checkin/data';
+import { Arrival } from '@blueprint/checkin/types';
+
+// boundary-violation-example: import { BookingApi } from '@blueprint/booking/data'; // foreign slice (never, no port)
 
 /** Feat-private store: orchestrates the desk — arrivals in, check-ins out. */
 @Injectable({ providedIn: 'root' })
 export class CheckinDeskStore {
-  private readonly bookingApi = inject(BookingApi);
+  private readonly api = inject(CheckinApi);
   private readonly checkinStore = inject(CheckinStore);
 
-  readonly arrivals = signal<Booking[]>([]);
+  readonly arrivals = signal<Arrival[]>([]);
   readonly openArrivals = computed(() => this.arrivals().length);
 
   async loadArrivals(): Promise<void> {
-    this.arrivals.set(await this.bookingApi.loadBookings());
+    this.arrivals.set(await this.api.loadArrivals());
   }
 
-  checkIn(booking: Booking): void {
-    this.checkinStore.handle(guestArrived(booking.id, booking.guestName));
-    this.arrivals.update((arrivals) => arrivals.filter((a) => a.id !== booking.id));
+  checkIn(arrival: Arrival): void {
+    this.checkinStore.handle(guestArrived(arrival.bookingId, arrival.guestName));
+    this.arrivals.update((arrivals) => arrivals.filter((a) => a.bookingId !== arrival.bookingId));
   }
 }

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/schema",
   "$id": "BlueprintDomain",
   "title": "Neue Domain (Slice)",
-  "description": "libs/<name>/{types,api,data,ui,shell} + testing + Beispiel-Spec, Lazy-Route in app.routes.ts, Scope in nx.json.",
+  "description": "libs/<name>/{types,data,ui,shell} + testing + Beispiel-Spec, Lazy-Route in app.routes.ts, Scope in lib-scopes.json.",
   "type": "object",
   "properties": {
     "name": {
@@ -14,8 +14,8 @@
     },
     "layers": {
       "type": "string",
-      "description": "Layer, kommagetrennt (types, utils, events, api, data, ui, shell).",
-      "default": "types,api,data,ui,shell"
+      "description": "Layer, kommagetrennt (types, utils, data, ui, shell).",
+      "default": "types,data,ui,shell"
     },
     "testing": {
       "type": "boolean",
