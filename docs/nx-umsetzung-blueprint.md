@@ -180,7 +180,8 @@ feat:<f>     -> feat:<f>, feat:none, feat-port          (je Feat)
 // Nx-Extra
 utils|events|data|ui|feature: bannedExternalImports ['@angular/common/http']
 Produktions-Layer + app:      bannedExternalImports [msw, msw/*, vitest, vitest/*, @vitest/*, @testing-library/*, playwright, playwright/*]
-// Override für *.spec.ts, *.test.ts, test-setup.ts: dieselben Constraints + type:testing (siehe Testing & MSW)
+// Override für *.spec.ts, *.test.ts, test-setup.ts: jeder Layer darf zusätzlich type:testing
+//   (alle außer types: testing baut auf types auf → Zyklus); Produktionscode darf testing nie (siehe Testing & MSW)
 ```
 
 **Wie wird `sameTag` ausgedrückt?** Gar nicht direkt: Nx kann aus einem Ziel-Tag nicht auf das Quell-Tag zurückverweisen. Deshalb gibt es eine Constraint pro Scope und eine pro Feat. `sameTagConstraints()` in `eslint.config.mjs` liest dazu die Tags aller Projekte aus dem Projekt-Graph (die Lib-Tags liefert das Plugin) und erzeugt die Constraints aus den vorhandenen `scope:*`- und `feat:*`-Tags. Ein neuer Slice ist abgedeckt, sobald sein erster Lib-Ordner mit `src/index.ts` existiert. Eine Liste muss niemand pflegen.
