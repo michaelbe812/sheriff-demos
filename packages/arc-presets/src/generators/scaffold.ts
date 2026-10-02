@@ -28,7 +28,7 @@ export function modelFile(name: string): string {
 }
 
 export function eventsFile(name: string): string {
-  return `/** Domain events: ui/feature emit, data handles. */
+  return `/** Domain events: ui/feature emit, state handles. */
 export interface ${names(name).className}Changed {
   readonly type: '${names(name).fileName}.changed';
   readonly id: string;
@@ -173,7 +173,7 @@ export function featStoreFile(feat: string): string {
   const { className } = names(feat);
   return `import { Injectable, signal } from '@angular/core';
 
-/** Feat-private store; may use domain-shared data (same slice family). */
+/** Feat-private store; may use domain-shared state (same slice family). */
 @Injectable({ providedIn: 'root' })
 export class ${className}Store {
   readonly busy = signal(false);
@@ -202,7 +202,7 @@ export function writeSliceBuckets(
   } else {
     tree.write(`${root}/api/${fileName}-api.ts`, apiConcreteFile(name));
   }
-  tree.write(`${root}/data/${fileName}.store.ts`, storeFile(name, preset));
+  tree.write(`${root}/state/${fileName}.store.ts`, storeFile(name, preset));
   tree.write(`${root}/ui/.gitkeep`, '');
 }
 
@@ -219,6 +219,6 @@ export function writeFeat(
   const featPort =
     preset === 'inverted' ? `${root}/api/index.ts` : `${root}/api/${fileName}-api.ts`;
   tree.write(featPort, featPortFile(feat));
-  tree.write(`${root}/data/${fileName}.store.ts`, featStoreFile(feat));
+  tree.write(`${root}/state/${fileName}.store.ts`, featStoreFile(feat));
   tree.write(`${root}/ui/.gitkeep`, '');
 }

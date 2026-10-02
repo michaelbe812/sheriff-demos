@@ -62,7 +62,7 @@ export default async function migrateGenerator(
       '     (abstract methods only — no bodies).',
       '  3. Add <name>.providers.ts at the slice root:',
       '       { provide: <Name>Api, useClass: Http<Name>Api }',
-      '  4. Update data/ stores to `inject(<Name>Api)` from ../api (the contract).',
+      '  4. Update state/ stores to `inject(<Name>Api)` from ../api (the contract).',
       '  5. Run `<pm> sheriff:verify` — type:api -> type:infra should now be blocked.',
       '',
       'Tip: `nx g @lambda-solutions/arc-presets:domain <name>` on the inverted preset',

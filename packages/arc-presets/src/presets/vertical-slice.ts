@@ -29,8 +29,8 @@ type DepRules = SheriffConfig['depRules'];
  *   events  -> types, utils, events
  *   api     -> types, utils, api                 (CONTRACT, never infra)
  *   infra   -> types, utils, api, infra          (inverted preset only)
- *   data    -> types, utils, api, data, events   (binds to the token, not infra)
- *   ui      -> types, utils, ui, events          (NOT api, NOT data)
+ *   state   -> types, utils, api, state, events  (binds to the token, not infra)
+ *   ui      -> types, utils, ui, events          (NOT api, NOT state)
  *   feature -> every type:* (inverted: EXCEPT infra outside the slice root)
  */
 
@@ -51,7 +51,7 @@ export const slice = (
   ...(preset === 'inverted'
     ? { [`${path}/infra`]: [scope, 'type:infra'] }
     : {}),
-  [`${path}/data`]: [scope, 'type:data'],
+  [`${path}/state`]: [scope, 'type:state'],
   [`${path}/ui`]: [scope, 'type:ui'],
   [`${path}/feat-<feat>`]: [scope, 'feat:<feat>', 'type:feature'],
   [`${path}/feat-<feat>/types`]: [scope, 'feat:<feat>', 'type:types'],
@@ -61,7 +61,7 @@ export const slice = (
   ...(preset === 'inverted'
     ? { [`${path}/feat-<feat>/infra`]: [scope, 'feat:<feat>', 'type:infra'] }
     : {}),
-  [`${path}/feat-<feat>/data`]: [scope, 'feat:<feat>', 'type:data'],
+  [`${path}/feat-<feat>/state`]: [scope, 'feat:<feat>', 'type:state'],
   [`${path}/feat-<feat>/ui`]: [scope, 'feat:<feat>', 'type:ui'],
 });
 
@@ -125,19 +125,19 @@ export const blueprintDepRules = (preset: VerticalPreset): DepRules => ({
   ...(preset === 'inverted'
     ? {
         // The impl side: implements the contract, talks to shared/api (http)
-        // and its own types/utils. It may NOT reach data/ or ui/.
+        // and its own types/utils. It may NOT reach state/ or ui/.
         'type:infra': ['type:types', 'type:utils', 'type:api', 'type:infra'],
       }
     : {}),
   // Stores bind to the TOKEN in api/, never to a class in infra/.
-  'type:data': [
+  'type:state': [
     'type:types',
     'type:utils',
     'type:api',
-    'type:data',
+    'type:state',
     'type:events',
   ],
-  'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT data
+  'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT state
   // Smart containers: routes, shells, feat roots. Broad by design.
   //
   // Inverted preset: NOT towards `type:infra`, which is the impl behind the

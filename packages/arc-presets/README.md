@@ -18,6 +18,14 @@ The four presets and the reasoning behind each are documented in
 | `hexagonal-fwcore` | Ports & Adapters, framework-aware core (3 layers) | no |
 | `hexagonal-strict` | Ports & Adapters, framework-free core (`denyRules`) | **yes** |
 
+Vertical-slice buckets: `types` · `utils` · `events` · `api` · `infra` (inverted
+only) · `state` (stores, tag `type:state`) · `ui` · `feat-<x>`.
+
+> **Upgrade:** the store bucket was renamed `data/` → `state/` (`type:data` →
+> `type:state`, same rules). Existing slices: rename each `data/` folder to
+> `state/` and fix imports; an old `data/` folder is untagged (`noTag`) and
+> fails `sheriff verify`. `migrate` does not move folders.
+
 ## Setup in a target repo
 
 ```sh

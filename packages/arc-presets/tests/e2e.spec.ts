@@ -250,33 +250,33 @@ describe.skipIf(!e2eEnabled)('arc-presets real package e2e', () => {
     expect(verify.stdout + verify.stderr).toContain('No issues found');
   });
 
-  it('blocks inverted data -> infra imports and allows data -> api imports through eslint', async () => {
+  it('blocks inverted state -> infra imports and allows state -> api imports through eslint', async () => {
     const workspace = await scaffoldPreset('inverted');
     writeSheriffOnlyEslintConfig(workspace);
 
-    const base = join(workspace, 'apps/client/src/app/domains/booking/data');
+    const base = join(workspace, 'apps/client/src/app/domains/booking/state');
     writeFileSync(
-      join(base, 'data-to-infra.ts'),
+      join(base, 'state-to-infra.ts'),
       "import { HttpBookingApi } from '../infra/http-booking-api';\nexport const blocked = HttpBookingApi;\n",
     );
     writeFileSync(
-      join(base, 'data-to-api.ts'),
+      join(base, 'state-to-api.ts'),
       "import { BookingApi } from '../api';\nexport const allowed = BookingApi;\n",
     );
 
     const blocked = await runEslint(
       workspace,
-      'apps/client/src/app/domains/booking/data/data-to-infra.ts',
+      'apps/client/src/app/domains/booking/state/state-to-infra.ts',
       false,
     );
     expect(blocked.status).not.toBe(0);
     expect(blocked.stdout + blocked.stderr).toMatch(
-      /type:data has no clearance[\s\S]*type:infra/,
+      /type:state has no clearance[\s\S]*type:infra/,
     );
 
     const allowed = await runEslint(
       workspace,
-      'apps/client/src/app/domains/booking/data/data-to-api.ts',
+      'apps/client/src/app/domains/booking/state/state-to-api.ts',
     );
     expect(allowed.status).toBe(0);
   });

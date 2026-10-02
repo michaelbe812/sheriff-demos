@@ -13,9 +13,9 @@ const ctx = (
 ): DepRuleContext => ({
   from,
   to,
-  fromModulePath: 'apps/client/src/app/domains/booking/data',
+  fromModulePath: 'apps/client/src/app/domains/booking/state',
   toModulePath: 'apps/client/src/app/domains/booking/api',
-  fromFilePath: 'apps/client/src/app/domains/booking/data/booking.store.ts',
+  fromFilePath: 'apps/client/src/app/domains/booking/state/booking.store.ts',
   toFilePath: 'apps/client/src/app/domains/booking/api/index.ts',
   ...overrides,
 });
@@ -86,9 +86,9 @@ describe('verticalSliceConfig dep rule predicates', () => {
       allows(
         invertedRules['domain:*'],
         ctx('domain:booking', 'domain:billing', {
-          toModulePath: 'apps/client/src/app/domains/billing/data',
+          toModulePath: 'apps/client/src/app/domains/billing/state',
           toFilePath:
-            'apps/client/src/app/domains/billing/data/billing.store.ts',
+            'apps/client/src/app/domains/billing/state/billing.store.ts',
         }),
       ),
     ).toBe(false);
@@ -107,7 +107,7 @@ describe('verticalSliceConfig dep rule predicates', () => {
   });
 
   it('keeps app-scoped imports inside the same app', () => {
-    expect(appOf('apps/client/src/app/domains/booking/data/x.ts')).toBe(
+    expect(appOf('apps/client/src/app/domains/booking/state/x.ts')).toBe(
       'client',
     );
     expect(
