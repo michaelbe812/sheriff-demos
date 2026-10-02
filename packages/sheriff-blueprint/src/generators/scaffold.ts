@@ -21,7 +21,7 @@ export function modelFile(name: string): string {
 }
 
 export function eventsFile(name: string): string {
-  return `/** Domain events: ui/feature emit, data handles. */
+  return `/** Domain events: ui/feature emit, state handles. */
 export interface ${names(name).className}Changed {
   readonly type: '${names(name).fileName}.changed';
   readonly id: string;
@@ -118,7 +118,7 @@ import { ${className} } from '../types/${fileName}.model';
 /** Domain-shared store: usable by feature containers, never by ui. */
 @Injectable({ providedIn: 'root' })
 export class ${className}Store {
-  // binds to the CONTRACT, never to the impl — type:data has no clearance
+  // binds to the CONTRACT, never to the impl — type:state has no clearance
   // towards type:infra, so this resolves to whatever the port declared as its
   // default, or to an explicit override
   private readonly api = inject(${className}Api);
@@ -162,7 +162,7 @@ export function featStoreFile(feat: string): string {
   const { className } = names(feat);
   return `import { Injectable, signal } from '@angular/core';
 
-/** Feat-private store; may use domain-shared data (same slice family). */
+/** Feat-private store; may use domain-shared state (same slice family). */
 @Injectable({ providedIn: 'root' })
 export class ${className}Store {
   readonly busy = signal(false);
@@ -182,7 +182,7 @@ export function writeSliceBuckets(tree: Tree, root: string, name: string): void 
   tree.write(`${root}/api/index.ts`, apiPortFile(name));
   tree.write(`${root}/infra/http-${fileName}-api.ts`, infraFile(name));
   // no <slice>.providers.ts: the port provides itself (see apiPortFile)
-  tree.write(`${root}/data/${fileName}.store.ts`, storeFile(name));
+  tree.write(`${root}/state/${fileName}.store.ts`, storeFile(name));
   tree.write(`${root}/ui/.gitkeep`, '');
 }
 
@@ -192,6 +192,6 @@ export function writeFeat(tree: Tree, sliceRoot: string, feat: string): void {
   const root = `${sliceRoot}/feat-${fileName}`;
   tree.write(`${root}/feat-${fileName}.ts`, featContainerFile(feat));
   tree.write(`${root}/api/index.ts`, featPortFile(feat));
-  tree.write(`${root}/data/${fileName}.store.ts`, featStoreFile(feat));
+  tree.write(`${root}/state/${fileName}.store.ts`, featStoreFile(feat));
   tree.write(`${root}/ui/.gitkeep`, '');
 }

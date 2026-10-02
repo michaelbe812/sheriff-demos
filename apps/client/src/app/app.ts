@@ -7,7 +7,7 @@ import { BookingApi } from '@blueprint/domains/booking/api';
 // Alle folgenden Zeilen einkommentieren ⇒ genau die genannte Violation feuert.
 //
 // sheriff-violation-example: import { HttpBookingApi } from '@blueprint/domains/booking/infra/http-booking-api'; // app:client -> type:infra (Impl ist slice-privat, auch via Kurz-Alias nicht erreichbar)
-// sheriff-violation-example: import { BookingStore } from '@blueprint/domains/booking/data/booking.store';       // app:client -> type:data (am Port vorbei)
+// sheriff-violation-example: import { BookingStore } from '@blueprint/domains/booking/state/booking.store';       // app:client -> type:state (am Port vorbei)
 // sheriff-violation-example: import { BookingCard } from '@blueprint/domains/booking/ui/booking-card';           // app:client -> type:ui (Shell sieht nur entry/port/shared)
 // sheriff-violation-example: import { bookingLabel } from '@blueprint/domains/booking/utils/booking.utils';      // app:client -> type:utils (Slice-interna)
 

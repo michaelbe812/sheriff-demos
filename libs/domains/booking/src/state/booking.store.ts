@@ -8,7 +8,7 @@ import { isConfirmed } from '../utils/booking.utils';
 @Injectable({ providedIn: 'root' })
 export class BookingStore {
   // binds to the ABSTRACT class, not the impl — the store cannot name
-  // HttpBookingApi even if it wanted to (type:data has no clearance towards
+  // HttpBookingApi even if it wanted to (type:state has no clearance towards
   // type:infra). BookingApi is abstract, so this resolves to the port's own
   // default impl, or to whatever an explicit provider overrode it with.
   private readonly api = inject(BookingApi);

@@ -30,7 +30,7 @@ type DepRules = SheriffConfig['depRules'];
  *   events  -> types, utils, events      (signal-store event definitions)
  *   api     -> types, utils, api, infra  (contract + its DEFAULT impl, see
  *              the `type:api` rule: layered, not inverted)
- *   data    -> types, utils, api, data, events   (stores, business services)
+ *   state   -> types, utils, api, state, events  (stores, business services)
  *   ui      -> types, utils, ui, events  (dumb components; component-local
  *              stores live INSIDE the ui bucket — intra-module imports are
  *              never checked)
@@ -54,14 +54,14 @@ export const slice = (path: string, scope: string): Modules => ({
   [`${path}/utils`]: [scope, 'type:utils'],
   [`${path}/events`]: [scope, 'type:events'],
   // The PUBLIC PORT: the contract plus its DEFAULT wiring. Consumers (own
-  // data/, foreign domains) bind to this and nothing else; the token resolves
+  // state/, foreign domains) bind to this and nothing else; the token resolves
   // to a default impl without a providers file.
   [`${path}/api`]: [scope, 'type:api', 'port'],
   // The port's implementation: HTTP clients, mappers, third-party SDKs.
   // NOT tagged `port`, so it stays invisible OUTSIDE the slice. Inside, the
   // port itself and the slice root (entry) may name it.
   [`${path}/infra`]: [scope, 'type:infra'],
-  [`${path}/data`]: [scope, 'type:data'],
+  [`${path}/state`]: [scope, 'type:state'],
   [`${path}/ui`]: [scope, 'type:ui'],
   [`${path}/feat-<feat>`]: [scope, 'feat:<feat>', 'type:feature'],
   [`${path}/feat-<feat>/types`]: [scope, 'feat:<feat>', 'type:types'],
@@ -69,7 +69,7 @@ export const slice = (path: string, scope: string): Modules => ({
   [`${path}/feat-<feat>/events`]: [scope, 'feat:<feat>', 'type:events'],
   [`${path}/feat-<feat>/api`]: [scope, 'feat:<feat>', 'type:api', 'feat-port'],
   [`${path}/feat-<feat>/infra`]: [scope, 'feat:<feat>', 'type:infra'],
-  [`${path}/feat-<feat>/data`]: [scope, 'feat:<feat>', 'type:data'],
+  [`${path}/feat-<feat>/state`]: [scope, 'feat:<feat>', 'type:state'],
   [`${path}/feat-<feat>/ui`]: [scope, 'feat:<feat>', 'type:ui'],
 });
 
@@ -161,13 +161,13 @@ export const blueprintDepRules = (): DepRules => ({
   // carries no `port` tag, so the scope axis still blocks it.
   'type:api': ['type:types', 'type:utils', 'type:api', 'type:infra'],
   // The impl side: implements the contract, talks to shared/api (http) and
-  // its own types/utils. It may NOT reach data/ or ui/ — nothing calls
+  // its own types/utils. It may NOT reach state/ or ui/ — nothing calls
   // inward from infrastructure.
   'type:infra': ['type:types', 'type:utils', 'type:api', 'type:infra'],
-  // Stores bind to the TOKEN in api/, never to a class in infra/. `type:data`
+  // Stores bind to the TOKEN in api/, never to a class in infra/. `type:state`
   // has no clearance towards `type:infra`; only the slice root wires them.
-  'type:data': ['type:types', 'type:utils', 'type:api', 'type:data', 'type:events'],
-  'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT data
+  'type:state': ['type:types', 'type:utils', 'type:api', 'type:state', 'type:events'],
+  'type:ui': ['type:types', 'type:utils', 'type:ui', 'type:events'], // NOT api, NOT state
   // Smart containers: routes, shells, feat roots. Broad by design — but NOT
   // towards `type:infra`, which is the impl behind the port.
   //

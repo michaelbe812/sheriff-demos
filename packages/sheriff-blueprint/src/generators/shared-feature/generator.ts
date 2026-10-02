@@ -25,7 +25,7 @@ export default async function sharedFeatureGenerator(
 
 /**
  * PORT of the ${fileName} shared-feature: contract only (token + interfaces).
- * The implementation (type:data) is wired at the slice root via
+ * The implementation (type:state) is wired at the slice root via
  * provide${className}() — consumers inject ${constantName}_API and never see the store.
  *
  * Uses the InjectionToken variant deliberately: a shared-feature port is
@@ -41,7 +41,7 @@ export const ${constantName}_API = new InjectionToken<${className}Api>('${consta
 `,
   );
   tree.write(
-    `${root}/data/${fileName}.store.ts`,
+    `${root}/state/${fileName}.store.ts`,
     `import { Injectable } from '@angular/core';
 import { ${className}Api } from '../api';
 
@@ -55,7 +55,7 @@ export class ${className}Store implements ${className}Api {
     `${root}/${fileName}.providers.ts`,
     `import { Provider } from '@angular/core';
 import { ${constantName}_API } from './api';
-import { ${className}Store } from './data/${fileName}.store';
+import { ${className}Store } from './state/${fileName}.store';
 
 /** Slice root (entry, type:feature): wires the port contract to its impl. */
 export function provide${className}(): Provider {

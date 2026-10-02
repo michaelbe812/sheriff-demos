@@ -4,7 +4,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 // booking's HTTP client — that lives in booking/infra, which carries no
 // `port` tag and is therefore unreachable from here.
 import { Booking, BookingApi } from '@blueprint/domains/booking/api';
-import { CheckinStore } from '../../data/checkin.store';
+import { CheckinStore } from '../../state/checkin.store';
 import { guestArrived } from '../../events/checkin.events';
 
 /** Feat-private store: orchestrates the desk — arrivals in, check-ins out. */

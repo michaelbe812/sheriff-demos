@@ -15,7 +15,7 @@ Skalierbare `sheriff.config.ts` für alle Projekte. Funktioniert identisch für 
 
 Ursprünglich war `api/` beides: öffentlicher Port **und** HTTP-Adapter — eine `@Injectable`-Klasse mit `fetch` darin. Wer den Port importierte (auch fremde Domains), hing an der Implementierung: kein Fake für Tests, kein Wechsel auf GraphQL ohne Anfassen aller Aufrufer. Der Abhängigkeitspfeil zeigte **zur** Infrastruktur.
 
-Jetzt gilt: **alle außer dem Port selbst** binden ans Token. `type:data` darf `infra` nicht sehen, `type:ui` und jedes `feat-<x>/` ebenso wenig, und fremde Domains scheitern schon an der Scope-Achse (`infra/` trägt kein `port`-Tag). Der Wechsel auf GraphQL oder einen In-Memory-Fake fasst genau eine Datei an.
+Jetzt gilt: **alle außer dem Port selbst** binden ans Token. `type:state` darf `infra` nicht sehen, `type:ui` und jedes `feat-<x>/` ebenso wenig, und fremde Domains scheitern schon an der Scope-Achse (`infra/` trägt kein `port`-Tag). Der Wechsel auf GraphQL oder einen In-Memory-Fake fasst genau eine Datei an.
 
 ### Self-Providing Port: `api → infra` ist erlaubt
 
@@ -80,7 +80,7 @@ export abstract class BookingApi {
 apps/<app>/src/
   main.ts                      root (implizites Root-Modul)
   app/                         app:<app>        Shell: app.ts, app.config.ts, app.routes.ts
-    shared/                    shared + type:*  dumm: types/utils/api/ui (KEIN data!)
+    shared/                    shared + type:*  dumm: types/utils/api/ui (KEIN state!)
     auth/  layout/  …          domain:<sf>      Shared-Features direkt im Root (Slice-Shape)
     domains/<domain>/          domain:<domain>  Slice-Shape (s.u.)
 
@@ -93,7 +93,7 @@ Slice-Shape (Domain, Shared-Feature — app-intern oder Lib):
   <slice>.routes.ts / shell    + entry           einziger Einstieg für App-Shell
   <slice>.providers.ts         + entry           optional: verdrahtet Port → Impl
                                                  (entfällt beim Self-Providing Port)
-  types/   utils/   events/   data/   ui/
+  types/   utils/   events/   state/   ui/
   api/                         + port            PUBLIC PORT (Contract + Default-Impl)
   infra/                       type:infra        Impl des Ports — slice-privat
   feat-<feat>/                 + feat:<feat>     strikt privat, gleiche Buckets
@@ -105,29 +105,29 @@ Shared-Features liegen direkt im Root (kein `shared-features/`-Ordner) und werde
 
 ### Modul-private Files: `internal/`
 
-Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPattern: 'internal'`): ein **top-level** `internal/` in einem Modul ist nur aus diesem Modul heraus importierbar — sogar die eigene Domain bekommt eine `encapsulation`-Violation. Kein Tag, keine Regel nötig. Beispiel: `checkin/data/internal/checkin.mapper.ts` (DTO→Model-Mapping, nur vom `CheckinStore` benutzt). Achtung: nur die oberste Ebene zählt — `data/foo/internal/` wird NICHT erkannt.
+Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPattern: 'internal'`): ein **top-level** `internal/` in einem Modul ist nur aus diesem Modul heraus importierbar — sogar die eigene Domain bekommt eine `encapsulation`-Violation. Kein Tag, keine Regel nötig. Beispiel: `checkin/state/internal/checkin.mapper.ts` (DTO→Model-Mapping, nur vom `CheckinStore` benutzt). Achtung: nur die oberste Ebene zählt — `state/foo/internal/` wird NICHT erkannt.
 
 ## Layer-Matrix (type-Achse)
 
-| from \ to | types | utils | events | api | infra | data | ui | feature |
+| from \ to | types | utils | events | api | infra | state | ui | feature |
 |---|---|---|---|---|---|---|---|---|
 | **types**   | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | **utils**   | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | **events**  | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | **api**     | ✓ | ✓ | ✗* | ✓ | ✓** | ✗ | ✗ | ✗ |
 | **infra**   | ✓ | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ |
-| **data**    | ✓ | ✓ | ✓ | ✓ | ✗** | ✓ | ✗ | ✗ |
+| **state**   | ✓ | ✓ | ✓ | ✓ | ✗** | ✓ | ✗ | ✗ |
 | **ui**      | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ |
 | **feature** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 *api→events bei Bedarf: `'type:events'` in der `'type:api'`-Regel ergänzen (Einzeiler).
 
-**`api → infra` ist **erlaubt** (Self-Providing Port, s.o.) — das ✓ ist die bewusste Entscheidung für Ergonomie statt Inversion. Die Kapselung trägt jetzt `data → infra ✗` (Stores binden ans Token), `ui → infra ✗`, `feat-<x> → infra ✗` und die Scope-Achse gegenüber fremden Domains. Getestet in `tests/e2e.spec.ts` — inklusive eines Tests, der `api → infra` explizit als erlaubt festhält.
+**`api → infra` ist **erlaubt** (Self-Providing Port, s.o.) — das ✓ ist die bewusste Entscheidung für Ergonomie statt Inversion. Die Kapselung trägt jetzt `state → infra ✗` (Stores binden ans Token), `ui → infra ✗`, `feat-<x> → infra ✗` und die Scope-Achse gegenüber fremden Domains. Getestet in `tests/e2e.spec.ts` — inklusive eines Tests, der `api → infra` explizit als erlaubt festhält.
 
-- `data` = Signal Stores + Business-Logic-Services (domain- oder feat-shared)
-- `events` = Signal-Store-Events, definition-only (Type + Creator). ui/feature werfen, data handelt → deshalb eigener Bucket, den ui importieren darf (data nicht)
+- `state` = Signal Stores + Business-Logic-Services (domain- oder feat-shared)
+- `events` = Signal-Store-Events, definition-only (Type + Creator). ui/feature werfen, state handelt → deshalb eigener Bucket, den ui importieren darf (state nicht)
 - ui-**lokale** Stores: colocated im ui-Bucket = type:ui bzw. intra-Modul (wird nie geprüft) → erlaubt
-- Store-Regel aus README erfüllt: Domain-/Feat-Store (type:data) in ui → Violation
+- Store-Regel aus README erfüllt: Domain-/Feat-Store (type:state) in ui → Violation
 
 ## Scope-Regeln
 
@@ -142,7 +142,7 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
 
 - **App-Isolation:** pfadbasierter `sameApp`-Guard. Ziel in `apps/<x>` ⇒ gleiche App; Libs app-frei; lib→app blockiert. Kein app-Tag pro Modul nötig ⇒ Domain-Tags ortsunabhängig.
 - **Cross-Domain-Types:** Port ist einziger Zugang — benötigte Types aus `api/` re-exportieren oder nach `shared/types` promoten.
-- **Port mit State (Muster):** Port = Contract (InjectionToken + Interface), Impl in `data/`, Verdrahtung am Slice-Root (`provideAuth()` in `auth.providers.ts`). Konsument injiziert Token aus dem Port, sieht den Store nie.
+- **Port mit State (Muster):** Port = Contract (InjectionToken + Interface), Impl in `state/`, Verdrahtung am Slice-Root (`provideAuth()` in `auth.providers.ts`). Konsument injiziert Token aus dem Port, sieht den Store nie.
 - **AND-Semantik:** jedes from-Tag muss den Import unabhängig erlauben; ein Tag ist erfüllt, wenn EIN Ziel-Tag passt. Marker (`entry`, `port`, `feat-port`) sind deshalb als from-Tag transparent (`anyTag`) — Constraints kommen von den anderen Achsen.
 
 ## Naming-Konventionen (load-bearing!)
@@ -164,7 +164,7 @@ Barrel-less gibt jedem Modul per Default einen privaten Ordner (`encapsulationPa
   import bookingRoutes           from '@blueprint/domains/booking/booking.routes'; // entry
   ```
 
-  Der Wildcard löst technisch **alles** auf — er ist keine Zugriffsgrenze, sondern nur Modul-Auflösung. Die Grenze zieht Sheriff über die Tags: `.../booking/data/booking.store` resolved zwar, wird aber geblockt. Das ist bewusst so, damit ein Verstoß als *Architektur*-Fehler mit Regelnamen erscheint statt als „Modul nicht gefunden". Verifiziert in `tests/e2e.spec.ts`.
+  Der Wildcard löst technisch **alles** auf — er ist keine Zugriffsgrenze, sondern nur Modul-Auflösung. Die Grenze zieht Sheriff über die Tags: `.../booking/state/booking.store` resolved zwar, wird aber geblockt. Das ist bewusst so, damit ein Verstoß als *Architektur*-Fehler mit Regelnamen erscheint statt als „Modul nicht gefunden". Verifiziert in `tests/e2e.spec.ts`.
 
   Eine härtere Variante wäre `exports` in der `package.json` der Lib (dann ist Verbotenes gar nicht erst auflösbar) — bewusst verworfen, weil Entwickler `exports` selten selbst pflegen und ein Fehler dort als kryptischer Resolver-Fehler auftritt.
 
@@ -195,13 +195,13 @@ Nx `@nx/enforce-module-boundaries` bleibt als grobes Netz (Projekt-Zyklen, build
 
 | # | Entscheidung |
 |---|---|
-| D1 | Type-Achse: types/utils/events/api/data/ui/feature (api=http, data=stores getrennt) |
-| D2 | ui: nur types/utils/events + lokale Stores; NICHT api, NICHT data |
+| D1 | Type-Achse: types/utils/events/api/state/ui/feature (api=http, state=stores getrennt) |
+| D2 | ui: nur types/utils/events + lokale Stores; NICHT api, NICHT state |
 | D3 | Cross-Domain nur via Port (= api-Bucket); Types re-exportieren/promoten |
 | D4 | Kein core-Scope; Shared-Features (auth, layout) als Domain-Slices mit Port, direkt im App-Root, explizit gelistet |
 | D5 | Geschwister-Feats strikt privat; Austausch nur via feat-port |
 | D6 | events als eigener Bucket (type:events) |
-| D7 | Kein shared/data — stateful Singletons gehören in shared-features |
+| D7 | Kein shared/state — stateful Singletons gehören in shared-features |
 | D8 | Libs ohne Barrel, Wildcard-Aliase, 1 Lib/Domain, flach unter src/ |
 | D9 | App-Isolation pfadbasiert (sameApp), nicht per Tag |
 
@@ -214,7 +214,7 @@ npx nx run-many -t lint                     # ESLint = Autorität
 npx nx build client
 ```
 
-Negativbeispiele: In den Quellen markieren Kommentare `// sheriff-violation-example: import …` verbotene Imports (ui→data, ui→api, utils→api, cross-domain internals, SF internals, Geschwister-Feat internals, shell→ui, Import aus fremdem `internal/` → encapsulation-Rule). Einkommentieren ⇒ genau diese Violations feuern.
+Negativbeispiele: In den Quellen markieren Kommentare `// sheriff-violation-example: import …` verbotene Imports (ui→state, ui→api, utils→api, cross-domain internals, SF internals, Geschwister-Feat internals, shell→ui, Import aus fremdem `internal/` → encapsulation-Rule). Einkommentieren ⇒ genau diese Violations feuern.
 
 ## Teilen über Projekte: `@berger-engineering/sheriff-blueprint`
 

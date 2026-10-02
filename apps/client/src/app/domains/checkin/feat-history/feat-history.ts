@@ -1,10 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { CheckinStore } from '../data/checkin.store';
+import { CheckinStore } from '../state/checkin.store';
 // Sibling feat ONLY via its feat-port:
 import { describeDesk } from '../feat-checkin/api/checkin-desk-api';
 import { checkinLabel } from '../utils/checkin.utils';
 
-// sheriff-violation-example: import { CheckinDeskStore } from '../feat-checkin/data/checkin-desk.store'; // sibling feat internals
+// sheriff-violation-example: import { CheckinDeskStore } from '../feat-checkin/state/checkin-desk.store'; // sibling feat internals
 
 @Component({
   selector: 'app-feat-history',

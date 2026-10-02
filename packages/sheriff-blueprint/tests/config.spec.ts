@@ -49,7 +49,7 @@ describe('sameApp / path helpers', () => {
     expect(sameApp({ fromFilePath: client, toModulePath: '/w/apps/client/src/app/shared/ui' })).toBe(true);
     expect(sameApp({ fromFilePath: client, toModulePath: '/w/apps/admin/src/app/shared/ui' })).toBe(false);
     expect(sameApp({ fromFilePath: client, toModulePath: '/w/libs/domains/booking/src/api' })).toBe(true);
-    expect(sameApp({ fromFilePath: '/w/libs/domains/booking/src/data/s.ts', toModulePath: '/w/apps/client/src/app/shared/ui' })).toBe(false);
+    expect(sameApp({ fromFilePath: '/w/libs/domains/booking/src/state/s.ts', toModulePath: '/w/apps/client/src/app/shared/ui' })).toBe(false);
   });
 
   it('root module files (workspace root) still pass sameApp via file path', () => {
@@ -57,21 +57,21 @@ describe('sameApp / path helpers', () => {
   });
 
   it('detects feat folders', () => {
-    expect(inAnyFeat('/w/libs/domains/b/src/feat-check/data')).toBe(true);
-    expect(inAnyFeat('/w/libs/domains/b/src/data')).toBe(false);
+    expect(inAnyFeat('/w/libs/domains/b/src/feat-check/state')).toBe(true);
+    expect(inAnyFeat('/w/libs/domains/b/src/state')).toBe(false);
     expect(inAnyFeat('/w/apps/c/src/app/domains/d/feat-x')).toBe(true);
   });
 });
 
 describe('domain axis', () => {
   it('allows the own domain, blocks foreign domain internals', () => {
-    const base = { fromFilePath: '/w/apps/c/src/app/domains/checkin/data/s.ts' };
+    const base = { fromFilePath: '/w/apps/c/src/app/domains/checkin/state/s.ts' };
     expect(anyFnAllows('domain:*', ctx({ ...base, from: 'domain:checkin', to: 'domain:checkin', toModulePath: '/w/apps/c/src/app/domains/checkin/ui' }))).toBe(true);
-    expect(anyFnAllows('domain:*', ctx({ ...base, from: 'domain:checkin', to: 'domain:booking', toModulePath: '/w/libs/domains/booking/src/data' }))).toBe(false);
+    expect(anyFnAllows('domain:*', ctx({ ...base, from: 'domain:checkin', to: 'domain:booking', toModulePath: '/w/libs/domains/booking/src/state' }))).toBe(false);
   });
 
   it('allows foreign domains only via port, and shared', () => {
-    const base = { fromFilePath: '/w/apps/c/src/app/domains/checkin/data/s.ts' };
+    const base = { fromFilePath: '/w/apps/c/src/app/domains/checkin/state/s.ts' };
     expect(anyFnAllows('domain:*', ctx({ ...base, from: 'domain:checkin', to: 'port', toModulePath: '/w/libs/domains/booking/src/api' }))).toBe(true);
     expect(anyFnAllows('domain:*', ctx({ ...base, from: 'domain:checkin', to: 'shared', toModulePath: '/w/apps/c/src/app/shared/ui' }))).toBe(true);
   });
@@ -81,7 +81,7 @@ describe('domain axis', () => {
       anyFnAllows('domain:*', ctx({
         from: 'domain:checkin',
         to: 'port',
-        fromFilePath: '/w/apps/client/src/app/domains/checkin/data/s.ts',
+        fromFilePath: '/w/apps/client/src/app/domains/checkin/state/s.ts',
         toModulePath: '/w/apps/admin/src/app/domains/billing/api',
       })),
     ).toBe(false);
@@ -90,18 +90,18 @@ describe('domain axis', () => {
 
 describe('feat axis', () => {
   it('allows targets outside any feat folder', () => {
-    expect(anyFnAllows('feat:*', ctx({ from: 'feat:history', to: 'domain:checkin', toModulePath: '/w/apps/c/src/app/domains/checkin/data' }))).toBe(true);
+    expect(anyFnAllows('feat:*', ctx({ from: 'feat:history', to: 'domain:checkin', toModulePath: '/w/apps/c/src/app/domains/checkin/state' }))).toBe(true);
   });
 
   it('blocks sibling feat internals, allows sibling feat-port', () => {
-    const toModulePath = '/w/apps/c/src/app/domains/checkin/feat-checkin/data';
+    const toModulePath = '/w/apps/c/src/app/domains/checkin/feat-checkin/state';
     expect(anyFnAllows('feat:*', ctx({ from: 'feat:history', to: 'domain:checkin', toModulePath }))).toBe(false);
     expect(anyFnAllows('feat:*', ctx({ from: 'feat:history', to: 'feat-port', toModulePath: '/w/apps/c/src/app/domains/checkin/feat-checkin/api' }))).toBe(true);
   });
 });
 
 describe('type axis + marker tags', () => {
-  it('keeps ui away from api and data', () => {
+  it('keeps ui away from api and state', () => {
     expect(rules['type:ui']).toEqual(['type:types', 'type:utils', 'type:ui', 'type:events']);
   });
 
