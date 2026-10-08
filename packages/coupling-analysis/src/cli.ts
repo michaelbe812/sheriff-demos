@@ -1,6 +1,7 @@
-#!/usr/bin/env -S node --experimental-strip-types --no-warnings=ExperimentalWarning
+#!/usr/bin/env node
 /**
- * Usage: node --experimental-strip-types packages/tooling/coupling/src/cli.ts [options]
+ * Usage: coupling-analysis [options]   (installed / built: dist/cli.js)
+ *        node --experimental-strip-types src/cli.ts [options]   (from source, Node ≥ 22.6)
  *   --repo <path>        repo to analyze (default: cwd)
  *   --config <file>      config (default: <repo>/coupling.config.json, else defaults)
  *   --out <dir>          writes coupling-report.json + coupling-report.md (default: print markdown)
@@ -19,6 +20,7 @@ import { serveDetective } from './detective.ts';
 import type { Severity } from './findings.ts';
 import { trackedFiles } from './repo.ts';
 import { toJson, toMarkdown } from './report.ts';
+import { TOOL } from './version.ts';
 import { createSliceMap } from './slices.ts';
 
 const SEVERITIES: Severity[] = ['high', 'medium', 'low'];
@@ -33,8 +35,27 @@ const { values } = parseArgs({
     detective: { type: 'boolean', default: false },
     'detective-serve': { type: 'boolean', default: false },
     'fail-on': { type: 'string' },
+    version: { type: 'boolean', default: false },
+    help: { type: 'boolean', short: 'h', default: false },
   },
 });
+
+const USAGE = `${TOOL}
+Usage: coupling-analysis [options]
+  --repo <path>        repo to analyze (default: cwd)
+  --config <file>      config (default: <repo>/coupling.config.json, else defaults)
+  --out <dir>          write coupling-report.json + coupling-report.md (default: print markdown)
+  --range <rev>        git range, overrides config (pin a sha for reproducible reports)
+  --max-commits <n>    newest n commits only
+  --detective          add Detective's matrices as cross-check (headless)
+  --detective-serve    seed Detective with the slices and open its UI (no report)
+  --fail-on <sev>      exit 1 if a finding has this severity or higher (high|medium|low)
+  --version, --help`;
+
+if (values.help || values.version) {
+  console.log(values.help ? USAGE : TOOL);
+  process.exit(0);
+}
 
 const repo = resolve(values.repo ?? process.cwd());
 const config = loadConfig(repo, values.config && resolve(values.config));

@@ -1,0 +1,42 @@
+{
+  "name": "@berger-engineering/coupling-analysis",
+  "version": "0.1.0",
+  "description": "Cut analysis for TypeScript/JavaScript repos: cross-slice imports, change coupling from git, shared usage → indicators for the right cut and a migration plan towards closed slices. Optional Detective cross-check.",
+  "keywords": ["architecture", "coupling", "change-coupling", "nx", "sheriff", "modular-monolith", "ddd", "code-analysis"],
+  "license": "MIT",
+  "author": "Michael Berger <michael.berger@berger-engineering.io>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michaelbe812/sheriff-demos.git",
+    "directory": "packages/coupling-analysis"
+  },
+  "homepage": "https://github.com/michaelbe812/sheriff-demos/tree/main/packages/coupling-analysis#readme",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "coupling-analysis": "dist/cli.js"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=20.10"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.lib.json && node scripts/fix-declarations.mjs && chmod +x dist/cli.js",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@softarc/detective": "2.1.2",
+    "typescript": ">=5.7 <7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

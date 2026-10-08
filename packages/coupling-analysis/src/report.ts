@@ -66,8 +66,8 @@ export function toMarkdown(report: CouplingReport): string {
   out.push(`# Schnitt-Analyse: ${meta.repo}`, '');
   out.push(
     table(
-      ['HEAD', 'Slices aus', 'Dateien', 'ohne Slice', 'Commits (analysiert/gelesen)', 'Range'],
-      [[meta.head.slice(0, 10), meta.sliceMode, meta.analyzedFiles, meta.unassignedFiles, `${meta.commitsAnalyzed}/${meta.commitsRead}`, meta.config.git.range]],
+      ['HEAD', 'Slices aus', 'Dateien', 'ohne Slice', 'Commits (analysiert/gelesen)', 'Range', 'Tool'],
+      [[meta.head.slice(0, 10), meta.sliceMode, meta.analyzedFiles, meta.unassignedFiles, `${meta.commitsAnalyzed}/${meta.commitsRead}`, meta.config.git.range, meta.tool]],
     ),
     '',
   );

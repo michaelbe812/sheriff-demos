@@ -1,28 +1,68 @@
-# @blueprint/tooling-coupling
+# @berger-engineering/coupling-analysis
 
-Schnitt-Analyse für **beliebige** TS/JS-Repos: misst, wo Slices (Features, Domains) miteinander gekoppelt sind, und leitet daraus Indizien für den richtigen Schnitt und die Schritte in die Zielarchitektur ab (Slices geschlossen, shared unten, App komponiert). Projekt `tooling-coupling` (`type:tooling`, `tooling:coupling`), importiert bewusst keine andere Tooling-Lib: Es soll auch auf Repos laufen, die den Blueprint-Konventionen (noch) nicht folgen. Übersicht: [`packages/tooling`](../README.md).
+Schnitt-Analyse für **beliebige** TypeScript/JavaScript-Repos: misst, wo Slices (Features, Domains) miteinander gekoppelt sind, und leitet daraus Indizien für den richtigen Schnitt und die Schritte in die Zielarchitektur ab (Slices geschlossen, shared unten, App komponiert). Eigenständiges CLI + Library, keine Annahmen über Framework oder Workspace-Konventionen: Slices kommen aus Nx-Tags oder aus Ordnermustern.
+
+**Was es kann:** Cross-Slice-Importe (inkl. tsconfig-Aliase), Zyklen, Ca/Ce/Instability, Change Coupling aus der git-Historie (Tornhill), Indizien mit Migrationsschritt, Schnittvorschlag, Report als Markdown (mit Mermaid-Graph) + JSON, CI-Gate, Detective als Gegenprobe.
+**Was es nicht kann:** fachliche Sprache bewerten, Duplikate finden, Backend-Endpunkte vergleichen, Code umbauen. Die Indizien sind Hypothesen, die fachlich geprüft werden müssen (siehe [Grenzen](#grenzen)).
+
+## Installation
+
+Voraussetzung: Node ≥ 20.10, `git` im `PATH`. Abhängigkeiten (`typescript`, `@softarc/detective`) installiert npm mit, im Zielrepo muss nichts vorhanden sein.
+
+| Weg | Befehl | Aufruf |
+|---|---|---|
+| einmalig, ohne Installation | – | `npx @berger-engineering/coupling-analysis --repo <pfad>` |
+| global | `npm i -g @berger-engineering/coupling-analysis` | `coupling-analysis --repo <pfad>` |
+| im Zielrepo (z. B. für CI) | `npm i -D @berger-engineering/coupling-analysis` | `npx coupling-analysis` (analysiert das cwd) |
+| lokal bauen, ohne npm-Registry | im Quell-Repo: `cd packages/coupling-analysis && npm pack` → `npm i -g ./berger-engineering-coupling-analysis-<version>.tgz` | `coupling-analysis --repo <pfad>` |
+| aus den Quellen (Entwicklung, Node ≥ 22.6) | – | `node --experimental-strip-types src/cli.ts --repo <pfad>` bzw. im Quell-Repo `pnpm coupling --repo <pfad>` |
+
+`npm pack` baut vorher automatisch (`prepack` → `dist/`). Das Tarball enthält nur `dist/`, `README.md`, `LICENSE`.
 
 ## Benutzen
 
 ```sh
-pnpm coupling --repo ../legacy-app --out dist/coupling          # coupling-report.md + coupling-report.json
-pnpm coupling --repo ../legacy-app --detective                   # + Detective als Gegenprobe (headless)
-pnpm coupling --repo ../legacy-app --detective-serve             # Detective-UI mit den Slices als Scopes
-pnpm coupling --repo . --range <sha> --fail-on high              # reproduzierbar, als Gate
-nx run tooling-coupling:analyze                                  # dieses Repo → dist/coupling
+coupling-analysis --repo ../legacy-app --out reports/legacy      # coupling-report.md + coupling-report.json
+coupling-analysis --repo ../legacy-app --detective               # + Detective als Gegenprobe (headless)
+coupling-analysis --repo ../legacy-app --detective-serve         # Detective-UI mit den Slices als Scopes
+coupling-analysis --range <sha> --fail-on high                   # im Zielrepo: reproduzierbar, als CI-Gate
+coupling-analysis --help | --version
 ```
+
+| Option | Bedeutung |
+|---|---|
+| `--repo <pfad>` | zu analysierendes Repo (Default: cwd). Muss ein git-Repo mit Historie sein |
+| `--config <datei>` | Config (Default: `<repo>/coupling.config.json`, sonst Defaults). Erlaubt Config außerhalb des Zielrepos |
+| `--out <dir>` | schreibt `coupling-report.json` + `coupling-report.md`; ohne: Markdown auf stdout |
+| `--range <rev>` | git-Range (`HEAD`, `v3.0..HEAD`, `<sha>`), überschreibt die Config |
+| `--max-commits <n>` | nur die neuesten n Commits |
+| `--detective` | Detective-Matrizen als Gegenprobe in den Report |
+| `--detective-serve` | Detective-UI öffnen, Scopes = Slices (kein Report) |
+| `--fail-on <high\|medium\|low>` | Exit-Code 1, wenn ein Indiz mindestens diese Schwere hat |
 
 Schritt für Schritt: [Anleitung: Fremd-Repo analysieren](#anleitung-fremd-repo-analysieren), [Report lesen](#report-lesen), [Beispielkonfigurationen](#beispielkonfigurationen).
 
-Läuft direkt aus den Quellen (`node --experimental-strip-types`, Node ≥ 22.6), kein Build. Nur lesend: `git ls-files`, `git log`, Dateien. Einzige Ausnahme: `--detective` legt `.detective/config.json` an und stellt danach den vorherigen Zustand wieder her. `--detective-serve` lässt ihn stehen.
+Nur lesend: `git ls-files`, `git log`, Dateien. Einzige Ausnahme: `--detective` legt `.detective/config.json` an und stellt danach den vorherigen Zustand wieder her. `--detective-serve` lässt ihn stehen (ggf. `.detective` in die `.gitignore` des Zielrepos).
+
+### Als Library
+
+```ts
+import { analyze, mergeConfig, toMarkdown } from '@berger-engineering/coupling-analysis';
+
+const report = await analyze({ repo: '../legacy-app', config: mergeConfig({ slices: ['src/app/{slice}/**'] }) });
+console.log(report.findings.filter((finding) => finding.severity === 'high'));
+console.log(toMarkdown(report));
+```
+
+Exportiert: `analyze`, `loadConfig`, `mergeConfig`, `defaultConfig`, `toJson`, `toMarkdown`, `TOOL` und die Typen `CouplingReport`, `CouplingConfig`, `Finding`, `FindingKind`, `Severity`, `Step`. ESM only.
 
 ## Anleitung: Fremd-Repo analysieren
 
-Voraussetzung: Node ≥ 22.6, das Fremd-Repo als Git-Klon mit vollständiger Historie (kein `--depth`). Das Tool läuft aus diesem Repo heraus, im Fremd-Repo muss nichts installiert sein.
+Voraussetzung: das Tool installiert (siehe [Installation](#installation)), das Fremd-Repo als git-Klon mit vollständiger Historie (kein `--depth`). Im Fremd-Repo muss nichts installiert sein.
 
 1. **Erster Lauf ohne Config**
    ```sh
-   pnpm coupling --repo ../legacy-app --out tmp/legacy
+   coupling-analysis --repo ../legacy-app --out tmp/legacy
    ```
    Kopfzeile in `tmp/legacy/coupling-report.md` prüfen: `Slices aus` (nx/patterns), `ohne Slice`, `Commits (analysiert/gelesen)`.
 2. **Schnitt konfigurieren:** `ohne Slice` listet die größten nicht zugeordneten Ordner. Liegt dort Fachcode, `coupling.config.json` im Fremd-Repo anlegen (oder per `--config` von außen übergeben, z. B. `tmp/legacy.config.json`), siehe [Beispielkonfigurationen](#beispielkonfigurationen):
@@ -156,19 +196,45 @@ Gleiches Repo + gleiche Config + gleiche Range → byte-gleicher Report: sortier
 ## Grenzen
 
 - **Barrels:** Importe über `index.ts` zählen auf den Barrel, nicht auf die eigentliche Datei. `shared-candidate` auf einem Barrel heißt: Public API eines Slices wird von mehreren genutzt, die konkreten Exporte muss man bestimmen.
-- **Historie:** Change Coupling braucht fachliche Commits. Umbau-Commits (wie die Blueprint-Umbauten in diesem Repo) fängt nur `maxFilesPerCommit` ab. Bei vielen kleinen Commits pro Feature ggf. `ignoreMessages` nutzen.
+- **Historie:** Change Coupling braucht fachliche Commits. Umbau-Commits (Migrationen, Architektur-Umbauten) fängt nur `maxFilesPerCommit` ab. Bei vielen kleinen Commits pro Feature ggf. `ignoreMessages` nutzen.
 - **Nicht automatisiert:** fachliche Sprache (EventStorming), Duplikate (jscpd), Endpunkt-Überlappung. Das sind mögliche Erweiterungen.
 - **Detective** zählt pro Ordner und ohne Commit-Filter. Seine Zahlen sind eine Gegenprobe, die Indizien basieren nur auf der eigenen Messung.
+- **Sprachen:** nur TS/JS (`.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, `.cjs`). Imports in Templates (Vue SFC, Svelte) werden nicht gelesen.
+- **Laufzeit-Kopplung** (DI-Tokens, Events, Router-Strings, HTTP) ist für die statische Analyse unsichtbar und taucht höchstens als `hidden-coupling` über die Historie auf.
 
-## Ergebnisse in diesem Repo
+## Validierung
+
+Erprobt im Quell-Repo [sheriff-blue-print](https://github.com/michaelbe812/sheriff-demos) an zwei Ständen derselben Demo-App:
 
 | Stand | unerwartete Kanten | Indizien |
 |---|---|---|
-| `feat/nx-blueprint-explicit-config` (Ports) | checkin → booking, checkin → auth | `merge-candidate` checkin + booking (Import + 3 gemeinsame Commits), `stable-dependency` checkin → auth, `move-into-slice` shared/api + shared/ui (nur checkin) |
+| `feat/nx-blueprint-explicit-config` (Ports, Cross-Slice-Importe) | checkin → booking, checkin → auth | `merge-candidate` checkin + booking (Import + 3 gemeinsame Commits), `stable-dependency` checkin → auth, `move-into-slice` shared/api + shared/ui (nur checkin) |
 | `feat/nx-reduced-blueprint` (Zielarchitektur) | 0 | `hidden-coupling` booking ↔ checkin (gemeinsame Umbau-Commits), `move-into-slice` shared/data-access, shared/state, shared/ui (nur checkin) |
 
-Die Indizien auf dem Ports-Stand decken sich mit dem, was der reduzierte Blueprint von Hand umgebaut hat (checkin lädt Ankünfte selbst, auth → `shared/state`).
+Die Indizien auf dem Ports-Stand decken sich mit dem manuellen Umbau zur Zielarchitektur (checkin lädt Ankünfte selbst, auth → `shared/state`).
 
-## Tests
+## Entwicklung
 
-`nx test tooling-coupling`: Globs, Metriken (Tarjan, Martin, Tornhill, Git-Log-Filter), Detective-Aggregation sowie End-to-End gegen temporäre Git-Repos (Legacy-App mit jedem Indiz einmal, Nx-Workspace mit Tags + Aliasen, Determinismus).
+Quellen in `src/` (TypeScript mit `.ts`-Imports, nur löschbare Syntax: läuft direkt per `node --experimental-strip-types`). Der Build (`tsconfig.lib.json`, `rewriteRelativeImportExtensions`) schreibt ESM nach `dist/`; `scripts/fix-declarations.mjs` schreibt die `.ts`-Importe in den `.d.ts` auf `.js` um.
+
+| Befehl (im Quell-Workspace) | Zweck |
+|---|---|
+| `nx test coupling-analysis` | Specs: Globs, Metriken (Tarjan, Martin, Tornhill, Git-Log-Filter), Detective-Aggregation, End-to-End gegen temporäre git-Repos (Legacy-App mit jedem Indiz, Nx-Workspace mit Tags + Aliasen, Determinismus) |
+| `nx run-many -t lint typecheck build -p coupling-analysis` | Lint, Typen, `dist/` |
+| `nx run coupling-analysis:analyze` | Analyse des Quell-Workspace → `dist/coupling` |
+
+## Veröffentlichen
+
+```sh
+cd packages/coupling-analysis
+npm version patch            # oder minor/major; Version steht im Report (meta.tool)
+npm pack --dry-run           # Inhalt prüfen: dist/, README.md, LICENSE
+npm login                    # einmalig, Account mit Zugriff auf den Scope @berger-engineering
+npm publish                  # prepack baut dist/, publishConfig.access = public
+```
+
+Ohne Registry weitergeben: `npm pack` und das `.tgz` verteilen (`npm i -g ./berger-engineering-coupling-analysis-<version>.tgz`).
+
+## Lizenz
+
+MIT

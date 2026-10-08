@@ -1,0 +1,46 @@
+{
+  "name": "coupling-analysis",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "packages/coupling-analysis/src",
+  "tags": ["type:tooling", "tooling:coupling"],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "dependsOn": [],
+      "inputs": ["default", "^default", { "externalDependencies": ["typescript"] }],
+      "options": {
+        "command": "tsc -p packages/coupling-analysis/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default", "^default", { "externalDependencies": ["vitest", "typescript"] }],
+      "options": {
+        "command": "vitest run --config packages/coupling-analysis/vitest.config.mts"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["production", "{projectRoot}/scripts/**/*", { "externalDependencies": ["typescript"] }],
+      "outputs": ["{projectRoot}/dist"],
+      "options": {
+        "command": "npm run build",
+        "cwd": "packages/coupling-analysis"
+      }
+    },
+    "analyze": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "node --experimental-strip-types --no-warnings=ExperimentalWarning packages/coupling-analysis/src/cli.ts --repo . --out dist/coupling"
+      }
+    }
+  }
+}

@@ -10,10 +10,12 @@ import { buildImportGraph } from './imports.ts';
 import { headSha, trackedFiles } from './repo.ts';
 import { createSliceMap, type SliceMap, type SliceRole } from './slices.ts';
 import { calcStaticCoupling, type StaticCoupling } from './static-coupling.ts';
+import { TOOL } from './version.ts';
 
 export interface CouplingReport {
   meta: {
     repo: string;
+    tool: string;
     head: string;
     sliceMode: SliceMap['mode'];
     analyzedFiles: number;
@@ -79,6 +81,7 @@ export async function analyze(options: AnalyzeOptions): Promise<CouplingReport> 
   const report: CouplingReport = {
     meta: {
       repo: basename(repo),
+      tool: TOOL,
       head: headSha(repo),
       sliceMode: slices.mode,
       analyzedFiles: files.length,

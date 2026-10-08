@@ -184,6 +184,15 @@ importers:
         specifier: 2.9.1
         version: 2.9.1
 
+  packages/coupling-analysis:
+    dependencies:
+      '@softarc/detective':
+        specifier: 2.1.2
+        version: 2.1.2(typescript@6.0.3)
+      typescript:
+        specifier: '>=5.7 <7'
+        version: 6.0.3
+
   packages/sheriff-blueprint:
     dependencies:
       '@nx/devkit':
@@ -194,12 +203,6 @@ importers:
         version: 0.19.6(typescript@6.0.3)
 
   packages/tooling/conventions: {}
-
-  packages/tooling/coupling:
-    dependencies:
-      '@softarc/detective':
-        specifier: 2.1.2
-        version: 2.1.2(typescript@6.0.3)
 
   packages/tooling/eslint-rules:
     dependencies:

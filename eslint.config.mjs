@@ -121,7 +121,7 @@ function deepImportPatterns() {
  *   ng-lib       test executor (Vitest UI flag) around an Nx internal — standalone, knows no conventions/openapi
  *   verify       proofs, read the project graph — standalone
  *   eslint-rules naming rules (blueprint/*), loaded by this config — conventions only
- *   coupling     cut analysis for any repo (no blueprint conventions on purpose) — standalone
+ *   coupling     packages/coupling-analysis: publishable cut analysis for any repo (no blueprint conventions) — standalone
  */
 const toolingConstraints = [
     { sourceTag: "tooling:conventions", onlyDependOnLibsWithTags: [] },
