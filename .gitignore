@@ -51,5 +51,8 @@ Thumbs.db
 __screenshots__
 .vitest-attachments
 
+# Detective (tooling-coupling --detective-serve) cache + config
+.detective
+
 # generated OpenAPI clients (packages/tooling/openapi): per client lib only src/index.ts is committed
 **/src/generated/**
