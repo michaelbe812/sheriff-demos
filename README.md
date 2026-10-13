@@ -60,6 +60,12 @@ In den Quellen markieren Kommentare `// sheriff-violation-example:` verbotene Im
 
 > **Wichtig:** Die Regeln leben in `packages/sheriff-blueprint` und Sheriff lädt sie aus `dist/`. Nach einem Branch-Wechsel ohne `pnpm install` kann ein veraltetes `dist/` durchgesetzt werden — lautlos. Siehe [Issue #31](https://github.com/lambda-solutions-io/sheriff/issues/31).
 
+## Tooling auf `main`
+
+| Paket | Was es ist |
+|---|---|
+| [`packages/coupling-analysis`](packages/coupling-analysis/README.md) | `@berger-engineering/coupling-analysis` — Schnitt-Analyse für beliebige Repos (Cross-Slice-Imports, Change Coupling aus git). `pnpm coupling --repo <pfad>` |
+
 ## Bekannte Sheriff-Limitierungen
 
 Vier Stellen, an denen Sheriff etwas still erlaubt, das die Config klar verbietet — reproduziert und upstream gemeldet in [lambda-solutions-io/sheriff#31](https://github.com/lambda-solutions-io/sheriff/issues/31):

@@ -2,7 +2,9 @@
   "name": "@sheriff-blue-print/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "coupling": "node --experimental-strip-types --no-warnings=ExperimentalWarning packages/coupling-analysis/src/cli.ts"
+  },
   "private": true,
   "dependencies": {
     "@angular/common": "~22.0.4",
@@ -31,6 +33,7 @@
     "@softarc/eslint-plugin-sheriff": "^0.19.6",
     "@softarc/sheriff-core": "^0.19.6",
     "@swc/helpers": "~0.5.18",
+    "@types/node": "^22.20.5",
     "@typescript-eslint/utils": "^8.58.0",
     "angular-eslint": "^22.0.0",
     "eslint": "^9.8.0",
@@ -39,7 +42,8 @@
     "prettier": "~3.6.2",
     "tslib": "^2.3.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.58.0"
+    "typescript-eslint": "^8.58.0",
+    "vitest": "~4.1.11"
   },
   "packageManager": "pnpm@10.12.1+sha256.889bac470ec93ccc3764488a19d6ba8f9c648ad5e50a9a6e4be3768a5de387a3"
 }
